@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <!-- Подстраиваем страницу под экран телефона/планшета, запрещаем случайный зум -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Зарядка</title>
+
+  <!-- Официальная библиотека Telegram для Mini App. Подключается первой. -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <style>
+    /*
+      Telegram сам передаёт цвета темы в CSS-переменные --tg-theme-*.
+      После запятой — запасной цвет, если страницу открыли просто в браузере.
+    */
+    :root {
+      --bg:     var(--tg-theme-bg-color, #ffffff);
+      --text:   var(--tg-theme-text-color, #000000);
+      --hint:   var(--tg-theme-hint-color, #8e8e93);
+      --button: var(--tg-theme-button-color, #2481cc);
+      --button-text: var(--tg-theme-button-text-color, #ffffff);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+
+    h1 { font-size: 32px; margin: 0 0 12px; }
+    p  { font-size: 18px; margin: 8px 0; }
+    .hint { color: var(--hint); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Зарядка 💪</h1>
+    <p id="hello">Привет!</p>
+    <p class="hint">Mini App работает. Скоро здесь будут программы и таймер.</p>
+    <!-- Служебная строка для проверки: где и в какой версии открыто -->
+    <p class="hint" id="info"></p>
+  </main>
+
+  <script>
+    // Объект Telegram WebApp. Если страницу открыли не в Telegram, его не будет.
+    const tg = window.Telegram && window.Telegram.WebApp;
+
+    const hello = document.getElementById('hello');
+    const info  = document.getElementById('info');
+
+    if (tg && tg.initData) {
+      // Сообщаем Telegram, что страница загрузилась (убирает индикатор загрузки)
+      tg.ready();
+      // Раскрываем Mini App на весь экран по высоте
+      tg.expand();
+
+      // Имя пользователя берём из данных Telegram
+      const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+      if (user && user.first_name) {
+        hello.textContent = 'Привет, ' + user.first_name + '!';
+      }
+
+      // Показываем платформу и версию — пригодится при тестах на телефоне и планшете
+      info.textContent = 'Платформа: ' + tg.platform + ', версия API: ' + tg.version;
+    } else {
+      // Открыто в обычном браузере — это нормально для проверки вёрстки
+      info.textContent = 'Открыто вне Telegram (обычный браузер).';
+    }
+  </script>
+</body>
+</html>
