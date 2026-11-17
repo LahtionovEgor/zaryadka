@@ -17,7 +17,7 @@
 
   <!-- Наши данные. ?v=4 — номер версии: меняйте его при каждом
        изменении data.js, иначе телефон может показать старую копию. -->
-  <script src="data.js?v=4"></script>
+  <script src="data.js?v=5"></script>
 
   <style>
     /* ================================================================
@@ -25,20 +25,21 @@
        Цвета берём из темы Telegram; после запятой — запасной цвет.
        --accent меняется из кода: у каждого вида занятия свой цвет.
        ================================================================ */
+    /* ================================================================
+       ЦВЕТА И ШРИФТЫ
+       Фон всегда белый, без градиентов. --accent меняется из кода:
+       у каждого вида занятия свой цвет (кнопка, регулятор, отметки).
+       ================================================================ */
     :root {
-      --bg:     var(--tg-theme-bg-color, #0c0d10);
-      --text:   var(--tg-theme-text-color, #ffffff);
-      --hint:   var(--tg-theme-hint-color, #8e8e93);
-      --accent: #4aa3ff;
-      /* «Стекло»: полупрозрачный цвет текста поверх фона */
-      --glass:     rgba(127,127,127,.12);
-      --glass:     color-mix(in srgb, var(--text) 7%, transparent);
-      --glass-brd: rgba(127,127,127,.18);
-      --glass-brd: color-mix(in srgb, var(--text) 11%, transparent);
-      --glass-hi:  color-mix(in srgb, var(--text) 13%, transparent);
+      --bg:     #ffffff;
+      --text:   #0b0b0c;
+      --hint:   #8a8a90;
+      --accent: #2f8cff;
+      --glass:    #f2f2f5;   /* фон карточек — светло-серый */
+      --glass-hi: #e7e7ec;   /* карточка при нажатии, дорожка регулятора */
       /* Цвета фаз тренировки */
-      --rest: #34c759;
-      --prep: #ff9f0a;
+      --rest: #22b866;
+      --prep: #ff9500;
       --font: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
@@ -56,23 +57,7 @@
     .hidden { display: none !important; }
     .hint { color: var(--hint); }
 
-    /* ---------- Атмосферный фон: размытые цветные пятна ----------
-       Это и даёт эффект «прозрачности»: карточки — матовое стекло поверх. */
-    .ambient { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
-    .ambient .blob {
-      position: absolute; border-radius: 50%;
-      filter: blur(70px); opacity: .45;
-      background: var(--accent);
-      transition: background .6s ease;
-      animation: drift 18s ease-in-out infinite alternate;
-    }
-    .ambient .b1 { width: 70vmax; height: 70vmax; top: -30vmax; right: -25vmax; }
-    .ambient .b2 { width: 55vmax; height: 55vmax; bottom: -25vmax; left: -25vmax; opacity: .25; animation-duration: 24s; }
-    .ambient .b3 { width: 35vmax; height: 35vmax; top: 35%; left: 40%; opacity: .12; background: #fff; animation-duration: 30s; }
-    @keyframes drift {
-      from { transform: translate(0, 0) scale(1); }
-      to   { transform: translate(-6vmax, 5vmax) scale(1.12); }
-    }
+    @keyframes drift { from { transform: none; } to { transform: none; } }
 
     /* Экраны: виден только один */
     .screen {
@@ -82,13 +67,8 @@
       padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px calc(env(safe-area-inset-bottom, 0px) + 24px);
     }
 
-    /* ---------- Стеклянная карточка ---------- */
-    .glass {
-      background: var(--glass);
-      border: 1px solid var(--glass-brd);
-      -webkit-backdrop-filter: blur(22px) saturate(150%);
-      backdrop-filter: blur(22px) saturate(150%);
-    }
+    /* ---------- Карточка: плоская, светло-серая ---------- */
+    .glass { background: var(--glass); }
     .row-card {
       display: flex; align-items: center; gap: 14px;
       width: 100%; text-align: left;
@@ -104,19 +84,17 @@
     .row-card .ico   { font-size: 28px; width: 40px; text-align: center; flex: 0 0 40px; }
     .row-card.dim .value { color: var(--hint); }
     .badge-on { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 99px;
-                background: var(--accent); color: #0b0b0b; margin-left: 6px; vertical-align: 3px; letter-spacing: 0; }
+                background: var(--accent); color: #fff; margin-left: 6px; vertical-align: 3px; letter-spacing: 0; }
 
-    /* Большая кнопка «Начать занятие» — градиент как на образце */
+    /* Большая кнопка «Начать занятие» — сплошной цвет вида занятия */
     .big-btn {
       width: 100%; min-height: 62px; border-radius: 31px;
       font-size: 20px; font-weight: 650; letter-spacing: -0.02em;
-      color: #0b0b0b;
-      background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 45%, #ffffff));
-      box-shadow: 0 10px 30px -10px var(--accent);
+      color: #ffffff; background: var(--accent);
       transition: transform .12s ease;
     }
     .big-btn:active { transform: scale(0.98); }
-    .big-btn:disabled { opacity: .45; box-shadow: none; }
+    .big-btn:disabled { opacity: .45; }
 
     /* Заголовки экранов */
     .eyebrow { font-size: 15px; color: var(--hint); font-weight: 500; }
@@ -140,8 +118,8 @@
     #dial { width: min(74vw, 330px); height: auto; touch-action: none; cursor: pointer; overflow: visible; }
     #dial .track { stroke: var(--glass-hi); }
     #dial .arc   { stroke: var(--text); }
-    #dial .knob-ring { fill: var(--accent); filter: drop-shadow(0 0 10px var(--accent)); }
-    #dial .knob-dot  { fill: var(--bg); }
+    #dial .knob-ring { fill: var(--accent); }
+    #dial .knob-dot  { fill: #ffffff; }
     #dial .num   { fill: var(--text); font-size: 104px; font-weight: 700; letter-spacing: -0.06em; font-family: var(--font); }
     #dial .unit  { fill: var(--hint); font-size: 26px; font-weight: 600; font-family: var(--font); }
 
@@ -167,9 +145,7 @@
     .pick-card .meta  { font-size: 13px; color: var(--hint); margin-top: 6px; line-height: 1.4; }
     .sport-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .sport-tile { min-height: 132px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
-    .sport-tile .big-ico { font-size: 40px; }
-    .sport-tile .swatch { position: absolute; right: -30px; top: -30px; width: 110px; height: 110px; border-radius: 50%;
-                          filter: blur(28px); opacity: .55; }
+    .sport-tile .dot { width: 14px; height: 14px; border-radius: 50%; }
     .sport-tile:first-child { grid-column: span 2; min-height: 110px; }
 
     /* ---------- Своя тренировка ---------- */
@@ -184,10 +160,11 @@
       padding: 12px 14px; border-radius: 18px; margin-bottom: 8px;
     }
     .ex-row .check {
+      background: #fff;
       flex: 0 0 30px; height: 30px; border-radius: 50%;
       border: 2px solid var(--glass-hi);
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 700; color: #0b0b0b;
+      font-size: 14px; font-weight: 700; color: #fff;
     }
     .ex-row.on .check { background: var(--accent); border-color: var(--accent); }
     .ex-row .nm { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
@@ -195,7 +172,7 @@
     .sticky-bar {
       position: sticky; bottom: 0; z-index: 3;
       display: flex; gap: 10px; padding: 12px 0 calc(env(safe-area-inset-bottom, 0px) + 8px);
-      margin-top: 8px;
+      margin-top: 8px; background: var(--bg);
     }
     .sticky-bar .ghost { flex: 0 0 auto; padding: 0 20px; border-radius: 31px; font-weight: 600; min-height: 62px; }
 
@@ -208,60 +185,50 @@
       position: fixed; inset: 0; z-index: 5;
       max-width: none; margin: 0; padding: 0;
       overflow: hidden; cursor: pointer;
-      background: #0a0b0d; color: #fff;
+      background: #ffffff; color: var(--text);
       display: flex; flex-direction: column;
       --phase: var(--accent);
     }
     #workout.ph-rest { --phase: var(--rest); }
     #workout.ph-prep { --phase: var(--prep); }
-    .wo-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-    .wo-bg .blob { position: absolute; border-radius: 50%; filter: blur(80px); background: var(--phase);
-                   transition: background .8s ease; animation: drift 14s ease-in-out infinite alternate; }
-    .wo-bg .b1 { width: 90vmax; height: 90vmax; left: -20vmax; top: 10%; opacity: .32; }
-    .wo-bg .b2 { width: 60vmax; height: 60vmax; right: -30vmax; top: -25vmax; opacity: .18; animation-duration: 20s; }
-
     .wo-top { position: relative; z-index: 2;
               padding: calc(env(safe-area-inset-top, 0px) + 12px) 20px 0; }
     .progress { display: flex; gap: 3px; height: 4px; }
-    .progress .seg { flex: 1; border-radius: 2px; background: rgba(255,255,255,.18); overflow: hidden; }
-    .progress .seg i { display: block; height: 100%; width: 0; background: #fff; }
+    .progress .seg { flex: 1; border-radius: 2px; background: #e7e7ec; overflow: hidden; }
+    .progress .seg i { display: block; height: 100%; width: 0; background: var(--text); }
     .wo-row { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 14px; }
     #clock { font-size: clamp(56px, 17vw, 96px); font-weight: 700; letter-spacing: -0.05em; line-height: .9;
              font-variant-numeric: tabular-nums; }
-    #counter { font-size: 16px; font-weight: 600; opacity: .7; margin-top: 6px; }
+    #counter { font-size: 16px; font-weight: 600; color: var(--hint); margin-top: 6px; }
 
     /* Сцена с фигуркой */
     .stage { position: relative; z-index: 1; flex: 1; min-height: 0;
              display: flex; align-items: center; justify-content: center; }
     #figure { width: 100%; height: 100%; max-height: 62vh; overflow: visible; }
-    #figure .limb { stroke: #fff; stroke-width: 11; stroke-linecap: round; fill: none; }
-    #figure .head { fill: #fff; }
-    #figure .floor { stroke: rgba(255,255,255,.18); stroke-width: 2; }
-    #figure .shadow { fill: rgba(0,0,0,.35); }
+    #figure .limb { stroke: var(--text); stroke-width: 11; stroke-linecap: round; fill: none; }
+    #figure .head { fill: var(--text); }
+    #figure .floor { stroke: #e2e2e7; stroke-width: 2; }
+    #figure .shadow { fill: #ececf0; }
     #figure .ring { fill: none; stroke: var(--phase); stroke-width: 2; opacity: 0; }
     #figure .paddle { fill: var(--phase); }
-    #figure .water { fill: rgba(80,200,255,.14); }
-    #figure.preview { opacity: .45; }   /* на отдыхе — показ следующего упражнения */
+    #figure .water { fill: #e3f4fa; }
+    #figure.preview { opacity: .3; }   /* на отдыхе — показ следующего упражнения */
     #ex-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
     .wo-bottom { position: relative; z-index: 2;
                  padding: 0 20px calc(env(safe-area-inset-bottom, 0px) + 22px); }
     .phase-pill { display: inline-flex; align-items: center; gap: 8px;
                   font-size: 14px; font-weight: 650; padding: 6px 12px; border-radius: 99px;
-                  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.14);
-                  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
-    .phase-pill::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--phase);
-                          box-shadow: 0 0 10px var(--phase); }
+                  background: var(--glass); }
+    .phase-pill::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--phase); }
     #ex-name { font-size: clamp(30px, 8.5vw, 52px); font-weight: 700; letter-spacing: -0.045em;
                line-height: 1.02; margin-top: 10px; }
     #wo-sub { font-size: clamp(17px, 4.5vw, 22px); font-weight: 600; margin-top: 6px; color: var(--phase); min-height: 1.2em; }
 
     /* Бегущая строка с подсказками */
-    .ticker { margin-top: 14px; overflow: hidden; white-space: nowrap;
-              -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-              mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+    .ticker { margin-top: 14px; overflow: hidden; white-space: nowrap; }
     .ticker-track { display: inline-flex; animation: marquee 30s linear infinite; }
-    .ticker-track span { padding-right: 48px; font-size: 16px; font-weight: 500; opacity: .78; }
+    .ticker-track span { padding-right: 48px; font-size: 16px; font-weight: 500; color: #4a4a50; }
     @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
     #workout.paused .ticker-track { animation-play-state: paused; }
 
@@ -269,24 +236,22 @@
     #pause-layer {
       position: absolute; inset: 0; z-index: 4;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
-      background: rgba(0,0,0,.45);
-      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      background: rgba(255,255,255,.96);
     }
-    .pause-title { font-size: 17px; font-weight: 600; opacity: .8; }
+    .pause-title { font-size: 17px; font-weight: 600; color: var(--hint); }
     .pause-controls { display: flex; align-items: center; gap: 34px; }
     .round-btn { width: 76px; height: 76px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-                 color: #fff; transition: transform .12s ease; }
+                 color: var(--text); transition: transform .12s ease; }
     .round-btn:active { transform: scale(0.92); }
     .round-btn svg { width: 54px; height: 54px; }
-    .round-btn.big { width: 96px; height: 96px; background: #fff; color: #0b0b0b; }
+    .round-btn.big { width: 96px; height: 96px; background: var(--text); color: #fff; }
     .round-btn.big svg { width: 38px; height: 38px; }
     .text-btn { font-size: 16px; font-weight: 600; padding: 12px 22px; border-radius: 99px;
-                background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.16); color: #fff; }
-    .pause-hint { font-size: 14px; opacity: .55; }
+                background: var(--glass); color: var(--text); }
+    .pause-hint { font-size: 14px; color: var(--hint); }
 
     /* ---------- Экран «Готово» ---------- */
     #done { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; }
-    #done .emoji { font-size: 76px; }
     #done .stats { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 4px 0 14px; }
     #done .stat { border-radius: 20px; padding: 12px 16px; min-width: 104px; }
     #done .stat b { display: block; font-size: 24px; letter-spacing: -0.03em; }
@@ -307,8 +272,6 @@
   </style>
 </head>
 <body>
-  <!-- Цветной размытый фон под стеклом -->
-  <div class="ambient"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
 
   <!-- =============== ГЛАВНЫЙ ЭКРАН =============== -->
   <section id="home" class="screen">
@@ -337,7 +300,7 @@
 
       <!-- 1. Вид занятия -->
       <button class="row-card glass" id="open-sports">
-        <span class="ico" id="sport-ico">☀️</span>
+        <span class="ico"><span id="sport-dot" style="display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--accent)"></span></span>
         <div class="grow">
           <div class="label">Вид занятия</div>
           <div class="value" id="sport-name">Зарядка</div>
@@ -409,8 +372,6 @@
   <!-- =============== ТРЕНИРОВКА ===============
        Касание в любом месте экрана — пауза / продолжить. -->
   <section id="workout" class="screen hidden">
-    <div class="wo-bg"><div class="blob b1"></div><div class="blob b2"></div></div>
-
     <div class="wo-top">
       <div class="progress" id="progress"></div>
       <div class="wo-row">
@@ -487,7 +448,6 @@
 
   <!-- =============== ГОТОВО =============== -->
   <section id="done" class="screen hidden">
-    <div class="emoji">🎉</div>
     <div class="h1">Готово!</div>
     <div class="hint" id="done-sub" style="font-size:16px"></div>
     <div class="stats" id="done-stats"></div>
@@ -505,6 +465,11 @@
     if (inTelegram) {
       tg.ready();
       tg.expand();
+      // Шапка и фон Telegram вокруг приложения — белые, как сам дизайн
+      if (tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) {
+        tg.setHeaderColor('#ffffff');
+        tg.setBackgroundColor('#ffffff');
+      }
       // Чтобы свайп по кругу не закрывал приложение (есть в новых версиях)
       if (tg.isVersionAtLeast && tg.isVersionAtLeast('7.7') && tg.disableVerticalSwipes) tg.disableVerticalSwipes();
     }
@@ -692,7 +657,6 @@
 
       $('greet').textContent = greeting();
       $('tagline').textContent = TAGLINES[s.id] || s.name;
-      $('sport-ico').textContent = s.icon;
       $('sport-name').textContent = s.name;
 
       // Направление: если включена своя тренировка — показываем приглушённо
@@ -748,8 +712,7 @@
         card.className = 'pick-card glass sport-tile' + (s.id === state.sport ? ' selected' : '');
         card.style.setProperty('--accent', s.accent);
         card.innerHTML =
-          '<div class="swatch" style="background:' + s.accent + '"></div>' +
-          '<div class="big-ico">' + s.icon + '</div>' +
+          '<div class="dot" style="background:' + s.accent + '"></div>' +
           '<div><div class="title">' + s.name + (s.id === state.sport ? '<span class="tick">✓</span>' : '') + '</div>' +
           '<div class="meta">' + s.directions.length + ' ' + plural(s.directions.length, 'программа', 'программы', 'программ') +
           ' · ' + s.min + '–' + s.max + ' мин</div></div>';
@@ -770,7 +733,7 @@
     // =====================================================================
     function renderDirections() {
       const s = sport();
-      $('dir-eyebrow').textContent = s.icon + ' ' + s.name;
+      $('dir-eyebrow').textContent = s.name;
       const box = $('dir-list');
       box.innerHTML = '';
       s.directions.forEach(dir => {
@@ -814,7 +777,7 @@
     function openCustom() {
       customDraft = [...customIds()];
       customFilter = 'mine';
-      $('custom-eyebrow').textContent = sport().icon + ' ' + sport().name;
+      $('custom-eyebrow').textContent = sport().name;
       renderCustom();
       show('custom');
     }
@@ -838,7 +801,7 @@
       groups.forEach(s => {
         const gt = document.createElement('div');
         gt.className = 'group-title';
-        gt.textContent = s.icon + ' ' + s.name;
+        gt.textContent = s.name;
         box.append(gt);
         sportExerciseIds(s.id).forEach(id => {
           const item = getExercise(id);
@@ -1256,7 +1219,7 @@
       beep(1318, 400);
       haptic('success');
       const n = countBlocks(state.workout.exercises);
-      $('done-sub').textContent = sport().icon + ' ' + sport().name + ' · ' + state.workout.name;
+      $('done-sub').textContent = sport().name + ' · ' + state.workout.name;
       const stats = [
         [formatClock(doneSeconds), 'время'],
         [String(n), plural(n, 'упражнение', 'упражнения', 'упражнений')],

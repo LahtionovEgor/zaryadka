@@ -270,7 +270,6 @@ const EXERCISES = [
 /*
   ВИД ЗАНЯТИЯ (кнопка «Вид занятия» на главном экране) — поля:
     id, name    — код и название
-    icon        — значок
     accent      — фирменный цвет (подсветка, регулятор, кнопка)
     min, max, def, step — границы, значение по умолчанию и шаг
                   выбора времени в минутах
@@ -286,7 +285,7 @@ const EXERCISES = [
 */
 const SPORTS = [
   {
-    id: 'morning', name: 'Зарядка', icon: '☀️', accent: '#4aa3ff',
+    id: 'morning', name: 'Зарядка', accent: '#2f8cff',
     min: 3, max: 30, def: 10, step: 1,
     directions: [
       { id: 'full', name: 'Общий комплекс на всё тело', short: 'Общий комплекс',
@@ -320,7 +319,7 @@ const SPORTS = [
     ],
   },
   {
-    id: 'gym', name: 'Тренажёрный зал', icon: '🏋️', accent: '#ff7a45',
+    id: 'gym', name: 'Тренажёрный зал', accent: '#f26522',
     min: 20, max: 90, def: 60, step: 5,
     directions: [
       { id: 'legs_biceps', name: 'День ног + бицепс', short: 'Ноги + бицепс', sets: 3,
@@ -356,7 +355,7 @@ const SPORTS = [
     ],
   },
   {
-    id: 'yoga', name: 'Йога', icon: '🧘', accent: '#a98bff',
+    id: 'yoga', name: 'Йога', accent: '#7b5cff',
     min: 5, max: 60, def: 20, step: 5,
     directions: [
       { id: 'yoga_morning', name: 'Утренняя йога', short: 'Утренняя',
@@ -387,7 +386,7 @@ const SPORTS = [
     ],
   },
   {
-    id: 'pool', name: 'Бассейн', icon: '🏊', accent: '#2ec5e6',
+    id: 'pool', name: 'Бассейн', accent: '#0f9fcc',
     min: 15, max: 60, def: 30, step: 5,
     directions: [
       { id: 'pool_tech', name: 'Техника кроля', short: 'Техника кроля',
@@ -413,7 +412,7 @@ const SPORTS = [
     ],
   },
   {
-    id: 'tt', name: 'Настольный теннис', icon: '🏓', accent: '#3fd27d',
+    id: 'tt', name: 'Настольный теннис', accent: '#1fa85a',
     min: 10, max: 90, def: 45, step: 5,
     directions: [
       { id: 'tt_prematch', name: 'Разминка перед игрой', short: 'Разминка',
