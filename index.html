@@ -15,9 +15,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Наши данные. ?v=6 — номер версии: меняйте его при каждом
+  <!-- Наши данные. ?v=7 — номер версии: меняйте его при каждом
        изменении data.js, иначе телефон может показать старую копию. -->
-  <script src="data.js?v=6"></script>
+  <script src="data.js?v=7"></script>
 
   <style>
     /* ================================================================
@@ -25,7 +25,7 @@
        Идея: всё сделано из одного «пластика» серого цвета.
        Кнопки и карточки ВЫПУКЛЫЕ (светлая тень сверху-слева,
        тёмная снизу-справа). При нажатии — ВДАВЛИВАЮТСЯ (тени внутрь).
-       --accent меняется из кода: у каждого вида занятия свой цвет.
+       Один фирменный цвет --accent для всех видов занятий.
        ================================================================ */
     :root {
       --bg:     #e6e9ef;   /* общий фон и цвет «пластика» */
@@ -42,6 +42,11 @@
       --rest: #16803d;
       --prep: #b45309;
       --font: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      /* Отступы от краёв экрана. Telegram сам задаёт переменные --tg-…,
+         в полноэкранном режиме они не нулевые: сверху вырез камеры
+         и кнопки Telegram «Закрыть» / «⋮», снизу — полоска жестов. */
+      --top: calc(max(env(safe-area-inset-top, 0px), var(--tg-safe-area-inset-top, 0px)) + var(--tg-content-safe-area-inset-top, 0px));
+      --bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-safe-area-inset-bottom, 0px));
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -63,7 +68,7 @@
       position: relative; z-index: 1;
       min-height: 100%;
       max-width: 1000px; margin: 0 auto;
-      padding: calc(env(safe-area-inset-top, 0px) + 18px) 20px calc(env(safe-area-inset-bottom, 0px) + 28px);
+      padding: calc(var(--top) + 18px) 20px calc(var(--bottom) + 28px);
     }
 
     /* ---------- Карточка: выпуклая. Класс .glass остался со старой версии ---------- */
@@ -103,7 +108,15 @@
     .screen-head { margin: 4px 2px 20px; }
 
     /* ---------- Главный экран ---------- */
-    .home-top { display: flex; justify-content: space-between; align-items: center; margin: 6px 2px 4px; }
+    .home-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 6px 2px 4px; }
+    /* Круглая кнопка-иконка (полный экран) */
+    .icon-btn {
+      flex: 0 0 48px; width: 48px; height: 48px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; color: var(--text);
+      transition: box-shadow .15s ease;
+    }
+    .icon-btn svg { width: 22px; height: 22px; }
+    .icon-btn:active, .icon-btn.on { box-shadow: var(--pressed); }
     .home-body { display: flex; flex-direction: column; gap: 16px; }
     .dir-line { display: flex; gap: 16px; align-items: stretch; }
     .dir-line .row-card { flex: 1; min-width: 0; }
@@ -134,6 +147,10 @@
     #dial .knob-dot  { fill: var(--accent); }
     #dial-knob { filter: drop-shadow(3px 3px 4px rgba(120,128,145,.55)) drop-shadow(-2px -2px 3px #ffffff); }
     #dial .num   { fill: var(--text); font-size: 96px; font-weight: 800; letter-spacing: -0.06em; font-family: var(--font); }
+    #dial .num.small { font-size: 66px; letter-spacing: -0.04em; }
+    /* Своя тренировка: время считается само, круг не крутится */
+    #dial.locked { cursor: default; }
+    #dial.locked #dial-knob { display: none; }
     #dial .unit  { fill: var(--hint); font-size: 24px; font-weight: 700; font-family: var(--font); }
 
     #summary { text-align: center; font-size: 15px; font-weight: 600; }
@@ -159,8 +176,8 @@
     .pick-card .meta  { font-size: 13px; color: var(--hint); margin-top: 6px; line-height: 1.4; }
     .sport-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .sport-tile { min-height: 132px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
-    .sport-tile .dot { width: 14px; height: 14px; border-radius: 50%; box-shadow: 0 0 0 4px var(--bg), 2px 2px 6px var(--dark); }
     .sport-tile:first-child { grid-column: span 2; min-height: 110px; }
+    .sport-tile:last-child:nth-child(even) { grid-column: span 2; min-height: 110px; }
 
     /* ---------- Своя тренировка ---------- */
     .chips { display: flex; gap: 10px; overflow-x: auto; padding: 6px 6px 16px; margin: 0 -6px; scrollbar-width: none; }
@@ -211,7 +228,7 @@
     #workout.ph-rest { --phase: var(--rest); }
     #workout.ph-prep { --phase: var(--prep); }
     .wo-top { position: relative; z-index: 2;
-              padding: calc(env(safe-area-inset-top, 0px) + 14px) 20px 0; }
+              padding: calc(var(--top) + 14px) 20px 0; }
     /* Полоска прогресса — вдавленный желобок */
     .progress { display: flex; gap: 4px; height: 8px; padding: 2px; border-radius: 6px; box-shadow: var(--pressed); }
     .progress .seg { flex: 1; border-radius: 3px; overflow: hidden; }
@@ -237,7 +254,7 @@
     #ex-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
     .wo-bottom { position: relative; z-index: 2;
-                 padding: 0 20px calc(env(safe-area-inset-bottom, 0px) + 24px); }
+                 padding: 0 20px calc(var(--bottom) + 24px); }
     .phase-pill { display: inline-flex; align-items: center; gap: 8px;
                   font-size: 14px; font-weight: 700; padding: 7px 14px; border-radius: 99px;
                   background: var(--bg); box-shadow: var(--raised-sm); }
@@ -246,8 +263,15 @@
                line-height: 1.02; margin-top: 12px; }
     #wo-sub { font-size: clamp(17px, 4.5vw, 22px); font-weight: 700; margin-top: 6px; color: var(--phase); min-height: 1.2em; }
 
-    /* Бегущая строка с подсказками */
-    .ticker { margin-top: 14px; overflow: hidden; white-space: nowrap; }
+    /* Бегущая строка с подсказками. Это кнопка: нажатие — весь текст целиком */
+    .ticker {
+      display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 14px;
+      padding: 10px 12px; border-radius: 16px; text-align: left;
+      background: var(--bg); box-shadow: var(--raised-sm); transition: box-shadow .15s ease;
+    }
+    .ticker:active { box-shadow: var(--pressed); }
+    .ticker .tk-ico { flex: 0 0 24px; height: 24px; color: var(--accent); }
+    .ticker .tk-view { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
     .ticker-track { display: inline-flex; animation: marquee 30s linear infinite; }
     .ticker-track span { padding-right: 48px; font-size: 16px; font-weight: 600; color: #3f4552; }
     @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -274,6 +298,44 @@
     .text-btn:active { box-shadow: var(--pressed); }
     .pause-hint { font-size: 14px; color: var(--hint); }
 
+    /* ---------- Шторка «Все рекомендации» (по нажатию на бегущую строку) ----------
+       Таймер при этом идёт дальше: читать можно прямо во время упражнения. */
+    #tips-sheet {
+      position: absolute; inset: 0; z-index: 6; cursor: default;
+      display: flex; align-items: flex-end; justify-content: center;
+      background: rgba(31,36,48,.30);
+    }
+    .sheet-card {
+      width: 100%; max-width: 640px; max-height: 82%; overflow-y: auto;
+      background: var(--bg); border-radius: 28px 28px 0 0;
+      padding: 10px 22px calc(var(--bottom) + 20px);
+      box-shadow: 0 -10px 30px rgba(31,36,48,.18);
+    }
+    .sheet-grip { width: 40px; height: 5px; border-radius: 3px; background: #c3c8d2; margin: 0 auto 14px; }
+    .sheet-title { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; margin-top: 4px; }
+    .sheet-sub { font-size: 15px; font-weight: 700; color: var(--accent); margin-top: 4px; }
+    .sheet-desc { font-size: 17px; line-height: 1.5; margin: 14px 0 0; }
+    .sheet-list { margin: 14px 0 20px; padding: 14px 16px 14px 34px; border-radius: 18px; box-shadow: var(--pressed);
+                  font-size: 16px; line-height: 1.5; }
+    .sheet-list li + li { margin-top: 8px; }
+
+    /* ---------- Медитация: только мягкий диск с обратным отсчётом ---------- */
+    #med-disc { display: none; }
+    #workout.med #figure, #workout.med #ex-video { display: none !important; }
+    #workout.med #clock, #workout.med #counter, #workout.med .progress { visibility: hidden; }
+    #workout.med #med-disc {
+      display: flex; align-items: center; justify-content: center;
+      width: min(72vw, 320px); aspect-ratio: 1; border-radius: 50%;
+      background: var(--bg); box-shadow: 14px 14px 28px var(--dark), -14px -14px 28px var(--light);
+    }
+    #med-disc .well {
+      width: 74%; aspect-ratio: 1; border-radius: 50%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      box-shadow: inset 8px 8px 16px var(--dark), inset -8px -8px 16px var(--light);
+    }
+    #med-clock { font-size: clamp(52px, 16vw, 84px); font-weight: 800; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+    #med-label { font-size: 15px; font-weight: 700; color: var(--hint); margin-top: 4px; }
+
     /* ---------- Экран «Готово» ---------- */
     #done { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
     #done .stats { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin: 8px 0 18px; }
@@ -288,7 +350,7 @@
       .dial-disc { width: min(40vw, 400px); }
       .list { grid-template-columns: 1fr 1fr; }
       .sport-grid { grid-template-columns: repeat(3, 1fr); }
-      .sport-tile:first-child { grid-column: auto; }
+      .sport-tile:first-child, .sport-tile:last-child:nth-child(even) { grid-column: auto; }
       #workout .stage { position: absolute; inset: 0; }
       #figure { max-height: 70vh; }
       .wo-bottom { margin-top: auto; max-width: 60%; }
@@ -304,6 +366,13 @@
         <div class="eyebrow" id="greet">Доброе утро</div>
         <div class="h1" id="tagline">Пора на зарядку</div>
       </div>
+      <!-- Развернуть на весь экран (видна, только если Telegram это умеет) -->
+      <button class="icon-btn glass hidden" id="fs-btn" aria-label="Развернуть на весь экран">
+        <svg id="fs-ico-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        <svg id="fs-ico-close" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+      </button>
     </div>
 
     <div class="home-body">
@@ -314,7 +383,7 @@
           <circle class="arc" id="dial-arc" cx="150" cy="150" r="128" fill="none" stroke-width="8"
                   stroke-linecap="round" transform="rotate(-90 150 150)"/>
           <text class="num"  id="dial-num" x="150" y="168" text-anchor="middle">10</text>
-          <text class="unit" x="150" y="206" text-anchor="middle">мин.</text>
+          <text class="unit" id="dial-unit" x="150" y="206" text-anchor="middle">мин.</text>
           <g id="dial-knob">
             <circle class="knob-ring" r="17"/>
             <circle class="knob-dot" r="7"/>
@@ -333,7 +402,7 @@
       </button>
 
       <!-- 2. Направление (программа) + шестерёнка -->
-      <div class="dir-line">
+      <div class="dir-line" id="dir-line">
         <button class="row-card glass" id="open-directions">
           <div class="grow">
             <div class="label">Направление</div>
@@ -359,7 +428,7 @@
 
       <button class="big-btn" id="start-btn">Начать занятие</button>
 
-      <details class="preview glass">
+      <details class="preview glass" id="preview">
         <summary>Что войдёт в занятие</summary>
         <ol id="preview-list"></ol>
       </details>
@@ -404,8 +473,10 @@
       </div>
     </div>
 
-    <!-- Сцена: видео (если есть ссылка) или анимированная фигурка -->
+    <!-- Сцена: видео (если есть ссылка) или анимированная фигурка.
+         Для медитации — мягкий диск с обратным отсчётом. -->
     <div class="stage">
+      <div id="med-disc"><div class="well"><div id="med-clock">10:00</div><div id="med-label">осталось</div></div></div>
       <video id="ex-video" class="hidden" muted loop playsinline webkit-playsinline></video>
       <svg id="figure" viewBox="-60 20 320 270" aria-hidden="true">
         <rect class="water hidden" id="fig-water" x="-60" y="170" width="320" height="120"/>
@@ -436,7 +507,25 @@
       <div class="phase-pill" id="phase">Работа</div>
       <div id="ex-name"></div>
       <div id="wo-sub"></div>
-      <div class="ticker"><div class="ticker-track" id="ticker-track"><span></span><span></span></div></div>
+      <!-- Бегущая строка. Нажатие — открыть все рекомендации целиком -->
+      <button class="ticker" id="ticker" aria-label="Показать все рекомендации по упражнению">
+        <svg class="tk-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/></svg>
+        <span class="tk-view"><span class="ticker-track" id="ticker-track"><span></span><span></span></span></span>
+      </button>
+    </div>
+
+    <!-- Все рекомендации по текущему упражнению. Таймер не останавливается. -->
+    <div id="tips-sheet" class="hidden" role="dialog" aria-modal="true" aria-labelledby="tips-title">
+      <div class="sheet-card" id="tips-card">
+        <div class="sheet-grip"></div>
+        <div class="eyebrow" id="tips-eyebrow">Как выполнять</div>
+        <div class="sheet-title" id="tips-title"></div>
+        <div class="sheet-sub" id="tips-sub"></div>
+        <p class="sheet-desc" id="tips-desc"></p>
+        <ul class="sheet-list" id="tips-list"></ul>
+        <button class="big-btn" id="tips-close">Понятно</button>
+      </div>
     </div>
 
     <!-- Показывается только на паузе -->
@@ -498,6 +587,53 @@
       if (tg.isVersionAtLeast && tg.isVersionAtLeast('7.7') && tg.disableVerticalSwipes) tg.disableVerticalSwipes();
     }
 
+    // =====================================================================
+    //  Полноэкранный режим (кнопка справа вверху на главном экране)
+    //  В Telegram (версия 8.0 и новее) — tg.requestFullscreen / exitFullscreen.
+    //  В обычном браузере (например, на планшете) — стандартный Fullscreen API.
+    //  Отступы от выреза камеры и кнопок Telegram задаются в CSS (--top).
+    // =====================================================================
+    const tgFullscreen = inTelegram && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0') && typeof tg.requestFullscreen === 'function';
+    const webFullscreen = !inTelegram && !!document.fullscreenEnabled;
+
+    function isFullscreen() {
+      return tgFullscreen ? !!tg.isFullscreen : !!document.fullscreenElement;
+    }
+    function renderFullscreenBtn() {
+      const on = isFullscreen();
+      $('fs-btn').classList.toggle('on', on);
+      $('fs-ico-open').classList.toggle('hidden', on);
+      $('fs-ico-close').classList.toggle('hidden', !on);
+      $('fs-btn').setAttribute('aria-label', on ? 'Выйти из полноэкранного режима' : 'Развернуть на весь экран');
+    }
+    function toggleFullscreen() {
+      haptic('light');
+      if (tgFullscreen) {
+        if (tg.isFullscreen) tg.exitFullscreen(); else tg.requestFullscreen();
+      } else if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      } else {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    }
+    if (tgFullscreen || webFullscreen) {
+      $('fs-btn').classList.remove('hidden');
+      $('fs-btn').addEventListener('click', toggleFullscreen);
+      if (tgFullscreen) {
+        tg.onEvent('fullscreenChanged', renderFullscreenBtn);
+        tg.onEvent('fullscreenFailed', e => {
+          renderFullscreenBtn();
+          if (e && e.error === 'ALREADY_FULLSCREEN') return;
+          tg.showAlert(e && e.error === 'UNSUPPORTED'
+            ? 'На этом устройстве Telegram не поддерживает полноэкранный режим.'
+            : 'Не получилось включить полноэкранный режим.');
+        });
+      } else {
+        document.addEventListener('fullscreenchange', renderFullscreenBtn);
+      }
+      renderFullscreenBtn();
+    }
+
     // Вибрация через Telegram (в браузере просто ничего не делает)
     function haptic(kind) {
       if (!inTelegram || !tg.HapticFeedback) return;
@@ -524,6 +660,24 @@
       osc.connect(gain).connect(audio.destination);
       osc.start();
       osc.stop(audio.currentTime + ms / 1000);
+    }
+
+    // Мягкий «колокол» для медитации: низкий тон с долгим затуханием
+    function bell() {
+      if (!audio) return;
+      const t = audio.currentTime;
+      [[396, 0.22], [792, 0.07], [1188, 0.03]].forEach(([freq, vol]) => {
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 3.5);
+        osc.connect(gain).connect(audio.destination);
+        osc.start(t);
+        osc.stop(t + 3.6);
+      });
     }
 
     // Не даём экрану погаснуть (Wake Lock)
@@ -583,7 +737,8 @@
       }
     }
     function onBack() {
-      if (current === 'workout') askExit();
+      if (current === 'workout' && tipsOpen()) closeTips();
+      else if (current === 'workout') askExit();
       else if (current === 'custom') closeCustom();
       else if (current !== 'home') show('home');
     }
@@ -599,14 +754,23 @@
       customBySport: {},  // своя тренировка: список id упражнений по видам
       workout: null,      // собранная тренировка
     };
-    const sport   = () => getSport(state.sport);
-    const dirId   = () => state.dirBySport[state.sport] || sport().directions[0].id;
-    const minutes = () => state.minBySport[state.sport] || sport().def;
-    const customIds = () => state.customBySport[state.sport] || [];
+    const sport    = () => getSport(state.sport);
+    const isSimple = () => !!sport().simple;   // медитация: просто обратный таймер
+    const dirId    = () => isSimple() ? null : (state.dirBySport[state.sport] || sport().directions[0].id);
+    // Своя тренировка: только упражнения, которые есть в библиотеке
+    const customIds = () => (state.customBySport[state.sport] || []).filter(id => getExercise(id));
+    const isCustom = () => !isSimple() && dirId() === CUSTOM_ID && customIds().length > 0;
+    // Границы круга зависят от программы: сколько она может заполнить без повторов
+    const limits   = () => planLimits(state.sport, isCustom() ? CUSTOM_ID : dirId());
+    function minutes() {
+      const lim = limits();
+      const m = state.minBySport[state.sport] || sport().def;
+      return Math.min(lim.max, Math.max(lim.min, m));
+    }
 
     // Подписи на главном экране для каждого вида
     const TAGLINES = { morning: 'Пора на зарядку', gym: 'Сегодня — в зал', yoga: 'Время для йоги',
-                       pool: 'Ныряем в бассейн', tt: 'К столу!' };
+                       pool: 'Ныряем в бассейн', tt: 'К столу!', meditation: 'Время для тишины' };
 
     function greeting() {
       const h = new Date().getHours();
@@ -624,28 +788,43 @@
     dialArc.setAttribute('stroke-dasharray', C);
 
     function drawDial() {
-      const frac = minutes() / sport().max;              // доля круга 0..1
+      let frac, text, unit = 'мин.';
+      const custom = isCustom();
+      if (custom) {
+        // Своя тренировка: время = сумма выбранных упражнений, круг не крутится
+        const total = workoutDuration(state.workout);
+        frac = Math.min(1, total / (sport().max * 60));
+        if (total < 60) { text = String(total); unit = 'сек.'; }
+        else if (total % 60 === 0) text = String(total / 60);
+        else { text = formatClock(total); unit = 'мин : сек'; }
+      } else {
+        frac = minutes() / limits().max;                  // доля круга 0..1
+        text = String(minutes());
+      }
+      dial.classList.toggle('locked', custom);
       dialArc.setAttribute('stroke-dashoffset', C * (1 - frac));
       const angle = frac * 2 * Math.PI - Math.PI / 2;      // от верхней точки по часовой
       $('dial-knob').setAttribute('transform',
         'translate(' + (150 + R * Math.cos(angle)) + ' ' + (150 + R * Math.sin(angle)) + ')');
-      $('dial-num').textContent = minutes();
+      $('dial-num').textContent = text;
+      $('dial-num').classList.toggle('small', text.length > 2);
+      $('dial-unit').textContent = unit;
     }
 
     // Перевести точку касания в минуты (с шагом вида занятия)
     function minutesFromPointer(e) {
-      const s = sport();
+      const lim = limits();
       const box = dial.getBoundingClientRect();
       const x = e.clientX - (box.left + box.width / 2);
       const y = e.clientY - (box.top + box.height / 2);
       let angle = Math.atan2(y, x) + Math.PI / 2;          // 0 — сверху
       if (angle < 0) angle += 2 * Math.PI;
-      let m = Math.round(angle / (2 * Math.PI) * s.max / s.step) * s.step;
+      let m = Math.round(angle / (2 * Math.PI) * lim.max / lim.step) * lim.step;
       // Не даём «перескочить» через верх круга
-      const edge = s.max * 0.17;
-      if (minutes() >= s.max - edge && m <= edge) m = s.max;
-      if (minutes() <= s.min + edge && m >= s.max - edge) m = s.min;
-      return Math.min(s.max, Math.max(s.min, m));
+      const edge = lim.max * 0.17;
+      if (minutes() >= lim.max - edge && m <= edge) m = lim.max;
+      if (minutes() <= lim.min + edge && m >= lim.max - edge) m = lim.min;
+      return Math.min(lim.max, Math.max(lim.min, m));
     }
 
     function setMinutes(m) {
@@ -658,7 +837,10 @@
     }
 
     let dragging = false;
-    dial.addEventListener('pointerdown', e => { dragging = true; dial.setPointerCapture(e.pointerId); setMinutes(minutesFromPointer(e)); });
+    dial.addEventListener('pointerdown', e => {
+      if (isCustom()) return;   // своя тренировка: время считается само
+      dragging = true; dial.setPointerCapture(e.pointerId); setMinutes(minutesFromPointer(e));
+    });
     dial.addEventListener('pointermove', e => { if (dragging) setMinutes(minutesFromPointer(e)); });
     dial.addEventListener('pointerup',     () => { dragging = false; });
     dial.addEventListener('pointercancel', () => { dragging = false; });
@@ -666,14 +848,12 @@
     // =====================================================================
     //  6. Главный экран: собрать тренировку и показать сводку
     // =====================================================================
-    function applyAccent() {
-      document.documentElement.style.setProperty('--accent', sport().accent);
-    }
-
     function updatePlan() {
       const s = sport();
-      const isCustom = dirId() === CUSTOM_ID && customIds().length > 0;
-      if (dirId() === CUSTOM_ID && !isCustom) state.dirBySport[state.sport] = s.directions[0].id;
+      const simple = isSimple();
+      // Своя тренировка без упражнений не бывает — возвращаемся к первой программе
+      if (!simple && dirId() === CUSTOM_ID && customIds().length === 0) state.dirBySport[state.sport] = s.directions[0].id;
+      const custom = isCustom();
 
       state.workout = buildWorkout(state.sport, dirId(), minutes(), customIds());
       const list = state.workout.exercises;
@@ -683,30 +863,45 @@
       $('tagline').textContent = TAGLINES[s.id] || s.name;
       $('sport-name').textContent = s.name;
 
-      // Направление: если включена своя тренировка — показываем приглушённо
-      $('dir-name').textContent = isCustom ? 'Своя тренировка' : getDirection(s.id, dirId()).short;
-      $('open-directions').classList.toggle('dim', isCustom);
+      // Медитация — просто таймер: без программ, своей тренировки и списка
+      $('dir-line').classList.toggle('hidden', simple);
+      $('open-custom').classList.toggle('hidden', simple);
+      $('preview').classList.toggle('hidden', simple);
 
-      // Своя тренировка
-      const n = customIds().length;
-      $('custom-name').innerHTML = '';
-      if (n === 0) $('custom-name').textContent = 'Выбрать упражнения';
-      else {
-        $('custom-name').textContent = n + ' ' + plural(n, 'упражнение', 'упражнения', 'упражнений');
-        if (isCustom) { const b = document.createElement('span'); b.className = 'badge-on'; b.textContent = 'вкл'; $('custom-name').append(b); }
+      if (!simple) {
+        // Направление: если включена своя тренировка — показываем приглушённо
+        $('dir-name').textContent = custom ? 'Своя тренировка' : getDirection(s.id, dirId()).short;
+        $('open-directions').classList.toggle('dim', custom);
+
+        // Своя тренировка
+        const n = customIds().length;
+        $('custom-name').innerHTML = '';
+        if (n === 0) $('custom-name').textContent = 'Выбрать упражнения';
+        else {
+          $('custom-name').textContent = n + ' ' + plural(n, 'упражнение', 'упражнения', 'упражнений');
+          if (custom) { const b = document.createElement('span'); b.className = 'badge-on'; b.textContent = 'вкл'; $('custom-name').append(b); }
+        }
       }
 
-      const blocks = countBlocks(list);
-      $('summary').textContent = blocks + ' ' + plural(blocks, 'упражнение', 'упражнения', 'упражнений') +
-        (s.id === 'gym' ? ' · ' + list.length + ' ' + plural(list.length, 'подход', 'подхода', 'подходов') : '') +
-        ' · ≈ ' + formatDuration(total);
-      $('start-btn').textContent = 'Начать · ' + Math.round(total / 60) + ' мин';
+      // Сводка под кругом
+      if (simple) {
+        $('summary').textContent = 'Обратный отсчёт · мягкий сигнал в начале и в конце';
+      } else {
+        const blocks = countBlocks(list);
+        let text = blocks + ' ' + plural(blocks, 'упражнение', 'упражнения', 'упражнений') +
+          (s.sets ? ' · ' + list.length + ' ' + plural(list.length, 'подход', 'подхода', 'подходов') : '') +
+          ' · ≈ ' + formatDuration(total);
+        if (custom) text += ' · время = сумма упражнений';
+        else if (minutes() === limits().max && limits().max < s.max) text += ' · максимум без повторов';
+        $('summary').textContent = text;
+      }
+      $('start-btn').textContent = 'Начать · ' + (total < 60 ? total + ' с' : Math.round(total / 60) + ' мин');
       $('start-btn').disabled = list.length === 0;
 
       // Список «Что войдёт в занятие»: подходы одного упражнения — одной строкой
       const ol = $('preview-list');
       ol.innerHTML = '';
-      list.forEach((item, i) => {
+      list.forEach(item => {
         if (item.set && item.set > 1) return; // второй и далее подходы не дублируем
         const li = document.createElement('li');
         li.textContent = item.name + ' ';
@@ -718,7 +913,6 @@
         ol.append(li);
       });
 
-      applyAccent();
       drawDial();
     }
 
@@ -734,12 +928,11 @@
       SPORTS.forEach(s => {
         const card = document.createElement('button');
         card.className = 'pick-card glass sport-tile' + (s.id === state.sport ? ' selected' : '');
-        card.style.setProperty('--accent', s.accent);
+        const what = s.simple ? 'Таймер'
+          : s.directions.length + ' ' + plural(s.directions.length, 'программа', 'программы', 'программ');
         card.innerHTML =
-          '<div class="dot" style="background:' + s.accent + '"></div>' +
-          '<div><div class="title">' + s.name + (s.id === state.sport ? '<span class="tick">✓</span>' : '') + '</div>' +
-          '<div class="meta">' + s.directions.length + ' ' + plural(s.directions.length, 'программа', 'программы', 'программ') +
-          ' · ' + s.min + '–' + s.max + ' мин</div></div>';
+          '<div class="title">' + s.name + (s.id === state.sport ? '<span class="tick">✓</span>' : '') + '</div>' +
+          '<div class="meta">' + what + ' · ' + s.min + '–' + s.max + ' мин</div>';
         card.addEventListener('click', () => {
           state.sport = s.id;
           haptic('select');
@@ -774,12 +967,19 @@
         about.className = 'about';
         about.textContent = dir.description + (dir.sets ? ' · ' + dir.sets + ' подхода' : '');
 
-        const ids = [...new Set([...dir.warmup, ...dir.main, ...dir.cool])];
+        // Группы мышц и сколько программа может длиться без повторов
+        const lim = planLimits(s.id, dir.id);
+        const groups = document.createElement('div');
+        groups.className = 'meta';
+        groups.textContent = directionGroups(dir).join(' · ') + ' — ' + dir.main.length + ' ' +
+          plural(dir.main.length, 'упражнение', 'упражнения', 'упражнений') + ', ' + lim.min + '–' + lim.max + ' мин';
+
+        const ids = [...dir.warmup, ...dir.main, ...dir.cool];
         const meta = document.createElement('div');
         meta.className = 'meta';
         meta.textContent = ids.map(id => getExercise(id).name).join(' · ');
 
-        card.append(title, about, meta);
+        card.append(title, about, groups, meta);
         card.addEventListener('click', () => {
           state.dirBySport[state.sport] = dir.id;
           haptic('select');
@@ -819,7 +1019,8 @@
       });
 
       // Группы: текущий вид первым, потом остальные (если «Все»)
-      const groups = customFilter === 'mine' ? [sport()] : [sport(), ...SPORTS.filter(s => s.id !== state.sport)];
+      const groups = customFilter === 'mine' ? [sport()]
+        : [sport(), ...SPORTS.filter(s => s.id !== state.sport && !s.simple)];
       const box = $('custom-list');
       box.innerHTML = '';
       groups.forEach(s => {
@@ -1073,6 +1274,8 @@
       paused = false;
       doneSeconds = 0;
       buildProgress();
+      closeTips();
+      $('workout').classList.toggle('med', isSimple());   // медитация — свой вид экрана
       show('workout');
       renderPause();
       keepScreenOn();
@@ -1089,7 +1292,7 @@
       lastWhole = Math.ceil(remaining);
       renderStep();
       if (paused) return;
-      if (step.kind === 'work') { beep(1046, 250); haptic('heavy'); }
+      if (step.kind === 'work') { if (isSimple()) bell(); else beep(1046, 250); haptic('heavy'); }
       else if (step.kind === 'rest') { beep(660, 200); haptic('medium'); }
     }
 
@@ -1105,7 +1308,8 @@
       const whole = Math.ceil(remaining);
       if (whole !== lastWhole) {
         lastWhole = whole;
-        if (whole >= 1 && whole <= 3) { beep(880, 90); haptic('light'); } // сигналы 3-2-1
+        // Сигналы 3-2-1 (в медитации не пищим — только колокол в начале и в конце)
+        if (whole >= 1 && whole <= 3 && !isSimple()) { beep(880, 90); haptic('light'); }
       }
       if (remaining <= 0) {
         if (stepIndex < steps.length - 1) goToStep(stepIndex + 1);
@@ -1123,16 +1327,16 @@
       wo.classList.remove('ph-work', 'ph-rest', 'ph-prep');
       wo.classList.add('ph-' + step.kind);
 
-      $('phase').textContent = step.kind === 'work' ? 'Работа' : step.kind === 'rest' ? 'Отдых · далее' : 'Приготовьтесь';
+      const med = isSimple();
+      $('phase').textContent = step.kind === 'work' ? (med ? 'Медитация' : 'Работа')
+        : step.kind === 'rest' ? 'Отдых · далее' : 'Приготовьтесь';
+      $('med-label').textContent = step.kind === 'work' ? 'осталось' : 'приготовьтесь';
       $('ex-name').textContent = ex.name;
       $('pause-ex').textContent = (step.kind === 'work' ? '' : 'Далее: ') + ex.name;
       $('counter').textContent = (step.index + 1) + ' / ' + state.workout.exercises.length;
 
       // Подпись: подход и повторы
-      const parts = [];
-      if (ex.sets) parts.push('Подход ' + ex.set + ' из ' + ex.sets);
-      if (ex.type === 'reps') parts.push(ex.reps + ' раз');
-      $('wo-sub').textContent = parts.join(' · ');
+      $('wo-sub').textContent = subLine(ex);
 
       // Бегущая строка: как выполнять + дыхание + ощущения
       let text;
@@ -1140,6 +1344,7 @@
       else if (step.kind === 'rest') text = ['Отдых: дышите спокойно — вдох носом, выдох ртом', 'Пейте воду маленькими глотками', 'Далее: ' + ex.description].join('   •   ');
       else text = ['Займите исходное положение', ex.description].join('   •   ');
       setTicker(text);
+      if (tipsOpen()) fillTips();   // шторка открыта — показываем текст нового упражнения
 
       // Видео, если есть ссылка; иначе — анимация фигурки
       const hasVideo = !!ex.video_url;
@@ -1168,10 +1373,54 @@
       track.style.animationDuration = Math.max(12, track.children[0].offsetWidth / 45) + 's';
     }
 
+    // «Подход 1 из 3 · 10 раз»
+    function subLine(ex) {
+      const parts = [];
+      if (ex.sets) parts.push('Подход ' + ex.set + ' из ' + ex.sets);
+      if (ex.type === 'reps') parts.push(ex.reps + ' раз');
+      return parts.join(' · ');
+    }
+
     function renderTime() {
       $('clock').textContent = formatClock(remaining);
+      $('med-clock').textContent = formatClock(remaining);
       renderProgress();
     }
+
+    // --- Шторка «Все рекомендации»: нажатие на бегущую строку ---
+    // Таймер не останавливается: можно читать во время упражнения.
+    function tipsOpen() { return !$('tips-sheet').classList.contains('hidden'); }
+    function fillTips() {
+      const step = steps[stepIndex];
+      if (!step) return;
+      const ex = step.ex;
+      let eyebrow = 'Как выполнять', tips = ex.tips;
+      if (step.kind === 'rest') {
+        eyebrow = 'Отдых · далее';
+        tips = ['Дышите спокойно — вдох носом, выдох ртом', 'Пейте воду маленькими глотками', ...ex.tips];
+      } else if (step.kind === 'prep') {
+        eyebrow = 'Приготовьтесь · далее';
+      }
+      $('tips-eyebrow').textContent = eyebrow;
+      $('tips-title').textContent = ex.name;
+      $('tips-sub').textContent = subLine(ex);
+      $('tips-desc').textContent = ex.description;
+      const ul = $('tips-list');
+      ul.innerHTML = '';
+      tips.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.append(li); });
+      ul.classList.toggle('hidden', tips.length === 0);
+    }
+    function openTips(e) {
+      e.stopPropagation();          // не ставим паузу
+      fillTips();
+      $('tips-sheet').classList.remove('hidden');
+      haptic('light');
+    }
+    function closeTips() { $('tips-sheet').classList.add('hidden'); }
+    $('ticker').addEventListener('click', openTips);
+    // Касание по затемнению — закрыть; касание по самой шторке — ничего (и без паузы)
+    $('tips-sheet').addEventListener('click', e => { e.stopPropagation(); if (e.target === $('tips-sheet')) closeTips(); });
+    $('tips-close').addEventListener('click', e => { e.stopPropagation(); closeTips(); });
 
     // --- Пауза / продолжить: касание по экрану ---
     function renderPause() {
@@ -1233,6 +1482,7 @@
 
     function stopWorkout() {
       clearInterval(timerId);
+      closeTips();
       releaseScreen();
       show('home');
     }
@@ -1240,14 +1490,13 @@
     function finishWorkout() {
       clearInterval(timerId);
       releaseScreen();
-      beep(1318, 400);
+      closeTips();
+      if (isSimple()) bell(); else beep(1318, 400);
       haptic('success');
       const n = countBlocks(state.workout.exercises);
-      $('done-sub').textContent = sport().name + ' · ' + state.workout.name;
-      const stats = [
-        [formatClock(doneSeconds), 'время'],
-        [String(n), plural(n, 'упражнение', 'упражнения', 'упражнений')],
-      ];
+      $('done-sub').textContent = isSimple() ? sport().name : sport().name + ' · ' + state.workout.name;
+      const stats = [[formatClock(doneSeconds), 'время']];
+      if (!isSimple()) stats.push([String(n), plural(n, 'упражнение', 'упражнения', 'упражнений')]);
       $('done-stats').innerHTML = '';
       stats.forEach(([value, label]) => {
         const d = document.createElement('div');
