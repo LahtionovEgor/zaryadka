@@ -105,18 +105,34 @@
     /* Заголовки экранов */
     .eyebrow { font-size: 15px; color: var(--hint); font-weight: 600; }
     .h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; margin: 2px 0 0; }
-    .screen-head { margin: 4px 2px 20px; }
+    /* Шапка экрана: [назад] заголовок [на весь экран] */
+    .screen-head { display: flex; align-items: center; gap: 12px; margin: 4px 2px 20px; }
+    .head-text { flex: 1; min-width: 0; }
 
     /* ---------- Главный экран ---------- */
     .home-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 6px 2px 4px; }
-    /* Круглая кнопка-иконка (полный экран) */
+    .home-top > div:first-child { min-width: 0; }
+    .home-actions { display: flex; gap: 12px; flex: 0 0 auto; }
+    /* Круглая кнопка-иконка (полный экран, дневник, назад) */
     .icon-btn {
       flex: 0 0 48px; width: 48px; height: 48px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center; color: var(--text);
       transition: box-shadow .15s ease;
     }
     .icon-btn svg { width: 22px; height: 22px; }
+    .icon-btn span { display: flex; }
     .icon-btn:active, .icon-btn.on { box-shadow: var(--pressed); }
+    /* Кнопка «на весь экран» есть на каждом экране (класс fs-btn).
+       Пока режим включён, у body есть класс fs-on: кнопка вдавлена,
+       иконка — «свернуть». Нет класса fs-ok — устройство не умеет, кнопок не видно. */
+    .fs-btn .ico-close { display: none; }
+    body.fs-on .fs-btn { box-shadow: var(--pressed); }
+    body.fs-on .fs-btn .ico-open { display: none; }
+    body.fs-on .fs-btn .ico-close { display: flex; }
+    body:not(.fs-ok) .fs-btn { display: none; }
+    /* «Назад» на странице нужна только в обычном браузере: в Telegram есть своя */
+    .icon-btn.back-btn { display: none; }
+    body.in-browser .icon-btn.back-btn { display: flex; }
     .home-body { display: flex; flex-direction: column; gap: 16px; }
     .dir-line { display: flex; gap: 16px; align-items: stretch; }
     .dir-line .row-card { flex: 1; min-width: 0; }
@@ -127,6 +143,16 @@
     }
     .gear-btn svg { width: 28px; height: 28px; }
     .gear-btn:active { box-shadow: var(--pressed); }
+    /* Невысокий экран (телефон в Telegram без полного экрана): всё чуть плотнее,
+       чтобы кнопка «Начать» была видна сразу. Размер круга подгоняет код (fitHome). */
+    @media (max-height: 780px) and (orientation: portrait) {
+      .home-top { margin-top: 0; }
+      .home-body { gap: 12px; }
+      .dial-wrap { padding: 6px 0 2px; }
+      #home .row-card { min-height: 62px; padding: 10px 18px; }
+      #home .gear-btn { flex-basis: 62px; min-height: 62px; }
+      #home .big-btn { min-height: 58px; }
+    }
 
     /* Круглый регулятор минут: выпуклый диск, в центре — вдавленная «лунка» */
     .dial-wrap { display: flex; justify-content: center; padding: 14px 0 10px; }
@@ -185,6 +211,8 @@
     .chip { flex: 0 0 auto; padding: 9px 16px; border-radius: 99px; font-size: 15px; font-weight: 700;
             box-shadow: var(--raised-sm) !important; }
     .chip.on { box-shadow: var(--pressed) !important; color: var(--accent); }
+    /* Чипсы в несколько строк (форма дневника) */
+    .chips.wrap { flex-wrap: wrap; overflow: visible; padding: 4px 2px 6px; margin: 0; }
     .group-title { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--hint);
                    margin: 18px 4px 10px; font-weight: 700; }
     .ex-row {
@@ -206,7 +234,7 @@
     .ex-row .ds { font-size: 13px; color: var(--hint); margin-top: 2px; }
     .sticky-bar {
       position: sticky; bottom: 0; z-index: 3;
-      display: flex; gap: 14px; padding: 14px 0 calc(env(safe-area-inset-bottom, 0px) + 8px);
+      display: flex; gap: 14px; padding: 14px 0 calc(var(--bottom) + 8px);
       margin-top: 8px; background: var(--bg);
     }
     .sticky-bar .ghost { flex: 0 0 auto; padding: 0 20px; border-radius: 26px; font-weight: 700; min-height: 64px; }
@@ -227,7 +255,9 @@
     }
     #workout.ph-rest { --phase: var(--rest); }
     #workout.ph-prep { --phase: var(--prep); }
-    .wo-top { position: relative; z-index: 2;
+    /* Верх экрана — над слоем паузы (5 больше 4): кнопка «на весь экран»
+       нажимается и на паузе, а часы остаются видны */
+    .wo-top { position: relative; z-index: 5;
               padding: calc(var(--top) + 14px) 20px 0; }
     /* Полоска прогресса — вдавленный желобок */
     .progress { display: flex; gap: 4px; height: 8px; padding: 2px; border-radius: 6px; box-shadow: var(--pressed); }
@@ -236,7 +266,8 @@
     .wo-row { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 18px; }
     #clock { font-size: clamp(56px, 17vw, 96px); font-weight: 800; letter-spacing: -0.05em; line-height: .9;
              font-variant-numeric: tabular-nums; }
-    #counter { font-size: 15px; font-weight: 700; color: var(--hint); margin-top: 6px;
+    .wo-right { display: flex; align-items: center; gap: 12px; }
+    #counter { font-size: 15px; font-weight: 700; color: var(--hint);
                padding: 6px 12px; border-radius: 99px; box-shadow: var(--raised-sm); }
 
     /* Сцена с фигуркой */
@@ -276,6 +307,25 @@
     .ticker-track span { padding-right: 48px; font-size: 16px; font-weight: 600; color: #3f4552; }
     @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
     #workout.paused .ticker-track { animation-play-state: paused; }
+
+    /* ---------- Зал: вес и повторы подхода — прямо на экране тренировки ----------
+       Нажатия по этой панели не ставят паузу. */
+    .set-panel { margin-top: 12px; padding: 10px 14px 12px; border-radius: 18px; background: var(--bg);
+                 box-shadow: var(--pressed); cursor: default; }
+    .sp-title { font-size: 14px; font-weight: 700; color: var(--hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sp-row { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 8px; }
+    .sp-label { font-size: 12px; font-weight: 700; color: var(--hint); margin: 0 0 4px 2px; text-transform: uppercase; letter-spacing: .05em; }
+    /* Кнопки −/+ вокруг числа (панель зала, длительность в дневнике) */
+    .stepper { display: flex; align-items: center; gap: 4px; }
+    .st-btn { flex: 0 0 38px; width: 38px; height: 38px; border-radius: 50%;
+              font-size: 22px; font-weight: 800; line-height: 1; color: var(--text);
+              background: var(--bg); box-shadow: var(--raised-sm); transition: box-shadow .15s ease; }
+    .st-btn:active { box-shadow: var(--pressed); }
+    .field.st-input { width: 54px; height: 38px; min-height: 0; padding: 0 2px; border-radius: 12px;
+                      text-align: center; font-size: 18px; font-weight: 800; }
+    .stepper.wide { gap: 10px; }
+    .stepper.wide .st-btn { flex-basis: 52px; width: 52px; height: 52px; font-size: 26px; }
+    .stepper.wide .field.st-input { width: 96px; height: 52px; font-size: 22px; }
 
     /* Пауза: «пульт» с выпуклыми кнопками */
     #pause-layer {
@@ -336,12 +386,84 @@
     #med-clock { font-size: clamp(52px, 16vw, 84px); font-weight: 800; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
     #med-label { font-size: 15px; font-weight: 700; color: var(--hint); margin-top: 4px; }
 
-    /* ---------- Экран «Готово» ---------- */
-    #done { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
-    #done .stats { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin: 8px 0 18px; }
+    /* ---------- Экран «Готово»: итоги и запись в дневник ---------- */
+    .done-wrap { max-width: 640px; margin: 0 auto; }
+    .done-top { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+    #done .stats { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin: 8px 0 4px; }
     #done .stat { border-radius: 20px; padding: 14px 18px; min-width: 110px; }
     #done .stat b { display: block; font-size: 24px; font-weight: 800; letter-spacing: -0.03em; }
     #done .stat span { font-size: 13px; color: var(--hint); }
+    .done-saved { font-size: 15px; font-weight: 700; color: var(--hint); min-height: 1.4em; }
+    .done-links { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+
+    /* ---------- Дневник: календарь месяца и занятия дня ---------- */
+    .diary-body { display: grid; gap: 22px; }
+    .cal { border-radius: 26px; padding: 12px 12px 16px; }
+    .cal-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .cal-nav .icon-btn { flex-basis: 44px; width: 44px; height: 44px; box-shadow: var(--raised-sm); }
+    .cal-nav .icon-btn:active { box-shadow: var(--pressed); }
+    .cal-sum { flex: 1; min-width: 0; text-align: center; font-size: 14px; font-weight: 700; color: var(--hint); }
+    .cal-week, .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+    .cal-week div { text-align: center; font-size: 12px; font-weight: 700; color: var(--hint); padding: 4px 0 6px; }
+    .cal-day { position: relative; aspect-ratio: 1; border-radius: 14px; font-size: 16px; font-weight: 700;
+               display: flex; align-items: center; justify-content: center; transition: box-shadow .15s ease; }
+    .cal-day:active { box-shadow: var(--pressed); }
+    .cal-day.today { color: var(--accent); font-weight: 800; }
+    .cal-day.sel { box-shadow: var(--pressed), inset 0 0 0 2px var(--accent); }
+    .cal-day.future { color: #9aa0ad; }
+    /* Точки под числом: сколько было занятий (не больше трёх) */
+    .cal-day .dots { position: absolute; left: 0; right: 0; bottom: 12%; display: flex; justify-content: center; gap: 3px; }
+    .cal-day .dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+    .day-box { display: grid; gap: 16px; align-content: start; }
+    .day-title { font-size: 21px; font-weight: 800; letter-spacing: -0.03em; margin: 2px 2px 0; }
+    .empty { font-size: 15px; padding: 2px 4px; }
+    .entry-card .title .chev { margin-left: auto; color: var(--hint); font-size: 24px; line-height: 1; }
+    .entry-card .note { font-style: italic; }
+    /* Длинное слово или ссылка в заметке не растягивают экран — переносятся */
+    .diary-body > *, .day-box > *, .entry-card { min-width: 0; }
+    .entry-card .about, .entry-card .meta { overflow-wrap: anywhere; }
+
+    /* ---------- Поля ввода: «вдавлены» в пластик ---------- */
+    input, textarea, select { user-select: text; -webkit-user-select: text; }
+    .field {
+      display: block; width: 100%; min-height: 52px; margin: 0;
+      border: 0; border-radius: 16px; padding: 12px 16px; outline: none;
+      font: inherit; font-size: 17px; font-weight: 600; letter-spacing: inherit; color: var(--text);
+      background-color: var(--bg); box-shadow: var(--pressed);
+      -webkit-appearance: none; appearance: none;
+    }
+    .field:focus { box-shadow: var(--pressed), inset 0 0 0 2px var(--accent); }
+    .field::placeholder { color: #8a909c; }
+    textarea.field { min-height: 96px; resize: vertical; line-height: 1.45; }
+    select.field {
+      padding-right: 44px; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b6170' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center; background-size: 20px;
+    }
+    input[type="date"].field, input[type="time"].field { min-width: 0; }
+    .field::-webkit-date-and-time-value { text-align: left; }
+    #entry { max-width: 760px; }
+    .form { display: grid; gap: 18px; }
+    .field-box { display: grid; gap: 8px; min-width: 0; }
+    .field-label { font-size: 14px; font-weight: 700; color: var(--hint); margin: 0 4px; }
+    .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+
+    /* ---------- Таблица «вес × повторы» (экран «Готово» и дневник) ---------- */
+    .sets-card { border-radius: 20px; padding: 14px 14px 16px; margin-bottom: 16px; }
+    .sets-head { display: flex; align-items: center; gap: 10px; }
+    .sets-head .nm { flex: 1; min-width: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+    .x-btn { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%; font-size: 22px; line-height: 1;
+             color: var(--hint); box-shadow: var(--raised-sm); }
+    .x-btn:active { box-shadow: var(--pressed); }
+    .set-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto minmax(0, 1fr) auto;
+               align-items: center; gap: 8px; margin-top: 10px; }
+    .set-no { font-size: 15px; font-weight: 800; color: var(--hint); text-align: center; }
+    .field.set-in { min-height: 44px; padding: 8px 6px; border-radius: 12px; text-align: center; font-size: 18px; font-weight: 800; }
+    .set-unit { font-size: 14px; font-weight: 700; color: var(--hint); }
+    .sets-actions { display: flex; gap: 12px; margin-top: 14px; }
+    .mini-btn { padding: 10px 16px; border-radius: 14px; font-size: 15px; font-weight: 700; box-shadow: var(--raised-sm); }
+    .mini-btn:active { box-shadow: var(--pressed); }
+    .mini-btn:disabled { opacity: .4; }
 
     /* ---------- Планшет в ландшафте: две колонки ---------- */
     @media (min-width: 700px) and (orientation: landscape) {
@@ -354,6 +476,9 @@
       #workout .stage { position: absolute; inset: 0; }
       #figure { max-height: 70vh; }
       .wo-bottom { margin-top: auto; max-width: 60%; }
+      /* Дневник: календарь слева, занятия дня справа */
+      .diary-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 24px 40px; }
+      .day-box .list { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -366,13 +491,16 @@
         <div class="eyebrow" id="greet">Доброе утро</div>
         <div class="h1" id="tagline">Пора на зарядку</div>
       </div>
-      <!-- Развернуть на весь экран (видна, только если Telegram это умеет) -->
-      <button class="icon-btn glass hidden" id="fs-btn" aria-label="Развернуть на весь экран">
-        <svg id="fs-ico-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
-        <svg id="fs-ico-close" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
-      </button>
+      <div class="home-actions">
+        <!-- Дневник тренировок: календарь и записи -->
+        <button class="icon-btn glass" id="open-diary" aria-label="Дневник тренировок">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+        </button>
+        <!-- На весь экран. Такая кнопка (класс fs-btn) есть на каждом экране;
+             иконку в неё вставляет код (раздел «Полноэкранный режим») -->
+        <button class="icon-btn glass fs-btn" aria-label="Развернуть на весь экран"></button>
+      </div>
     </div>
 
     <div class="home-body">
@@ -437,23 +565,32 @@
 
   <!-- =============== ВЫБОР ВИДА ЗАНЯТИЯ =============== -->
   <section id="sports" class="screen hidden">
-    <div class="screen-head"><div class="eyebrow">Чем занимаемся</div><div class="h1">Вид занятия</div></div>
+    <div class="screen-head">
+      <button class="icon-btn glass back-btn" aria-label="Назад"></button>
+      <div class="head-text"><div class="eyebrow">Чем занимаемся</div><div class="h1">Вид занятия</div></div>
+      <button class="icon-btn glass fs-btn" aria-label="Развернуть на весь экран"></button>
+    </div>
     <div class="sport-grid" id="sport-list"></div>
   </section>
 
   <!-- =============== ВЫБОР НАПРАВЛЕНИЯ =============== -->
   <section id="directions" class="screen hidden">
-    <div class="screen-head"><div class="eyebrow" id="dir-eyebrow">Зарядка</div><div class="h1">Направление</div></div>
+    <div class="screen-head">
+      <button class="icon-btn glass back-btn" aria-label="Назад"></button>
+      <div class="head-text"><div class="eyebrow" id="dir-eyebrow">Зарядка</div><div class="h1">Направление</div></div>
+      <button class="icon-btn glass fs-btn" aria-label="Развернуть на весь экран"></button>
+    </div>
     <div class="list" id="dir-list"></div>
   </section>
 
   <!-- =============== СВОЯ ТРЕНИРОВКА =============== -->
   <section id="custom" class="screen hidden">
     <div class="screen-head">
-      <div class="eyebrow" id="custom-eyebrow">Зарядка</div>
-      <div class="h1">Своя тренировка</div>
-      <p class="hint" style="font-size:15px;margin:8px 0 0">Отметьте упражнения — пойдут в том порядке, в каком выбрали. Длительность задаётся кругом на главном экране.</p>
+      <button class="icon-btn glass back-btn" aria-label="Назад"></button>
+      <div class="head-text"><div class="eyebrow" id="custom-eyebrow">Зарядка</div><div class="h1">Своя тренировка</div></div>
+      <button class="icon-btn glass fs-btn" aria-label="Развернуть на весь экран"></button>
     </div>
+    <p class="hint" style="font-size:15px;margin:-6px 2px 12px">Отметьте упражнения — пойдут в том порядке, в каком выбрали. Время занятия — сумма выбранных упражнений.</p>
     <div class="chips" id="custom-chips"></div>
     <div id="custom-list"></div>
     <div class="sticky-bar">
@@ -469,7 +606,11 @@
       <div class="progress" id="progress"></div>
       <div class="wo-row">
         <div id="clock">0:30</div>
-        <div id="counter">1 / 10</div>
+        <div class="wo-right">
+          <div id="counter">1 / 10</div>
+          <!-- На весь экран (нажатие не ставит паузу) -->
+          <button class="icon-btn glass fs-btn" aria-label="Развернуть на весь экран"></button>
+        </div>
       </div>
     </div>
 
@@ -507,6 +648,29 @@
       <div class="phase-pill" id="phase">Работа</div>
       <div id="ex-name"></div>
       <div id="wo-sub"></div>
+      <!-- Зал: вес и повторы. На работе — текущий подход, на отдыхе — только что сделанный.
+           Нажатия здесь не ставят паузу. -->
+      <div id="set-panel" class="set-panel hidden">
+        <div class="sp-title" id="sp-title"></div>
+        <div class="sp-row">
+          <div>
+            <div class="sp-label">Вес, кг</div>
+            <div class="stepper">
+              <button class="st-btn" data-field="w" data-step="-2.5" aria-label="Меньше вес">−</button>
+              <input class="field st-input" id="sp-w" inputmode="decimal" autocomplete="off" placeholder="—" aria-label="Вес, кг">
+              <button class="st-btn" data-field="w" data-step="2.5" aria-label="Больше вес">+</button>
+            </div>
+          </div>
+          <div>
+            <div class="sp-label">Повторы</div>
+            <div class="stepper">
+              <button class="st-btn" data-field="r" data-step="-1" aria-label="Меньше повторов">−</button>
+              <input class="field st-input" id="sp-r" inputmode="numeric" autocomplete="off" placeholder="—" aria-label="Повторы">
+              <button class="st-btn" data-field="r" data-step="1" aria-label="Больше повторов">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <!-- Бегущая строка. Нажатие — открыть все рекомендации целиком -->
       <button class="ticker" id="ticker" aria-label="Показать все рекомендации по упражнению">
         <svg class="tk-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -559,12 +723,94 @@
     </div>
   </section>
 
-  <!-- =============== ГОТОВО =============== -->
+  <!-- =============== ГОТОВО: итоги и запись в дневник =============== -->
   <section id="done" class="screen hidden">
-    <div class="h1">Готово!</div>
-    <div class="hint" id="done-sub" style="font-size:16px"></div>
-    <div class="stats" id="done-stats"></div>
-    <button class="big-btn" id="home-btn" style="max-width:420px">На главную</button>
+    <div class="screen-head">
+      <div class="head-text"></div>
+      <button class="icon-btn glass fs-btn" aria-label="Развернуть на весь экран"></button>
+    </div>
+    <div class="done-wrap">
+      <div class="done-top">
+        <div class="h1" id="done-title">Готово!</div>
+        <div class="hint" id="done-sub" style="font-size:16px"></div>
+        <div class="stats" id="done-stats"></div>
+        <div class="done-saved" id="done-saved"></div>
+      </div>
+      <!-- Зал: что сделали на каждом подходе — можно поправить -->
+      <div id="done-gym" class="hidden">
+        <div class="group-title">Веса и повторения · кг × раз</div>
+        <div id="done-sets"></div>
+      </div>
+      <div class="group-title">Заметка</div>
+      <textarea class="field" id="done-note" rows="3" maxlength="500" placeholder="Самочувствие, что получилось, что улучшить"></textarea>
+      <button class="big-btn" id="home-btn" style="margin-top:22px">На главную</button>
+      <div class="done-links">
+        <button class="text-btn" id="done-diary">Открыть дневник</button>
+        <button class="text-btn" id="done-delete">Удалить запись</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== ДНЕВНИК: календарь и занятия дня =============== -->
+  <section id="diary" class="screen hidden">
+    <div class="screen-head">
+      <button class="icon-btn glass back-btn" aria-label="Назад"></button>
+      <div class="head-text"><div class="eyebrow">Дневник тренировок</div><div class="h1" id="cal-title">Месяц</div></div>
+      <button class="icon-btn glass fs-btn" aria-label="Развернуть на весь экран"></button>
+    </div>
+    <div class="diary-body">
+      <div class="cal glass">
+        <div class="cal-nav">
+          <button class="icon-btn" id="cal-prev" aria-label="Предыдущий месяц">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <div class="cal-sum" id="cal-sum"></div>
+          <button class="icon-btn" id="cal-next" aria-label="Следующий месяц">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+        <div class="cal-week"><div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div></div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+      <div class="day-box">
+        <div class="day-title" id="day-title"></div>
+        <div class="list" id="day-list"></div>
+        <button class="big-btn" id="day-add">Добавить занятие</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== ЗАНЯТИЕ В ДНЕВНИКЕ: добавить вручную или изменить =============== -->
+  <section id="entry" class="screen hidden">
+    <div class="screen-head">
+      <button class="icon-btn glass back-btn" aria-label="Назад"></button>
+      <div class="head-text"><div class="eyebrow">Дневник тренировок</div><div class="h1" id="entry-title">Новое занятие</div></div>
+      <button class="icon-btn glass fs-btn" aria-label="Развернуть на весь экран"></button>
+    </div>
+    <div class="form">
+      <div class="two">
+        <label class="field-box"><span class="field-label">Дата</span><input type="date" class="field" id="f-date"></label>
+        <label class="field-box"><span class="field-label">Время</span><input type="time" class="field" id="f-time"></label>
+      </div>
+      <div class="field-box"><span class="field-label">Вид занятия</span><div class="chips wrap" id="f-sports"></div></div>
+      <label class="field-box" id="f-dir-box"><span class="field-label">Программа</span><select class="field" id="f-dir"></select></label>
+      <div class="field-box"><span class="field-label">Длительность, мин</span>
+        <div class="stepper wide">
+          <button class="st-btn" id="f-min-minus" aria-label="Меньше минут">−</button>
+          <input class="field st-input" id="f-min" inputmode="numeric" autocomplete="off" aria-label="Длительность в минутах">
+          <button class="st-btn" id="f-min-plus" aria-label="Больше минут">+</button>
+        </div>
+      </div>
+      <!-- Только для зала -->
+      <div id="f-gym-box" class="hidden">
+        <div class="field-label" style="margin-bottom:10px">Веса и повторения · кг × раз</div>
+        <div id="f-sets"></div>
+      </div>
+      <label class="field-box"><span class="field-label">Заметка</span>
+        <textarea class="field" id="f-note" rows="3" maxlength="500" placeholder="Самочувствие, что получилось, что улучшить"></textarea></label>
+    </div>
+    <div class="sticky-bar">
+      <button class="ghost glass hidden" id="f-delete">Удалить</button>
+      <button class="big-btn" id="f-save">Сохранить</button>
+    </div>
   </section>
 
   <script>
@@ -574,6 +820,8 @@
     const tg = window.Telegram && window.Telegram.WebApp;
     const inTelegram = !!(tg && tg.initData);
     const $ = id => document.getElementById(id);
+    // Пометка для CSS: вне Telegram показываем свою кнопку «Назад» на странице
+    document.body.classList.toggle('in-browser', !inTelegram);
 
     if (inTelegram) {
       tg.ready();
@@ -588,51 +836,76 @@
     }
 
     // =====================================================================
-    //  Полноэкранный режим (кнопка справа вверху на главном экране)
+    //  Полноэкранный режим — кнопка в шапке КАЖДОГО экрана (класс fs-btn)
     //  В Telegram (версия 8.0 и новее) — tg.requestFullscreen / exitFullscreen.
-    //  В обычном браузере (например, на планшете) — стандартный Fullscreen API.
+    //  В обычном браузере (например, на планшете) — стандартный Fullscreen API
+    //  (на старых iPad — его вариант с приставкой webkit).
     //  Отступы от выреза камеры и кнопок Telegram задаются в CSS (--top).
     // =====================================================================
     const tgFullscreen = inTelegram && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0') && typeof tg.requestFullscreen === 'function';
-    const webFullscreen = !inTelegram && !!document.fullscreenEnabled;
+    const docEl = document.documentElement;
+    const webRequest = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
+    const webExit = document.exitFullscreen || document.webkitExitFullscreen;
+    const webFullscreen = !inTelegram && !!webRequest && !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+
+    // Иконки (вставляются из кода, чтобы не повторять их на каждом экране)
+    const ICON_FS_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+    const ICON_FS_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+    const ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
 
     function isFullscreen() {
-      return tgFullscreen ? !!tg.isFullscreen : !!document.fullscreenElement;
+      if (tgFullscreen) return !!tg.isFullscreen;
+      return !!(document.fullscreenElement || document.webkitFullscreenElement);
     }
+    // Обновляем все кнопки сразу: иконку меняет CSS по классу fs-on у body
     function renderFullscreenBtn() {
       const on = isFullscreen();
-      $('fs-btn').classList.toggle('on', on);
-      $('fs-ico-open').classList.toggle('hidden', on);
-      $('fs-ico-close').classList.toggle('hidden', !on);
-      $('fs-btn').setAttribute('aria-label', on ? 'Выйти из полноэкранного режима' : 'Развернуть на весь экран');
+      document.body.classList.toggle('fs-on', on);
+      document.querySelectorAll('.fs-btn').forEach(btn =>
+        btn.setAttribute('aria-label', on ? 'Выйти из полноэкранного режима' : 'Развернуть на весь экран'));
     }
     function toggleFullscreen() {
       haptic('light');
       if (tgFullscreen) {
         if (tg.isFullscreen) tg.exitFullscreen(); else tg.requestFullscreen();
-      } else if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
+      } else if (inTelegram) {
+        // Telegram старше версии 8.0 полный экран не умеет
+        showMessage('Полноэкранный режим есть в новых версиях Telegram. Обновите Telegram и откройте приложение снова.');
       } else {
-        document.documentElement.requestFullscreen().catch(() => {});
+        try {
+          const p = isFullscreen() ? webExit.call(document) : webRequest.call(docEl);
+          if (p && p.catch) p.catch(() => {});
+        } catch (e) {}
       }
     }
-    if (tgFullscreen || webFullscreen) {
-      $('fs-btn').classList.remove('hidden');
-      $('fs-btn').addEventListener('click', toggleFullscreen);
-      if (tgFullscreen) {
-        tg.onEvent('fullscreenChanged', renderFullscreenBtn);
-        tg.onEvent('fullscreenFailed', e => {
-          renderFullscreenBtn();
-          if (e && e.error === 'ALREADY_FULLSCREEN') return;
-          tg.showAlert(e && e.error === 'UNSUPPORTED'
-            ? 'На этом устройстве Telegram не поддерживает полноэкранный режим.'
-            : 'Не получилось включить полноэкранный режим.');
-        });
-      } else {
-        document.addEventListener('fullscreenchange', renderFullscreenBtn);
-      }
-      renderFullscreenBtn();
+    // Кнопки видны: в Telegram — всегда (старый Telegram подскажет обновиться),
+    // в браузере — если он умеет полный экран
+    if (inTelegram || webFullscreen) document.body.classList.add('fs-ok');
+    document.querySelectorAll('.fs-btn').forEach(btn => {
+      btn.innerHTML = '<span class="ico-open">' + ICON_FS_OPEN + '</span><span class="ico-close">' + ICON_FS_CLOSE + '</span>';
+      // stopPropagation — чтобы на экране тренировки нажатие не ставило паузу
+      btn.addEventListener('click', e => { e.stopPropagation(); toggleFullscreen(); });
+    });
+    if (tgFullscreen) {
+      tg.onEvent('fullscreenChanged', renderFullscreenBtn);
+      tg.onEvent('fullscreenFailed', e => {
+        renderFullscreenBtn();
+        if (e && e.error === 'ALREADY_FULLSCREEN') return;
+        showMessage(e && e.error === 'UNSUPPORTED'
+          ? 'На этом устройстве Telegram не поддерживает полноэкранный режим.'
+          : 'Не получилось включить полноэкранный режим.');
+      });
+    } else {
+      document.addEventListener('fullscreenchange', renderFullscreenBtn);
+      document.addEventListener('webkitfullscreenchange', renderFullscreenBtn);
     }
+    renderFullscreenBtn();
+
+    // Кнопки «Назад» на странице (видны только вне Telegram)
+    document.querySelectorAll('.back-btn').forEach(btn => {
+      btn.innerHTML = ICON_BACK;
+      btn.addEventListener('click', () => { haptic('light'); onBack(); });
+    });
 
     // Вибрация через Telegram (в браузере просто ничего не делает)
     function haptic(kind) {
@@ -640,6 +913,20 @@
       if (kind === 'select') tg.HapticFeedback.selectionChanged();
       else if (kind === 'success') tg.HapticFeedback.notificationOccurred('success');
       else tg.HapticFeedback.impactOccurred(kind); // 'light' | 'medium' | 'heavy'
+    }
+
+    // Сообщение и вопрос «да / нет»: в Telegram — его окна, в браузере — обычные.
+    // askConfirm возвращает Promise: const ok = await askConfirm('Удалить?')
+    function showMessage(text) {
+      if (inTelegram && tg.showAlert) { try { tg.showAlert(text); } catch (e) {} }
+      else alert(text);
+    }
+    function askConfirm(text) {
+      return new Promise(resolve => {
+        if (inTelegram && tg.showConfirm) {
+          try { tg.showConfirm(text, ok => resolve(!!ok)); } catch (e) { resolve(false); }  // уже открыто другое окно
+        } else resolve(window.confirm(text));
+      });
     }
 
     // Короткий звуковой сигнал (создаётся после первого нажатия — так требует iOS)
@@ -691,6 +978,8 @@
     }
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && current === 'workout') keepScreenOn();
+      // Свернули приложение на экране «Готово» — сразу сохраняем правки в дневник
+      if (document.visibilityState === 'hidden' && doneTimer) saveDone();
     });
 
     // =====================================================================
@@ -723,15 +1012,236 @@
       }, 500);
     }
 
+    // ---------------------------------------------------------------------
+    //  2б. Хранилище дневника: облако Telegram, а если его нет (обычный
+    //  браузер, старый Telegram) — память этого устройства (localStorage).
+    //  Все функции возвращают Promise — результат ждут через await.
+    //  У облака Telegram ограничения: до 1024 ключей и не больше
+    //  4096 символов в одном ключе. Поэтому дневник лежит по месяцам,
+    //  а длинный месяц делится на части.
+    // ---------------------------------------------------------------------
+    function cloudCall(method, ...args) {
+      return new Promise((resolve, reject) => {
+        try {
+          tg.CloudStorage[method](...args, (err, result) => err ? reject(new Error(String(err))) : resolve(result));
+        } catch (e) { reject(e); }
+      });
+    }
+    const store = useCloud ? {
+      get:     key => cloudCall('getItem', key),
+      getMany: keys => keys.length ? cloudCall('getItems', keys) : Promise.resolve({}),
+      set:     (key, value) => cloudCall('setItem', key, value),
+      remove:  key => cloudCall('removeItem', key),
+      keys:    () => cloudCall('getKeys'),
+    } : {
+      get:     async key => localStorage.getItem(key),
+      getMany: async keys => Object.fromEntries(keys.map(k => [k, localStorage.getItem(k)])),
+      set:     async (key, value) => { localStorage.setItem(key, value); return true; },
+      remove:  async key => { localStorage.removeItem(key); return true; },
+      keys:    async () => Object.keys(localStorage),
+    };
+
+    /*
+      ЗАПИСЬ В ДНЕВНИКЕ — поля:
+        id     — уникальный код записи
+        date   — дата 'ГГГГ-ММ-ДД'; time — время начала 'ЧЧ:ММ' (может не быть)
+        sport  — вид занятия ('gym', 'yoga'…)
+        dir    — программа (id); 'custom' — своя тренировка; нет — без программы
+        title  — короткое название программы в момент записи
+        min    — длительность в минутах
+        n      — сколько упражнений сделано (если известно)
+        gym    — только зал: [{ id: 'bench', sets: [[вес, повторы], …] }, …]
+                 вес null — без веса (например, подтягивания)
+        note   — заметка
+        manual — 1: внесено вручную, а не после таймера
+      Ключи в хранилище: zaryadka_log_202611_1, zaryadka_log_202611_2… —
+      год и месяц, затем номер части. Часть — список записей не длиннее
+      PART_LIMIT символов; не помещается — начинается следующая часть.
+    */
+    const LOG_PREFIX = 'zaryadka_log_';
+    const PART_LIMIT = 4000;               // с запасом до предела Telegram (4096)
+    const GYM_LAST_KEY = 'zaryadka_gym_last';
+    const monthCache = {};                 // 'ГГГГММ' → записи месяца, которые уже прочитали
+
+    const monthOf = date => date.slice(0, 4) + date.slice(5, 7);   // '2026-11-17' → '202611'
+    const partNo = key => parseInt(key.slice(key.lastIndexOf('_') + 1), 10) || 0;
+
+    // Все части месяца по порядку: [{ key, list }]
+    async function readMonth(ym) {
+      const keys = (await store.keys())
+        .filter(k => k.startsWith(LOG_PREFIX + ym + '_'))
+        .sort((a, b) => partNo(a) - partNo(b));
+      const values = await store.getMany(keys);
+      return keys.map(key => ({ key, list: parseJSON(values[key]) || [] }));
+    }
+    // Все записи месяца одним списком (и запоминаем их в monthCache)
+    async function loadMonth(ym) {
+      const list = [];
+      (await readMonth(ym)).forEach(part => list.push(...part.list));
+      monthCache[ym] = list;
+      return list;
+    }
+    // Записать часть; пустую — удалить из хранилища
+    function writePart(part) {
+      return part.list.length ? store.set(part.key, JSON.stringify(part.list)) : store.remove(part.key);
+    }
+    // Убрать запись из её месяца
+    async function removeFromMonth(id, date) {
+      for (const part of await readMonth(monthOf(date))) {
+        const before = part.list.length;
+        part.list = part.list.filter(e => e.id !== id);
+        if (part.list.length !== before) await writePart(part);
+      }
+    }
+    // Положить запись в её месяц: на прежнее место, а если там не помещается
+    // или записи ещё нет — в последнюю часть (или в новую)
+    async function putToMonth(entry) {
+      const ym = monthOf(entry.date);
+      const parts = await readMonth(ym);
+      for (const part of parts) {
+        const i = part.list.findIndex(e => e.id === entry.id);
+        if (i < 0) continue;
+        part.list[i] = entry;
+        if (JSON.stringify(part.list).length <= PART_LIMIT) return writePart(part);
+        part.list.splice(i, 1);            // не поместилось — переносим в другую часть
+        await writePart(part);
+        break;
+      }
+      let last = parts[parts.length - 1];
+      if (!last || JSON.stringify([...last.list, entry]).length > PART_LIMIT) {
+        last = { key: LOG_PREFIX + ym + '_' + (last ? partNo(last.key) + 1 : 1), list: [] };
+      }
+      last.list.push(entry);
+      return writePart(last);
+    }
+
+    // Перед сохранением убираем пустые поля: чем короче записи, тем больше их помещается
+    function cleanEntry(e) {
+      const c = { ...e };
+      c.gym = (c.gym || []).filter(b => b.sets.length);
+      if (!c.gym.length || !getSport(c.sport).sets) delete c.gym;
+      c.note = (c.note || '').trim();
+      ['note', 'time', 'n', 'manual', 'title', 'dir'].forEach(k => { if (!c[k]) delete c[k]; });
+      return c;
+    }
+
+    // Сохраняем строго по очереди, чтобы записи не перебивали друг друга
+    let saveChain = Promise.resolve();
+    function queue(task) {
+      const run = saveChain.then(task);
+      saveChain = run.catch(() => {});
+      return run;
+    }
+    // Сохранить запись (новую или изменённую). oldDate — прежняя дата, если её поменяли
+    function saveEntry(entry, oldDate) {
+      return queue(async () => {
+        const data = cleanEntry(entry);
+        if (oldDate && monthOf(oldDate) !== monthOf(data.date)) await removeFromMonth(data.id, oldDate);
+        await putToMonth(data);
+        delete monthCache[monthOf(data.date)];
+        if (oldDate) delete monthCache[monthOf(oldDate)];
+        await rememberGym(data);
+      });
+    }
+    function deleteEntry(entry) {
+      return queue(async () => {
+        await removeFromMonth(entry.id, entry.date);
+        delete monthCache[monthOf(entry.date)];
+      });
+    }
+
+    // ---------- Зал: последние веса и повторы каждого упражнения ----------
+    // Подставляются в следующий раз. Вид: { bench: { d: '2026-11-17', s: [[60, 8], [70, 8]] }, … }
+    let gymLast = {};
+    const gymLastReady = store.get(GYM_LAST_KEY)
+      .then(text => { gymLast = parseJSON(text) || {}; })
+      .catch(() => {});
+    async function rememberGym(entry) {
+      if (!entry.gym) return;
+      await gymLastReady;
+      let changed = false;
+      entry.gym.forEach(b => {
+        const prev = gymLast[b.id];
+        if (!prev || (prev.d || '') <= entry.date) {
+          gymLast[b.id] = { d: entry.date, s: b.sets.slice(0, 10).map(s => [s[0], s[1]]) };
+          changed = true;
+        }
+      });
+      if (!changed) return;
+      // Не помещается в 4096 символов — забываем самые давние упражнения
+      let text = JSON.stringify(gymLast);
+      while (text.length > PART_LIMIT) {
+        const oldest = Object.keys(gymLast).sort((a, b) => (gymLast[a].d || '').localeCompare(gymLast[b].d || ''))[0];
+        delete gymLast[oldest];
+        text = JSON.stringify(gymLast);
+      }
+      await store.set(GYM_LAST_KEY, text);
+    }
+    const lastSetsOf = id => (gymLast[id] && Array.isArray(gymLast[id].s)) ? gymLast[id].s : [];
+
+    // Для каких упражнений пишем вес и повторы: в зале (есть подходы) и на повторы
+    const loggable = item => !!item && !!item.sets && item.type === 'reps';
+
+    // Подходы упражнения для таблицы: как в прошлый раз, иначе — по плану (вес пустой)
+    function prefillSets(id, count) {
+      const last = lastSetsOf(id);
+      const ex = getExercise(id);
+      const n = count || last.length || 3;
+      const sets = [];
+      for (let i = 0; i < n; i++) {
+        const src = last[i] || last[last.length - 1];
+        sets.push(src ? [src[0], src[1]] : [null, ex && ex.reps ? ex.reps : null]);
+      }
+      return sets;
+    }
+    // [[60, 8], [70, 8]] → «60×8, 70×8»; без веса — «8, 8 раз»
+    function setsText(sets) {
+      const anyWeight = sets.some(s => s[0]);
+      return sets.map(s => (s[0] ? fmtNum(s[0]) + '×' : '') + (s[1] == null ? '—' : s[1])).join(', ') +
+        (anyWeight ? '' : ' раз');
+    }
+
+    // ---------- Даты и числа ----------
+    const pad2 = n => String(n).padStart(2, '0');
+    const dayKey = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());   // '2026-11-17'
+    const timeKey = d => pad2(d.getHours()) + ':' + pad2(d.getMinutes());                            // '08:30'
+    const todayKey = () => dayKey(new Date());
+    function parseDay(key) { const [y, m, d] = key.split('-').map(Number); return new Date(y, m - 1, d); }
+    const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+    const WEEKDAYS = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+    // '2026-11-17' → «Вторник, 17 ноября» (год пишем, если он не текущий)
+    function dayTitle(key) {
+      const d = parseDay(key);
+      const w = WEEKDAYS[d.getDay()];
+      return w[0].toUpperCase() + w.slice(1) + ', ' + d.getDate() + ' ' + MONTHS_GEN[d.getMonth()] +
+        (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '');
+    }
+    // 460 → «7 ч 40 мин»
+    function formatMinutes(min) {
+      const h = Math.floor(min / 60), m = min % 60;
+      return h ? h + ' ч' + (m ? ' ' + m + ' мин' : '') : m + ' мин';
+    }
+    // Число из поля ввода: «62,5» → 62.5; пусто или не число → null
+    function parseNum(text) {
+      const v = parseFloat(String(text).replace(',', '.'));
+      return isFinite(v) && v >= 0 ? Math.round(v * 100) / 100 : null;
+    }
+    const fmtNum = v => v == null ? '' : String(v).replace('.', ',');    // 62.5 → «62,5»
+    const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
     // =====================================================================
     //  3. Переключение экранов и кнопка «Назад» Telegram
     // =====================================================================
-    const SCREENS = ['home', 'sports', 'directions', 'custom', 'workout', 'done'];
+    const SCREENS = ['home', 'sports', 'directions', 'custom', 'workout', 'done', 'diary', 'entry'];
     let current = 'home';
     function show(name) {
+      // Убираем клавиатуру, если было открыто поле ввода
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
       SCREENS.forEach(id => $(id).classList.toggle('hidden', id !== name));
       current = name;
       window.scrollTo(0, 0);
+      if (name === 'home') fitHome();
       if (inTelegram) {
         if (name === 'home' || name === 'done') tg.BackButton.hide(); else tg.BackButton.show();
       }
@@ -740,6 +1250,7 @@
       if (current === 'workout' && tipsOpen()) closeTips();
       else if (current === 'workout') askExit();
       else if (current === 'custom') closeCustom();
+      else if (current === 'entry') leaveEntry();
       else if (current !== 'home') show('home');
     }
     if (inTelegram) tg.BackButton.onClick(onBack);
@@ -914,6 +1425,21 @@
       });
 
       drawDial();
+      fitHome();
+    }
+
+    // Главный экран: уменьшаем круг так, чтобы кнопка «Начать» помещалась
+    // на экран сразу, без прокрутки (но не меньше 170 точек)
+    function fitHome() {
+      if (current !== 'home') return;
+      const disc = document.querySelector('.dial-disc');
+      disc.style.width = '';   // сначала обычный размер из CSS
+      // Планшет в ландшафте: две колонки, там всё и так помещается
+      if (window.matchMedia('(min-width: 700px) and (orientation: landscape)').matches) return;
+      const viewH = inTelegram && tg.viewportStableHeight ? tg.viewportStableHeight : window.innerHeight;
+      const btnBottom = $('start-btn').getBoundingClientRect().bottom + window.scrollY;
+      const over = btnBottom + 16 - viewH;   // насколько кнопка ниже края экрана
+      if (over > 0) disc.style.width = Math.max(170, disc.getBoundingClientRect().width - over) + 'px';
     }
 
     // Сколько разных «блоков» упражнений (подходы одного упражнения — один блок)
@@ -1069,8 +1595,7 @@
     // Шестерёнка: экран настроек будет позже, пока — сообщение
     $('settings-btn').addEventListener('click', () => {
       haptic('light');
-      const msg = 'Настройки (звук, вибрация, время отдыха) появятся на следующем этапе.';
-      if (inTelegram) tg.showAlert(msg); else alert(msg);
+      showMessage('Настройки (звук, вибрация, время отдыха) появятся на следующем этапе.');
     });
 
     // =====================================================================
@@ -1235,6 +1760,10 @@
     let lastTick = 0;
     let lastWhole = 0;   // для сигнала на 3-2-1
     let doneSeconds = 0; // сколько реально позанимались (для итогов)
+    let woStarted = null;  // когда начали (дата и время для дневника)
+    let doneSet = [];      // doneSet[i] = true — упражнение (подход) номер i выполнено
+    let woSets = [];       // зал: что вы ввели для подхода номер i — { w: вес, r: повторы }
+    let panelIndex = null; // какой подход сейчас в панели «вес и повторы»
 
     function buildSteps(workout) {
       const list = workout.exercises;
@@ -1271,8 +1800,13 @@
     function startWorkout() {
       initAudio();
       steps = buildSteps(state.workout);
+      stepIndex = 0;
       paused = false;
       doneSeconds = 0;
+      woStarted = new Date();
+      doneSet = [];
+      woSets = [];
+      panelIndex = null;
       buildProgress();
       closeTips();
       $('workout').classList.toggle('med', isSimple());   // медитация — свой вид экрана
@@ -1285,7 +1819,15 @@
       timerId = setInterval(tick, 100);
     }
 
+    // Уходим с шага: упражнение засчитано, если таймер дошёл до конца
+    // или на нём провели хотя бы 5 секунд (а не просто пролистали)
+    function leaveStep() {
+      const step = steps[stepIndex];
+      if (step && step.kind === 'work' && (remaining <= 0 || step.dur - remaining >= 5)) doneSet[step.index] = true;
+    }
+
     function goToStep(i) {
+      leaveStep();
       stepIndex = i;
       const step = steps[i];
       remaining = step.dur;
@@ -1335,8 +1877,9 @@
       $('pause-ex').textContent = (step.kind === 'work' ? '' : 'Далее: ') + ex.name;
       $('counter').textContent = (step.index + 1) + ' / ' + state.workout.exercises.length;
 
-      // Подпись: подход и повторы
-      $('wo-sub').textContent = subLine(ex);
+      // Подпись: подход, вес и повторы; в зале — панель для ввода
+      $('wo-sub').textContent = subLine(ex, step.index);
+      renderSetPanel();
 
       // Бегущая строка: как выполнять + дыхание + ощущения
       let text;
@@ -1373,11 +1916,16 @@
       track.style.animationDuration = Math.max(12, track.children[0].offsetWidth / 45) + 's';
     }
 
-    // «Подход 1 из 3 · 10 раз»
-    function subLine(ex) {
+    // «Подход 1 из 3 · 60 кг × 8» (в зале — с весом), «10 раз».
+    // i — номер упражнения в списке тренировки (по нему ищем введённый вес)
+    function subLine(ex, i) {
       const parts = [];
       if (ex.sets) parts.push('Подход ' + ex.set + ' из ' + ex.sets);
-      if (ex.type === 'reps') parts.push(ex.reps + ' раз');
+      if (loggable(ex) && i != null && state.workout.exercises[i] === ex) {
+        const v = setValue(i);
+        const reps = v.r == null ? '—' : v.r;
+        parts.push(v.w ? fmtNum(v.w) + ' кг × ' + reps : reps + ' раз');
+      } else if (ex.type === 'reps') parts.push(ex.reps + ' раз');
       return parts.join(' · ');
     }
 
@@ -1386,6 +1934,96 @@
       $('med-clock').textContent = formatClock(remaining);
       renderProgress();
     }
+
+    // ---------- Зал: панель «вес и повторы» ----------
+    /*
+      Какой вес подставить в подход (по порядку):
+        1) что вы ввели сами;
+        2) если в предыдущем подходе этого упражнения вы поменяли вес — тот же вес;
+        3) вес этого подхода в прошлый раз;
+        4) вес предыдущего подхода.
+      Повторы: что ввели → как в прошлый раз → по плану программы.
+      i — номер подхода в списке упражнений тренировки.
+    */
+    function setValue(i) {
+      const list = state.workout.exercises;
+      const item = list[i];
+      const own = woSets[i] || {};
+      const last = lastSetsOf(item.id)[(item.set || 1) - 1];
+      const prev = i > 0 && list[i - 1].id === item.id ? i - 1 : -1;   // предыдущий подход того же упражнения
+      let w = null;
+      if ('w' in own) w = own.w;
+      else if (prev >= 0 && woSets[prev] && 'w' in woSets[prev]) w = setValue(prev).w;
+      else if (last) w = last[0];
+      else if (prev >= 0) w = setValue(prev).w;
+      let r = item.reps;
+      if ('r' in own) r = own.r;
+      else if (last && last[1] != null) r = last[1];
+      return { w, r };
+    }
+
+    // Какой подход в панели: на работе — текущий, на отдыхе — только что сделанный
+    function panelTarget() {
+      const step = steps[stepIndex];
+      if (!step || isSimple()) return null;
+      const list = state.workout.exercises;
+      if (step.kind === 'work' && loggable(list[step.index])) return step.index;
+      if (step.kind === 'rest' && loggable(list[step.index - 1])) return step.index - 1;
+      return null;
+    }
+
+    function renderSetPanel() {
+      const i = panelTarget();
+      const panel = $('set-panel');
+      // Подход сменился, а вы печатали — убираем клавиатуру
+      if (i !== panelIndex && panel.contains(document.activeElement)) document.activeElement.blur();
+      panelIndex = i;
+      panel.classList.toggle('hidden', i == null);
+      if (i == null) return;
+      const item = state.workout.exercises[i];
+      $('sp-title').textContent = steps[stepIndex].kind === 'rest'
+        ? 'Сделано: ' + item.name + ', подход ' + item.set + ' из ' + item.sets
+        : 'Подход ' + item.set + ' из ' + item.sets + ': вес и повторы';
+      const v = setValue(i);
+      // Пока вы печатаете в поле — его не трогаем
+      if (document.activeElement !== $('sp-w')) $('sp-w').value = fmtNum(v.w);
+      if (document.activeElement !== $('sp-r')) $('sp-r').value = v.r == null ? '' : String(v.r);
+    }
+
+    // Запомнить введённое и обновить подпись (на отдыхе там следующий подход,
+    // и его подсказка зависит от только что введённого веса)
+    function setOwn(field, value) {
+      if (panelIndex == null) return;
+      woSets[panelIndex] = { ...(woSets[panelIndex] || {}), [field]: value };
+      const step = steps[stepIndex];
+      $('wo-sub').textContent = subLine(step.ex, step.index);
+    }
+
+    // Кнопки −/+ : вес шагом 2,5 кг, повторы — по одному
+    document.querySelectorAll('#set-panel .st-btn').forEach(btn => btn.addEventListener('click', () => {
+      if (panelIndex == null) return;
+      const field = btn.dataset.field;
+      const cur = setValue(panelIndex)[field] || 0;
+      const v = Math.max(0, Math.round((cur + parseFloat(btn.dataset.step)) * 100) / 100);
+      setOwn(field, field === 'r' ? Math.round(v) : v);
+      haptic('select');
+      renderSetPanel();
+    }));
+    // Ввод цифрами с клавиатуры телефона
+    [['sp-w', 'w'], ['sp-r', 'r']].forEach(([id, field]) => {
+      const input = $(id);
+      input.addEventListener('input', () => {
+        const v = parseNum(input.value);
+        setOwn(field, field === 'r' && v != null ? Math.round(v) : v);
+      });
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+      input.addEventListener('blur', () => {
+        renderSetPanel();
+        if (current === 'workout') window.scrollTo(0, 0);   // iPhone мог сдвинуть экран под клавиатуру
+      });
+    });
+    // Нажатия по панели не ставят паузу
+    $('set-panel').addEventListener('click', e => e.stopPropagation());
 
     // --- Шторка «Все рекомендации»: нажатие на бегущую строку ---
     // Таймер не останавливается: можно читать во время упражнения.
@@ -1403,7 +2041,7 @@
       }
       $('tips-eyebrow').textContent = eyebrow;
       $('tips-title').textContent = ex.name;
-      $('tips-sub').textContent = subLine(ex);
+      $('tips-sub').textContent = subLine(ex, step.index);
       $('tips-desc').textContent = ex.description;
       const ul = $('tips-list');
       ul.innerHTML = '';
@@ -1471,13 +2109,15 @@
     $('play-btn').addEventListener('click', e => { e.stopPropagation(); togglePause(); });
     $('end-btn').addEventListener('click', e => { e.stopPropagation(); askExit(); });
 
-    // Выход: ставим паузу и спрашиваем
+    // Выход: ставим паузу и спрашиваем. Если позанимались хотя бы минуту —
+    // показываем итоги и записываем в дневник то, что успели сделать.
     function askExit() {
       const wasPaused = paused;
       if (!paused) togglePause();
-      const exit = ok => { if (ok) stopWorkout(); else if (!wasPaused) togglePause(); };
-      if (inTelegram) tg.showConfirm('Закончить занятие?', exit);
-      else exit(window.confirm('Закончить занятие?'));
+      askConfirm('Закончить занятие?').then(ok => {
+        if (!ok) { if (!wasPaused) togglePause(); return; }
+        if (doneSeconds >= 60) finishWorkout(true); else stopWorkout();
+      });
     }
 
     function stopWorkout() {
@@ -1487,16 +2127,65 @@
       show('home');
     }
 
-    function finishWorkout() {
+    // early — закончили досрочно (кнопкой «Завершить»), а не дошли до конца
+    function finishWorkout(early = false) {
+      leaveStep();
       clearInterval(timerId);
       releaseScreen();
       closeTips();
-      if (isSimple()) bell(); else beep(1318, 400);
-      haptic('success');
-      const n = countBlocks(state.workout.exercises);
-      $('done-sub').textContent = isSimple() ? sport().name : sport().name + ' · ' + state.workout.name;
+      if (!early) {
+        if (isSimple()) bell(); else beep(1318, 400);
+        haptic('success');
+      }
+      openDone(early);
+    }
+
+    // =====================================================================
+    //  12. Экран «Готово»: итоги и запись в дневник
+    //  Запись сохраняется сразу. Правки (вес, повторы, заметка)
+    //  сохраняются сами через секунду после ввода.
+    // =====================================================================
+    let doneEntry = null;   // запись этой тренировки в дневнике
+    let doneTimer = null;   // отложенное сохранение правок
+
+    // Сделанные подходы в зале → [{ id, sets: [[вес, повторы], …] }]
+    function workoutGym() {
+      const result = [];
+      state.workout.exercises.forEach((item, i) => {
+        if (!loggable(item) || !doneSet[i]) return;
+        const v = setValue(i);
+        let block = result.find(b => b.id === item.id);
+        if (!block) { block = { id: item.id, sets: [] }; result.push(block); }
+        block.sets.push([v.w, v.r]);
+      });
+      return result;
+    }
+
+    function openDone(early) {
+      const s = sport();
+      const simple = isSimple();
+      // Сколько разных упражнений сделано
+      const ids = new Set();
+      state.workout.exercises.forEach((item, i) => { if (doneSet[i]) ids.add(item.id); });
+      const n = simple ? 0 : ids.size;
+      const dir = simple ? '' : dirId();
+      doneEntry = {
+        id: newId(),
+        date: dayKey(woStarted), time: timeKey(woStarted),
+        sport: s.id, dir,
+        title: simple ? '' : dir === CUSTOM_ID ? 'Своя тренировка' : getDirection(s.id, dir).short,
+        min: Math.max(1, Math.round(doneSeconds / 60)),
+        n,
+        gym: s.sets ? workoutGym() : [],
+        note: '',
+      };
+
+      $('done-title').textContent = early ? 'Занятие завершено' : 'Готово!';
+      $('done-sub').textContent = simple ? s.name : s.name + ' · ' + state.workout.name;
       const stats = [[formatClock(doneSeconds), 'время']];
-      if (!isSimple()) stats.push([String(n), plural(n, 'упражнение', 'упражнения', 'упражнений')]);
+      if (!simple) stats.push([String(n), plural(n, 'упражнение', 'упражнения', 'упражнений')]);
+      const k = doneEntry.gym.reduce((t, b) => t + b.sets.length, 0);
+      if (k) stats.push([String(k), plural(k, 'подход', 'подхода', 'подходов')]);
       $('done-stats').innerHTML = '';
       stats.forEach(([value, label]) => {
         const d = document.createElement('div');
@@ -1506,14 +2195,475 @@
         d.querySelector('span').textContent = label;
         $('done-stats').append(d);
       });
+
+      // Зал: таблица «вес × повторы» — проверить и поправить
+      $('done-gym').classList.toggle('hidden', !s.sets);
+      if (s.sets) renderSetsEditor($('done-sets'), doneEntry.gym, onDoneEdit);
+      $('done-note').value = '';
       show('done');
+      $('done-saved').textContent = 'Записываю в дневник…';
+      saveDone();
+    }
+
+    // Сохранить запись тренировки (сразу после занятия и после правок).
+    // Возвращает Promise: true — записано, false — не получилось
+    function saveDone() {
+      clearTimeout(doneTimer);
+      doneTimer = null;
+      if (!doneEntry) return Promise.resolve(true);
+      doneEntry.note = $('done-note').value;
+      return saveEntry(doneEntry)
+        .then(() => { $('done-saved').textContent = '✓ Записано в дневник'; return true; })
+        .catch(err => { $('done-saved').textContent = 'Не удалось записать: ' + err.message; return false; });
+    }
+    // Уходим с экрана «Готово»: сначала сохраняем; не получилось — спрашиваем
+    async function leaveDone() {
+      if (!(await saveDone()) && !(await askConfirm('Не получилось записать тренировку в дневник (нет интернета?). Уйти без записи?'))) return false;
+      doneEntry = null;
+      return true;
+    }
+    function onDoneEdit() {
+      $('done-saved').textContent = 'Сохраняю…';
+      clearTimeout(doneTimer);
+      doneTimer = setTimeout(saveDone, 900);
+    }
+    $('done-note').addEventListener('input', onDoneEdit);
+
+    $('home-btn').addEventListener('click', async () => {
+      if (await leaveDone()) show('home');
+    });
+    $('done-diary').addEventListener('click', async () => {
+      const date = doneEntry ? doneEntry.date : todayKey();
+      if (await leaveDone()) openDiary(date);
+    });
+    $('done-delete').addEventListener('click', async () => {
+      if (!doneEntry || !(await askConfirm('Удалить эту тренировку из дневника?'))) return;
+      clearTimeout(doneTimer);
+      doneTimer = null;
+      const entry = doneEntry;
+      doneEntry = null;
+      try { await deleteEntry(entry); } catch (err) { showMessage('Не удалось удалить: ' + err.message); }
+      show('home');
+    });
+
+    // =====================================================================
+    //  13. Дневник: календарь месяца и занятия выбранного дня
+    // =====================================================================
+    let calMonth = new Date();      // какой месяц показан (важны год и месяц)
+    let calDay = todayKey();        // выбранный день 'ГГГГ-ММ-ДД'
+    const monthLoading = {};        // месяцы, которые сейчас читаются из хранилища
+    const ymOf = d => d.getFullYear() + pad2(d.getMonth() + 1);   // → '202611'
+
+    function openDiary(day) {
+      calDay = day || todayKey();
+      const d = parseDay(calDay);
+      calMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+      // Читаем заново: вдруг что-то добавили на другом устройстве
+      Object.keys(monthCache).forEach(k => delete monthCache[k]);
+      show('diary');
+      renderDiary();
+    }
+
+    function renderDiary() {
+      const ym = ymOf(calMonth);
+      $('cal-title').textContent = MONTHS[calMonth.getMonth()] + ' ' + calMonth.getFullYear();
+      const entries = monthCache[ym];
+      if (!entries) {
+        // Месяц ещё не прочитан: пустая сетка, пока грузится
+        $('cal-sum').textContent = 'Загрузка…';
+        drawMonth([]);
+        drawDay(null);
+        if (!monthLoading[ym]) {
+          monthLoading[ym] = loadMonth(ym)
+            .then(() => { if (current === 'diary' && ymOf(calMonth) === ym) renderDiary(); })
+            .catch(err => {
+              $('cal-sum').textContent = 'Не удалось загрузить';
+              $('day-list').innerHTML = '';
+              $('day-list').append(hintLine('Не получилось прочитать дневник (' + err.message + '). Проверьте интернет и откройте его снова.'));
+            })
+            .finally(() => { delete monthLoading[ym]; });
+        }
+        return;
+      }
+      const total = entries.reduce((t, e) => t + (e.min || 0), 0);
+      $('cal-sum').textContent = entries.length
+        ? entries.length + ' ' + plural(entries.length, 'занятие', 'занятия', 'занятий') + ' · ' + formatMinutes(total)
+        : 'Занятий пока нет';
+      drawMonth(entries);
+      drawDay(entries.filter(e => e.date === calDay));
+    }
+
+    // Серая строка-подсказка
+    function hintLine(text) {
+      const p = document.createElement('div');
+      p.className = 'hint empty';
+      p.textContent = text;
+      return p;
+    }
+
+    // Сетка месяца: понедельник первый, точки — сколько было занятий
+    function drawMonth(entries) {
+      const y = calMonth.getFullYear(), m = calMonth.getMonth();
+      const count = {};
+      entries.forEach(e => { count[e.date] = (count[e.date] || 0) + 1; });
+      const grid = $('cal-grid');
+      grid.innerHTML = '';
+      const shift = (new Date(y, m, 1).getDay() + 6) % 7;   // пустые клетки до 1-го числа
+      for (let i = 0; i < shift; i++) grid.append(document.createElement('div'));
+      const today = todayKey();
+      const days = new Date(y, m + 1, 0).getDate();
+      for (let d = 1; d <= days; d++) {
+        const key = y + '-' + pad2(m + 1) + '-' + pad2(d);
+        const cell = document.createElement('button');
+        cell.className = 'cal-day' + (key === today ? ' today' : '') + (key === calDay ? ' sel' : '') + (key > today ? ' future' : '');
+        cell.innerHTML = '<span>' + d + '</span>';
+        const n = count[key] || 0;
+        if (n) {
+          const dots = document.createElement('span');
+          dots.className = 'dots';
+          dots.innerHTML = '<i></i>'.repeat(Math.min(3, n));
+          cell.append(dots);
+        }
+        cell.setAttribute('aria-label', dayTitle(key) + (n ? ', занятий: ' + n : ''));
+        cell.addEventListener('click', () => { calDay = key; haptic('select'); renderDiary(); });
+        grid.append(cell);
+      }
+    }
+
+    // Занятия выбранного дня (null — ещё грузятся)
+    function drawDay(entries) {
+      $('day-title').textContent = dayTitle(calDay);
+      const future = calDay > todayKey();
+      $('day-add').classList.toggle('hidden', future);
+      const box = $('day-list');
+      box.innerHTML = '';
+      if (entries == null) return box.append(hintLine('Загрузка…'));
+      if (!entries.length) return box.append(hintLine(future ? 'Этот день ещё не наступил.' : 'В этот день занятий нет.'));
+      entries.slice().sort((a, b) => (a.time || '').localeCompare(b.time || '')).forEach(e => box.append(entryCard(e)));
+    }
+
+    // Короткое название программы у записи
+    function entryTitle(e) {
+      const s = SPORTS.find(x => x.id === e.sport);
+      const d = s && e.dir && s.directions.find(x => x.id === e.dir);
+      return d ? d.short : e.dir === CUSTOM_ID ? 'Своя тренировка' : (e.title || '');
+    }
+
+    // Карточка занятия: время · вид; программа · минуты; веса; заметка
+    function entryCard(e) {
+      const s = SPORTS.find(x => x.id === e.sport);
+      const card = document.createElement('button');
+      card.className = 'pick-card glass entry-card';
+      const title = document.createElement('div');
+      title.className = 'title';
+      title.textContent = (e.time ? e.time + ' · ' : '') + (s ? s.name : 'Занятие');
+      const chev = document.createElement('span');
+      chev.className = 'chev';
+      chev.textContent = '›';
+      title.append(chev);
+      const about = document.createElement('div');
+      about.className = 'about';
+      const bits = [entryTitle(e), formatMinutes(e.min || 0)];
+      if (e.n) bits.push(e.n + ' ' + plural(e.n, 'упражнение', 'упражнения', 'упражнений'));
+      about.textContent = bits.filter(Boolean).join(' · ');
+      card.append(title, about);
+      (e.gym || []).forEach(b => {
+        const ex = getExercise(b.id);
+        const line = document.createElement('div');
+        line.className = 'meta';
+        line.textContent = (ex ? ex.name : b.id) + ': ' + setsText(b.sets);
+        card.append(line);
+      });
+      if (e.note) {
+        const note = document.createElement('div');
+        note.className = 'meta note';
+        note.textContent = e.note;
+        card.append(note);
+      }
+      card.addEventListener('click', () => { haptic('light'); openEntry(e); });
+      return card;
+    }
+
+    // Листаем месяцы. Выбранным становится 1-е число (в текущем месяце — сегодня)
+    function shiftMonth(k) {
+      calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + k, 1);
+      calDay = ymOf(calMonth) === ymOf(new Date()) ? todayKey() : dayKey(calMonth);
+      haptic('select');
+      renderDiary();
+    }
+    $('cal-prev').addEventListener('click', () => shiftMonth(-1));
+    $('cal-next').addEventListener('click', () => shiftMonth(1));
+    $('day-add').addEventListener('click', () => { haptic('light'); openEntry(null, calDay); });
+    $('open-diary').addEventListener('click', () => { haptic('light'); openDiary(); });
+
+    // =====================================================================
+    //  14. Занятие в дневнике: добавить вручную или изменить
+    // =====================================================================
+    let form = null;          // запись, которую правим (копия)
+    let formOld = null;       // какой она была до правок (null — новая)
+    let formDirty = false;    // есть несохранённые правки — спросим перед выходом
+    let setsTouched = false;  // таблицу веса правили — не перезаполняем её при смене программы
+    let minTouched = false;   // длительность меняли сами
+
+    // Программа по умолчанию для новой записи — та, что выбрана на главном экране
+    function defaultDir(sportId) {
+      const s = getSport(sportId);
+      if (s.simple) return '';
+      const d = state.dirBySport[sportId];
+      if (d === CUSTOM_ID) return (state.customBySport[sportId] || []).length ? CUSTOM_ID : s.directions[0].id;
+      return s.directions.some(x => x.id === d) ? d : s.directions[0].id;
+    }
+
+    function openEntry(entry, day) {
+      formOld = entry || null;
+      if (entry) {
+        form = JSON.parse(JSON.stringify(entry));   // правим копию, а не саму запись
+      } else {
+        const date = day || todayKey();
+        form = { id: newId(), date, time: date === todayKey() ? timeKey(new Date()) : '',
+                 sport: state.sport, dir: '', min: getSport(state.sport).def, n: 0, note: '', manual: 1 };
+      }
+      form.gym = form.gym || [];
+      form.dir = form.dir || '';
+      setsTouched = minTouched = !!entry;
+      if (!entry) setFormDir(defaultDir(form.sport));
+      formDirty = false;
+      $('entry-title').textContent = entry ? 'Изменить занятие' : 'Новое занятие';
+      $('f-delete').classList.toggle('hidden', !entry);
+      $('f-date').max = todayKey();
+      $('f-date').value = form.date;
+      $('f-time').value = form.time || '';
+      $('f-note').value = form.note || '';
+      renderForm();
+      show('entry');
+    }
+
+    // Сменили программу. В зале, пока таблицу не трогали, заполняем её
+    // упражнениями программы (с весами прошлого раза)
+    function setFormDir(dir) {
+      form.dir = dir;
+      const s = getSport(form.sport);
+      if (!s.sets || setsTouched) return;
+      const d = s.directions.find(x => x.id === dir);
+      const ids = dir === CUSTOM_ID ? (state.customBySport[s.id] || []) : d ? d.main : [];
+      form.gym = ids.map(getExercise)
+        .filter(ex => ex && ex.type === 'reps')
+        .map(ex => ({ id: ex.id, sets: prefillSets(ex.id, lastSetsOf(ex.id).length || (d && d.sets) || s.sets) }));
+    }
+
+    function renderForm() {
+      const s = getSport(form.sport);
+      // Вид занятия — «чипсы»
+      const chips = $('f-sports');
+      chips.innerHTML = '';
+      SPORTS.forEach(x => {
+        const c = document.createElement('button');
+        c.className = 'chip glass' + (x.id === form.sport ? ' on' : '');
+        c.textContent = x.name;
+        c.addEventListener('click', () => {
+          if (x.id === form.sport) return;
+          form.sport = x.id;
+          if (!minTouched) form.min = x.def;
+          setFormDir(defaultDir(x.id));
+          formDirty = true;
+          haptic('select');
+          renderForm();
+        });
+        chips.append(c);
+      });
+      // Программа (у медитации её нет)
+      $('f-dir-box').classList.toggle('hidden', !!s.simple);
+      const options = [['', 'Без программы'], ...s.directions.map(d => [d.id, d.short]), [CUSTOM_ID, 'Своя тренировка']];
+      if (form.dir && !options.some(o => o[0] === form.dir)) options.push([form.dir, form.title || form.dir]);
+      const sel = $('f-dir');
+      sel.innerHTML = '';
+      options.forEach(([id, name]) => {
+        const o = document.createElement('option');
+        o.value = id;
+        o.textContent = name;
+        sel.append(o);
+      });
+      sel.value = form.dir || '';
+      // Длительность
+      $('f-min').value = form.min;
+      // Зал: веса и повторы
+      $('f-gym-box').classList.toggle('hidden', !s.sets);
+      if (s.sets) renderSetsEditor($('f-sets'), form.gym, () => { setsTouched = true; formDirty = true; });
+    }
+
+    $('f-date').addEventListener('change', () => { form.date = $('f-date').value; formDirty = true; });
+    $('f-time').addEventListener('change', () => { form.time = $('f-time').value; formDirty = true; });
+    $('f-dir').addEventListener('change', () => { setFormDir($('f-dir').value); formDirty = true; haptic('select'); renderForm(); });
+    $('f-note').addEventListener('input', () => { form.note = $('f-note').value; formDirty = true; });
+    $('f-min').addEventListener('input', () => {
+      const v = parseNum($('f-min').value);
+      if (v != null) form.min = Math.min(600, Math.max(1, Math.round(v)));
+      minTouched = formDirty = true;
+    });
+    $('f-min').addEventListener('blur', () => { $('f-min').value = form.min; });
+    $('f-min').addEventListener('keydown', e => { if (e.key === 'Enter') $('f-min').blur(); });
+    // −/+ : по 5 минут (до ближайшего круглого числа)
+    function bumpMinutes(dir) {
+      const m = form.min;
+      form.min = Math.min(600, Math.max(1, dir > 0 ? Math.floor(m / 5) * 5 + 5 : Math.ceil(m / 5) * 5 - 5));
+      $('f-min').value = form.min;
+      minTouched = formDirty = true;
+      haptic('select');
+    }
+    $('f-min-minus').addEventListener('click', () => bumpMinutes(-1));
+    $('f-min-plus').addEventListener('click', () => bumpMinutes(1));
+
+    $('f-save').addEventListener('click', async () => {
+      if (!form.date) form.date = todayKey();
+      if (form.date > todayKey()) return showMessage('Эта дата ещё не наступила. Выберите сегодня или прошедший день.');
+      const s = getSport(form.sport);
+      if (s.simple) form.dir = '';
+      const d = s.directions.find(x => x.id === form.dir);
+      form.title = d ? d.short : form.dir === CUSTOM_ID ? 'Своя тренировка' : (form.dir ? form.title : '');
+      if (form.manual && s.sets) form.n = form.gym.filter(b => b.sets.length).length;
+      haptic('medium');
+      $('f-save').disabled = true;
+      try {
+        await saveEntry(form, formOld && formOld.date !== form.date ? formOld.date : null);
+        formDirty = false;
+        openDiary(form.date);
+      } catch (err) {
+        showMessage('Не удалось сохранить: ' + err.message);
+      }
+      $('f-save').disabled = false;
+    });
+
+    $('f-delete').addEventListener('click', async () => {
+      if (!formOld || !(await askConfirm('Удалить это занятие из дневника?'))) return;
+      try {
+        await deleteEntry(formOld);
+        formDirty = false;
+        openDiary(formOld.date);
+      } catch (err) {
+        showMessage('Не удалось удалить: ' + err.message);
+      }
+    });
+
+    // «Назад» из формы: если что-то поменяли — спрашиваем
+    async function leaveEntry() {
+      if (formDirty && !(await askConfirm('Выйти без сохранения?'))) return;
+      formDirty = false;
+      show('diary');
+      renderDiary();
     }
 
     // =====================================================================
-    //  12. Запуск
+    //  15. Таблица «вес × повторы» (экран «Готово» и запись в дневнике)
+    //  model — [{ id, sets: [[вес, повторы], …] }, …]; правки идут прямо в неё.
+    //  onChange вызывается после любой правки.
+    // =====================================================================
+    const LOG_MAX_SETS = 10;   // подходов в одном упражнении
+    const LOG_MAX_EX = 20;     // упражнений в одной записи
+
+    function renderSetsEditor(box, model, onChange) {
+      const redraw = () => { haptic('light'); onChange(); renderSetsEditor(box, model, onChange); };
+      box.innerHTML = '';
+      model.forEach((block, bi) => {
+        const ex = getExercise(block.id);
+        const card = document.createElement('div');
+        card.className = 'sets-card glass';
+
+        // Название и «убрать упражнение»
+        const head = document.createElement('div');
+        head.className = 'sets-head';
+        const nm = document.createElement('div');
+        nm.className = 'nm';
+        nm.textContent = ex ? ex.name : block.id;
+        const x = document.createElement('button');
+        x.className = 'x-btn';
+        x.textContent = '×';
+        x.setAttribute('aria-label', 'Убрать упражнение');
+        x.addEventListener('click', () => { model.splice(bi, 1); redraw(); });
+        head.append(nm, x);
+        card.append(head);
+
+        // Подходы: номер, вес, повторы
+        block.sets.forEach((set, si) => {
+          const row = document.createElement('div');
+          row.className = 'set-row';
+          row.innerHTML = '<span class="set-no">' + (si + 1) + '</span>' +
+            '<input class="field set-in" inputmode="decimal" autocomplete="off" placeholder="—" aria-label="Вес, кг">' +
+            '<span class="set-unit">кг ×</span>' +
+            '<input class="field set-in" inputmode="numeric" autocomplete="off" placeholder="—" aria-label="Повторы">' +
+            '<span class="set-unit">раз</span>';
+          const [wIn, rIn] = row.querySelectorAll('input');
+          wIn.value = fmtNum(set[0]);
+          rIn.value = set[1] == null ? '' : String(set[1]);
+          wIn.addEventListener('input', () => { set[0] = parseNum(wIn.value); onChange(); });
+          rIn.addEventListener('input', () => { const v = parseNum(rIn.value); set[1] = v == null ? null : Math.round(v); onChange(); });
+          [wIn, rIn].forEach(input => input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); }));
+          card.append(row);
+        });
+
+        // «+ подход» (копия последнего) и «− подход»
+        const actions = document.createElement('div');
+        actions.className = 'sets-actions';
+        const add = document.createElement('button');
+        add.className = 'mini-btn';
+        add.textContent = '+ подход';
+        add.disabled = block.sets.length >= LOG_MAX_SETS;
+        add.addEventListener('click', () => {
+          const last = block.sets[block.sets.length - 1];
+          block.sets.push(last ? [last[0], last[1]] : [null, ex && ex.reps ? ex.reps : null]);
+          redraw();
+        });
+        const del = document.createElement('button');
+        del.className = 'mini-btn';
+        del.textContent = '− подход';
+        del.disabled = block.sets.length <= 1;
+        del.addEventListener('click', () => { block.sets.pop(); redraw(); });
+        actions.append(add, del);
+        card.append(actions);
+        box.append(card);
+      });
+
+      // Добавить упражнение — обычный список выбора телефона, по группам мышц
+      if (model.length >= LOG_MAX_EX) return;
+      const sel = document.createElement('select');
+      sel.className = 'field';
+      sel.setAttribute('aria-label', 'Добавить упражнение');
+      const first = document.createElement('option');
+      first.value = '';
+      first.textContent = '+ Добавить упражнение';
+      sel.append(first);
+      const groups = {};
+      sportExerciseIds('gym').map(getExercise).filter(e => e.type === 'reps').forEach(e => {
+        if (!groups[e.group]) {
+          groups[e.group] = document.createElement('optgroup');
+          groups[e.group].label = GROUP_NAMES[e.group] || e.group;
+          sel.append(groups[e.group]);
+        }
+        const o = document.createElement('option');
+        o.value = e.id;
+        o.textContent = e.name;
+        groups[e.group].append(o);
+      });
+      sel.addEventListener('change', () => {
+        if (!sel.value) return;
+        model.push({ id: sel.value, sets: prefillSets(sel.value) });
+        redraw();
+      });
+      box.append(sel);
+    }
+
+    // =====================================================================
+    //  16. Запуск
     // =====================================================================
     $('start-btn').addEventListener('click', () => { haptic('medium'); startWorkout(); });
-    $('home-btn').addEventListener('click', () => show('home'));
+
+    // Пересчитываем круг, когда меняется размер экрана: поворот, полный экран,
+    // Telegram развернул окно, догрузился шрифт
+    window.addEventListener('resize', fitHome);
+    if (inTelegram) {
+      tg.onEvent('viewportChanged', e => { if (!e || e.isStateStable) fitHome(); });
+      tg.onEvent('fullscreenChanged', () => setTimeout(fitHome, 300));
+    }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitHome);
 
     updatePlan();
     show('home');
