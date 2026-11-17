@@ -17,7 +17,7 @@
 
   <!-- Наши данные. ?v=7 — номер версии: меняйте его при каждом
        изменении data.js, иначе телефон может показать старую копию. -->
-  <script src="data.js?v=7"></script>
+  <script src="data.js?v=8"></script>
 
   <style>
     /* ================================================================
@@ -264,14 +264,8 @@
     /* Сцена с фигуркой */
     .stage { position: relative; z-index: 1; flex: 1; min-height: 0;
              display: flex; align-items: center; justify-content: center; }
-    #figure { width: 100%; height: 100%; max-height: 62vh; overflow: visible; }
-    #figure .limb { stroke: var(--text); stroke-width: 11; stroke-linecap: round; fill: none; }
-    #figure .head { fill: var(--text); }
-    #figure .floor { stroke: #cfd4dd; stroke-width: 2; }
-    #figure .shadow { fill: #d3d8e1; }
-    #figure .ring { fill: none; stroke: var(--phase); stroke-width: 2; opacity: 0; }
-    #figure .paddle { fill: var(--phase); }
-    #figure .water { fill: #d4e6ee; }
+    /* Объёмный манекен рисуется на холсте <canvas> (см. раздел 10 в коде) */
+    #figure { width: 100%; height: 100%; max-height: 62vh; display: block; }
     #figure.preview { opacity: .3; }   /* на отдыхе — показ следующего упражнения */
     #ex-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
@@ -632,29 +626,7 @@
     <div class="stage">
       <div id="med-disc"><div class="well"><div id="med-clock">10:00</div><div id="med-label">осталось</div></div></div>
       <video id="ex-video" class="hidden" muted loop playsinline webkit-playsinline></video>
-      <svg id="figure" viewBox="-60 20 320 270" aria-hidden="true">
-        <rect class="water hidden" id="fig-water" x="-60" y="170" width="320" height="120"/>
-        <ellipse class="shadow" id="fig-shadow" cx="100" cy="262" rx="46" ry="6"/>
-        <line class="floor" id="fig-floor" x1="-40" y1="264" x2="240" y2="264"/>
-        <circle class="ring" id="fig-ring" cx="100" cy="150" r="118"/>
-        <!-- Фигурка: каждая часть тела — отдельная группа, её поворачивает код -->
-        <g id="p-fig">
-          <line class="limb" x1="94" y1="160" x2="106" y2="160"/>
-          <g id="p-legL"><line class="limb" x1="94" y1="160" x2="94" y2="210"/>
-            <g id="p-shinL"><line class="limb" x1="94" y1="210" x2="94" y2="258"/></g></g>
-          <g id="p-legR"><line class="limb" x1="106" y1="160" x2="106" y2="210"/>
-            <g id="p-shinR"><line class="limb" x1="106" y1="210" x2="106" y2="258"/></g></g>
-          <g id="p-torso">
-            <line class="limb" x1="100" y1="160" x2="100" y2="98"/>
-            <g id="p-head"><circle class="head" cx="100" cy="76" r="16"/></g>
-            <g id="p-armL"><line class="limb" x1="100" y1="102" x2="100" y2="140"/>
-              <g id="p-foreL"><line class="limb" x1="100" y1="140" x2="100" y2="174"/></g></g>
-            <g id="p-armR"><line class="limb" x1="100" y1="102" x2="100" y2="140"/>
-              <g id="p-foreR"><line class="limb" x1="100" y1="140" x2="100" y2="174"/>
-                <circle class="paddle hidden" id="fig-paddle" cx="100" cy="186" r="11"/></g></g>
-          </g>
-        </g>
-      </svg>
+      <canvas id="figure" aria-hidden="true"></canvas>
     </div>
 
     <div class="wo-bottom">
@@ -1626,152 +1598,702 @@
     });
 
     // =====================================================================
-    //  10. Анимация фигурки
-    //  Поза = углы суставов в градусах (+ по часовой стрелке):
-    //    x, y, r — сдвиг и поворот всей фигуры (вокруг стоп)
-    //    t — корпус (вокруг таза), h — голова
-    //    aL/aR — плечо левой/правой руки, fL/fR — предплечья
-    //    lL/lR — бедро левой/правой ноги, sL/sR — голени
-    //  «Левая» — та, что слева на экране. Рука вниз = 0, вверх = ±180.
-    //  Анимация = список поз; фигурка плавно переходит между ними по кругу.
+    //  10. Анимация фигурки — объёмный 3D-манекен
+    //  Фигурка — скелет из 18 суставов в 3D. Каждый кадр:
+    //    1) берём позу из анимации (углы суставов и положение таза);
+    //    2) считаем, где в пространстве оказались суставы;
+    //    3) рисуем части тела «капсулами» на <canvas>: сначала дальние, потом ближние.
+    //  Стопы и ладони можно «прибить» к полу — колени и локти подстроятся сами.
+    //  У каждого упражнения свой ракурс камеры. Анимации — в списке ANIMS ниже,
+    //  а какое упражнение какую анимацию показывает — поле anim в data.js.
     // =====================================================================
-    const BASE = { x: 0, y: 0, r: 0, t: 0, h: 0, aL: 10, fL: 0, aR: -10, fR: 0, lL: 3, sL: 0, lR: -3, sR: 0 };
-    const LIE  = { r: -90, x: 92, y: -4 };                  // лёжа (головой влево)
-    const SWIM = { r: -90, x: 92, y: -78 };                 // в воде
-    const KNEEL = { lL: -60, sL: 170, lR: -60, sR: 170, y: 73 };  // сидя на пятках
+    // ---------- Немного математики: векторы и повороты ----------
+    const DG = Math.PI / 180;
+    const vAdd = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+    const vSub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+    const vMul = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
+    const vDot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    const vLen = a => Math.hypot(a[0], a[1], a[2]);
+    const vNorm = a => { const l = vLen(a); return l ? vMul(a, 1 / l) : [0, 0, 0]; };
+    const vMix = (a, b, u) => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u];
+    // Матрица поворота 3×3, записана строками
+    const mMul = (a, b) => [
+      a[0]*b[0]+a[1]*b[3]+a[2]*b[6], a[0]*b[1]+a[1]*b[4]+a[2]*b[7], a[0]*b[2]+a[1]*b[5]+a[2]*b[8],
+      a[3]*b[0]+a[4]*b[3]+a[5]*b[6], a[3]*b[1]+a[4]*b[4]+a[5]*b[7], a[3]*b[2]+a[4]*b[5]+a[5]*b[8],
+      a[6]*b[0]+a[7]*b[3]+a[8]*b[6], a[6]*b[1]+a[7]*b[4]+a[8]*b[7], a[6]*b[2]+a[7]*b[5]+a[8]*b[8]];
+    const mVec = (m, v) => [m[0]*v[0]+m[1]*v[1]+m[2]*v[2], m[3]*v[0]+m[4]*v[1]+m[5]*v[2], m[6]*v[0]+m[7]*v[1]+m[8]*v[2]];
+    const rotX = d => { const c = Math.cos(d * DG), s = Math.sin(d * DG); return [1, 0, 0, 0, c, -s, 0, s, c]; };
+    const rotY = d => { const c = Math.cos(d * DG), s = Math.sin(d * DG); return [c, 0, s, 0, 1, 0, -s, 0, c]; };
+    const rotZ = d => { const c = Math.cos(d * DG), s = Math.sin(d * DG); return [c, -s, 0, s, c, 0, 0, 0, 1]; };
+    function rotAxis(k, d) {          // поворот на d градусов вокруг оси k
+      const a = d * DG, c = Math.cos(a), s = Math.sin(a), t = 1 - c, [x, y, z] = k;
+      return [t*x*x + c, t*x*y - s*z, t*x*z + s*y, t*x*y + s*z, t*y*y + c, t*y*z - s*x, t*x*z - s*y, t*y*z + s*x, t*z*z + c];
+    }
+    const atP = (R, o, v) => vAdd(o, mVec(R, v));   // точку v из системы сустава — в общую систему
 
-    // seq: true — позы идут по кругу и сразу начинаются заново (для вращений)
-    const ANIMS = {
-      idle:      { dur: 3200, f: [{}, { aL: 16, aR: -16, y: -1 }] },
-      breathe:   { dur: 5200, ring: true, f: [{ aL: 18, aR: -18 }, { aL: 70, aR: -70, y: -2 }] },
-      head:      { dur: 2600, f: [{ h: -22 }, { h: 22 }] },
-      shrug:     { dur: 1500, f: [{}, { aL: 22, aR: -22, fL: -20, fR: 20, y: -3 }] },
-      arms:      { dur: 1700, seq: true, f: [{ aL: 0, aR: 0 }, { aL: 120, aR: -120 }, { aL: 240, aR: -240 }, { aL: 360, aR: -360 }] },
-      reach:     { dur: 3000, f: [{}, { aL: 175, aR: -175, y: -9 }] },
-      jerks:     { dur: 1300, f: [{ aL: 85, fL: 110, aR: -85, fR: -110 }, { aL: 100, aR: -100 }] },
-      twist:     { dur: 2200, f: [{ aL: 55, aR: -120, h: -18 }, { aL: 120, aR: -55, h: 18 }] },
-      sidebend:  { dur: 4400, f: [{}, { t: -24, aR: -165, aL: 18 }, {}, { t: 24, aL: 165, aR: -18 }] },
-      hips:      { dur: 2200, f: [{ t: -8, x: 4, aL: 35, fL: -120, aR: -35, fR: 120 }, { t: 8, x: -4, aL: 35, fL: -120, aR: -35, fR: 120 }] },
-      halfsquat: { dur: 1600, f: [{ aL: 20, aR: -20 }, { lL: 16, sL: -32, lR: -16, sR: 32, y: 4, aL: 26, fL: -30, aR: -26, fR: 30 }] },
-      squat:     { dur: 2400, f: [{ aL: 70, aR: -70 }, { lL: 36, sL: -72, lR: -36, sR: 72, y: 19, aL: 85, aR: -85 }] },
-      wall:      { dur: 3000, f: [{ lL: 46, sL: -92, lR: -46, sR: 92, y: 30, aL: 10, aR: -10 }, { lL: 46, sL: -92, lR: -46, sR: 92, y: 30, aL: 14, aR: -14 }] },
-      jacks:     { dur: 900,  f: [{}, { lL: 18, lR: -18, aL: 165, aR: -165, y: -9 }] },
-      march:     { dur: 1100, f: [{ lL: -55, sL: 75, aL: -28, aR: 28 }, { lR: -55, sR: 75, aL: 28, aR: -28 }] },
-      run:       { dur: 620,  f: [{ lL: -65, sL: 85, lR: 10, aL: -35, fL: -80, aR: 35, fR: -80, y: -4 }, { lR: -65, sR: 85, lL: 10, aL: 35, fL: -80, aR: -35, fR: -80, y: -4 }] },
-      windmill:  { dur: 3400, f: [{ lL: 16, lR: -16, aL: 90, aR: -90, y: 4 }, { t: -72, lL: 16, lR: -16, aL: 90, aR: -90, y: 4 }, { lL: 16, lR: -16, aL: 90, aR: -90, y: 4 }, { t: 72, lL: 16, lR: -16, aL: 90, aR: -90, y: 4 }] },
-      fold:      { dur: 3600, f: [{}, { t: 100, aL: -100, aR: -100, x: -12 }] },
-      pump:      { dur: 1000, f: [{ t: 20, aL: -20, aR: -20 }, { t: 55, aL: -55, aR: -55 }] },
-      hug:       { dur: 1100, f: [{ aL: 90, aR: -90 }, { aL: 60, fL: 105, aR: -60, fR: -105 }] },
-      bow:       { dur: 4000, f: [{ lL: 24, lR: -24, y: 9, aL: 90, aR: -90, fR: -150 }, { lL: 24, lR: -24, y: 9, aL: 90, fL: 150, aR: -90 }] },
-      split:     { dur: 4200, f: [{ aL: 175, aR: -8 }, { aL: 8, aR: -175 }] },
-      calf:      { dur: 1500, f: [{}, { y: -11 }] },
-      shake:     { dur: 320,  f: [{ aL: 6, aR: -6, fL: 12, fR: -12 }, { aL: 22, aR: -22, fL: -12, fR: 12, y: -2 }] },
-      tap:       { dur: 700,  f: [{ aL: 25, fL: 140, aR: -25, fR: -110 }, { aL: 30, fL: 110, aR: -30, fR: -140 }] },
-      curl:      { dur: 1900, f: [{ aL: 6, aR: -6 }, { aL: 2, fL: 150, aR: -2, fR: -150 }] },
-      press_down:{ dur: 1500, f: [{ aL: 18, fL: 120, aR: -18, fR: -120 }, { aL: 12, aR: -12 }] },
-      press:     { dur: 1900, f: [{ aL: 80, fL: 100, aR: -80, fR: -100 }, { aL: 168, fL: 6, aR: -168, fR: -6 }] },
-      lateral:   { dur: 2000, f: [{ aL: 10, aR: -10 }, { aL: 86, aR: -86 }] },
-      row:       { dur: 1800, f: [{ t: 70, aL: -70, aR: -70, x: -10, lL: 10, lR: 10 }, { t: 70, aL: -25, fL: -45, aR: -25, fR: -45, x: -10, lL: 10, lR: 10 }] },
-      pull:      { dur: 2000, f: [{ aL: 168, aR: -168, y: -6 }, { aL: 130, fL: 70, aR: -130, fR: -70, y: -34 }] },
-      lunge:     { dur: 2600, f: [{}, { lL: -38, sL: 40, lR: 40, sR: 50, y: 30 }] },
-      lunge_up:  { dur: 4000, f: [{ lL: -38, sL: 40, lR: 40, sR: 50, y: 30, aL: 172, aR: -172 }, { lL: -40, sL: 42, lR: 40, sR: 50, y: 31, aL: 178, aR: -178 }] },
-      pose:      { dur: 4000, f: [{ lL: 32, sL: -18, lR: -26, y: 16, aL: 90, aR: -90, h: -10 }, { lL: 34, sL: -20, lR: -26, y: 17, aL: 95, aR: -95, h: -10 }] },
-      triangle:  { dur: 4000, f: [{ lL: 28, lR: -28, y: 12, t: -55, aL: 55, aR: -125 }, { lL: 28, lR: -28, y: 12, t: -62, aL: 62, aR: -118 }] },
-      balance:   { dur: 3000, f: [{ lR: -70, sR: 140, aL: 85, aR: -85, r: -1.5 }, { lR: -70, sR: 140, aL: 90, aR: -90, r: 1.5 }] },
-      dog:       { dur: 4000, f: [{ t: 128, aL: 180, aR: 180, lL: 40, lR: 40, y: 23, h: 0 }, { t: 133, aL: 180, aR: 180, lL: 43, lR: 43, y: 25 }] },
-      child:     { dur: 4500, f: [{ ...KNEEL, t: 100, aL: 170, aR: 170 }, { ...KNEEL, t: 104, y: 75, aL: 166, aR: 166 }] },
-      catcow:    { dur: 3600, f: [{ lL: 0, sL: 90, lR: 0, sR: 90, y: 48, t: 92, aL: -92, aR: -92, h: -25 }, { lL: 0, sL: 90, lR: 0, sR: 90, y: 48, t: 78, aL: -78, aR: -78, h: 25 }] },
-      pushup:    { dur: 2000, f: [{ r: -64, x: 92, aL: 64, aR: 64 }, { r: -74, x: 92, y: 3, aL: 110, fL: -80, aR: 110, fR: -80 }] },
-      bridge:    { dur: 2600, f: [{ ...LIE, lL: -55, sL: 110, lR: -55, sR: 110, aL: 0, aR: 0 }, { ...LIE, y: -26, t: -20, lL: -35, sL: 90, lR: -35, sR: 90, aL: 20, aR: 20 }] },
-      lying:     { dur: 5000, f: [{ ...LIE, aL: -8, aR: 8 }, { ...LIE, y: -6, aL: -8, aR: 8 }] },
-      cobra:     { dur: 4000, f: [{ ...LIE, aL: 90, aR: 90, fL: -50, fR: -50 }, { ...LIE, t: 34, aL: 56, aR: 56 }] },
-      side_lying:{ dur: 2200, f: [{ ...LIE, lL: -30, sL: 60, aL: 175, aR: 175 }, { ...LIE, lL: -30, sL: 60, lR: -42, aL: 175, aR: 175 }] },
-      sit_kick:  { dur: 3200, f: [{ lL: -90, sL: 90, lR: -90, sR: 90, y: 50, aL: -20, aR: -20 }, { lL: -90, sL: 0, lR: -90, sR: 90, y: 50, aL: -20, aR: -20 }, { lL: -90, sL: 90, lR: -90, sR: 90, y: 50, aL: -20, aR: -20 }, { lL: -90, sL: 90, lR: -90, sR: 0, y: 50, aL: -20, aR: -20 }] },
-      swim:      { dur: 1800, seq: true, water: true, f: [{ ...SWIM, aL: 0, aR: 180, lL: -8, lR: 8 }, { ...SWIM, aL: 120, aR: 300, lL: 8, lR: -8 }, { ...SWIM, aL: 240, aR: 420, lL: -8, lR: 8 }, { ...SWIM, aL: 360, aR: 540, lL: -8, lR: 8 }] },
-      swim_back: { dur: 2200, seq: true, water: true, f: [{ ...SWIM, aL: 0, aR: 180 }, { ...SWIM, aL: -120, aR: 60, lL: 6 }, { ...SWIM, aL: -240, aR: -60, lR: 6 }, { ...SWIM, aL: -360, aR: -180 }] },
-      swim_breast:{ dur: 2000, water: true, f: [{ ...SWIM, aL: 180, aR: 180 }, { ...SWIM, aL: 110, fL: 60, aR: 110, fR: 60, lL: -40, sL: 90, lR: -40, sR: 90 }, { ...SWIM, aL: 180, aR: 180 }] },
-      kick:      { dur: 520,  water: true, f: [{ ...SWIM, aL: 180, aR: 180, lL: -12, lR: 12 }, { ...SWIM, aL: 180, aR: 180, lL: 12, lR: -12 }] },
-      float:     { dur: 4000, water: true, f: [{ ...SWIM, y: -82, aL: 170, aR: 170, lL: -6, lR: 6 }, { ...SWIM, y: -86, aL: 160, aR: 160, lL: -10, lR: 10 }] },
-      jump:      { dur: 480,  f: [{ aL: 30, fL: -30, aR: -30, fR: 30 }, { aL: 30, fL: -30, aR: -30, fR: 30, y: -14 }] },
-      step:      { dur: 1100, f: [{ x: -26, lL: 22, sL: -16, lR: -10, sR: 16, y: 4, aL: 20, fL: -70, aR: -20, fR: 70 }, { x: 26, lL: 10, sL: -16, lR: -22, sR: 16, y: 4, aL: 20, fL: -70, aR: -20, fR: 70 }] },
-      tennis:    { dur: 1200, paddle: true, f: [{ lL: 14, lR: -14, y: 2, aR: -20, fR: -40, t: -6, aL: 30 }, { lL: 14, lR: -14, y: 2, aR: -150, fR: -20, t: 8, aL: 30 }] },
-      tennis_bh: { dur: 1100, paddle: true, f: [{ lL: 14, lR: -14, y: 2, aR: 40, fR: 70, t: 6 }, { lL: 14, lR: -14, y: 2, aR: -105, fR: -10, t: -6 }] },
-      tennis_serve:{ dur: 1700, paddle: true, f: [{ aL: 30, aR: -30, fR: -60 }, { aL: 160, aR: -40, fR: -80 }, { aL: 40, aR: -110, fR: -20 }] },
+    // Размеры тела, см (рост около 175). Ось x — влево от фигурки, y — вверх, z — вперёд.
+    const BODY = { hipX: 9, hipY: -2, thigh: 44, shin: 42, ankle: 8.5, spine1: 20, spine2: 26,
+                   neck: 8, headR: 11, shX: 17, shY: 21, upper: 29, fore: 26, hand: 8.5 };
+
+    /*
+      ПОЗА — набор чисел (углы в градусах, расстояния в сантиметрах).
+      L — левая сторона тела фигурки, R — правая.
+        x, y, z            — где таз (y — высота над полом, z — вперёд)
+        yaw, pitch, roll   — поворот всего тела: pitch 90 — горизонтально лицом вниз, −90 — на спине
+        spin               — поворот вокруг своей оси (перекат с боку на бок)
+        lift               — приподнять над полом (для прыжков; работает с ground)
+        s1f, s1s, s1t      — поясница: наклон вперёд / вбок / поворот
+        s2f, s2s, s2t      — грудной отдел: то же
+        nkf, nks, nkt      — голова: кивок вниз / к плечу / поворот
+        clLe, clLp         — плечо: поднять / вывести вперёд
+        shLe, shLa, shLt   — рука: насколько поднята (0 — вниз, 90 — горизонтально, 180 — вверх),
+                             куда (0 — вперёд, 90 — в сторону, 180 — назад, −90 — к другому плечу),
+                             вращение внутрь
+        elL, wrL           — сгиб локтя и кисти
+        hpLe, hpLa, hpLt   — нога в бедре: подъём / куда / вращение (как у руки)
+        knL, anL           — сгиб колена; стопа на себя (+) или носок (−)
+      «Прибитые» стопы (если у анимации feet: true):
+        fLx, fLz — где стоит стопа, fLl — приподнять над полом, fLh — подъём пятки, fLyaw — носок наружу
+      «Прибитые» ладони (если hands: true): hLx, hLy, hLz — где запястье.
+    */
+    const P0 = {
+      x: 0, y: 96, z: 0, yaw: 0, pitch: 0, roll: 0, spin: 0, lift: 0,
+      s1f: 0, s1s: 0, s1t: 0, s2f: 0, s2s: 0, s2t: 0, nkf: 0, nks: 0, nkt: 0,
+      clLe: 0, clLp: 0, clRe: 0, clRp: 0,
+      shLe: 6, shLa: 90, shLt: 0, elL: 8, wrL: 0, shRe: 6, shRa: 90, shRt: 0, elR: 8, wrR: 0,
+      hpLe: 3, hpLa: 90, hpLt: 0, knL: 0, anL: 0, hpRe: 3, hpRa: 90, hpRt: 0, knR: 0, anR: 0,
+      fLx: 10, fLz: 0, fLl: 0, fLh: 0, fLyaw: 8, fRx: -10, fRz: 0, fRl: 0, fRh: 0, fRyaw: -8,
+      hLx: 22, hLy: 4.5, hLz: 40, hRx: -22, hRy: 4.5, hRz: 40,
     };
 
-    // Части фигурки и точки, вокруг которых они вращаются (суставы)
-    const P = {
-      legL: [$('p-legL'), 94, 160], shinL: [$('p-shinL'), 94, 210],
-      legR: [$('p-legR'), 106, 160], shinR: [$('p-shinR'), 106, 210],
-      torso: [$('p-torso'), 100, 160], head: [$('p-head'), 100, 98],
-      armL: [$('p-armL'), 100, 102], foreL: [$('p-foreL'), 100, 140],
-      armR: [$('p-armR'), 100, 102], foreR: [$('p-foreR'), 100, 140],
-    };
-    const KEYMAP = { legL: 'lL', shinL: 'sL', legR: 'lR', shinR: 'sR', torso: 't', head: 'h', armL: 'aL', foreL: 'fL', armR: 'aR', foreR: 'fR' };
+    // Поворот руки или ноги: поднять на el градусов в направлении az, повернуть на tw
+    function limbRot(sd, el, az, tw) {
+      const hx = sd * Math.sin(az * DG), hz = Math.cos(az * DG);
+      return mMul(rotAxis([-hz, 0, hx], el), rotY(-sd * tw));
+    }
+    // Две кости (бедро+голень или плечо+предплечье) тянутся от a к цели t.
+    // Возвращает сустав посередине (колено/локоть) и конец (куда реально дотянулись).
+    function reach2(a, t, l1, l2, pole) {
+      const d = vSub(t, a), u = vNorm(d); let dist = vLen(d);
+      const hi = l1 + l2 - 0.01, lo = Math.abs(l1 - l2) + 0.01;
+      if (dist > hi) { dist = hi; t = vAdd(a, vMul(u, dist)); }
+      if (dist < lo) { dist = lo; t = vAdd(a, vMul(u, dist)); }
+      const ca = (l1 * l1 + dist * dist - l2 * l2) / (2 * l1 * dist), sa = Math.sqrt(Math.max(0, 1 - ca * ca));
+      const v = vNorm(vSub(pole, vMul(u, vDot(pole, u))));
+      return [vAdd(a, vAdd(vMul(u, l1 * ca), vMul(v, l1 * sa))), t];
+    }
 
-    function applyPose(p) {
-      $('p-fig').setAttribute('transform', 'translate(' + p.x + ' ' + p.y + ') rotate(' + p.r + ' 100 258)');
-      for (const name in P) {
-        const [el, cx, cy] = P[name];
-        el.setAttribute('transform', 'rotate(' + p[KEYMAP[name]] + ' ' + cx + ' ' + cy + ')');
+    // Строим тело по позе: 14 групп деталей (туловище, голова, по 6 на каждую сторону).
+    // Деталь — капсула {a, b, ra, rb} или шар {a, r}. Порядок групп всегда один и тот же.
+    function buildBody(p, A) {
+      const B = BODY, G = [];
+      const R0 = mMul(mMul(rotY(p.yaw), rotX(p.pitch)), mMul(rotZ(p.roll), rotY(p.spin))), O = [p.x, p.y, p.z];
+      const spine = (f, s, t) => mMul(rotY(t), mMul(rotX(f), rotZ(-s)));
+      const R1 = mMul(R0, spine(p.s1f, p.s1s, p.s1t)), C = atP(R1, O, [0, B.spine1, 0]);
+      const R2 = mMul(R1, spine(p.s2f, p.s2s, p.s2t)), N = atP(R2, C, [0, B.spine2, 0]);
+      const R3 = mMul(R2, spine(p.nkf, p.nks, p.nkt));
+      const NT = atP(R3, N, [0, B.neck, 1.5]), HC = atP(R3, NT, [0, B.headR - 1, 1.5]);
+      const S = {}, side = { L: 1, R: -1 };
+      for (const k of ['L', 'R']) {
+        const sd = side[k], piv = atP(R2, C, [sd * 2, B.shY + 1.5, 0]);
+        const Rc = mMul(R2, mMul(rotY(-sd * p['cl' + k + 'p']), rotZ(sd * p['cl' + k + 'e'])));
+        S[k] = atP(Rc, piv, [sd * (B.shX - 2), -1.5, -1]);
+      }
+      // Туловище — два гладких «мешка» (верх и низ), обтягивающих несколько шаров
+      const up = [{ a: S.L, r: 6.8 }, { a: S.R, r: 6.8 }, { a: atP(R2, C, [5.5, 12, 0.5]), r: 11.5 },
+        { a: atP(R2, C, [-5.5, 12, 0.5]), r: 11.5 }, { a: atP(R2, C, [0, 21, -1.5]), r: 9.5 }, { a: C, r: 10.5 }];
+      const lo = [{ a: atP(R0, O, [6.5, 1, 0.5]), r: 10 }, { a: atP(R0, O, [-6.5, 1, 0.5]), r: 10 },
+        { a: atP(R0, O, [5, -1, -3.5]), r: 9.5 }, { a: atP(R0, O, [-5, -1, -3.5]), r: 9.5 },
+        { a: atP(R1, O, [3.5, 10, 0]), r: 10.2 }, { a: atP(R1, O, [-3.5, 10, 0]), r: 10.2 }, { a: C, r: 10.4 }];
+      G.push({ tone: 'body', hull: [up, lo], prims: up.concat(lo) });
+      G.push({ tone: 'body', head: true, prims: [{ a: N, b: NT, ra: 5.2, rb: 4.6 }, { a: HC, r: B.headR }] });
+      G.headC = HC; G.headR = R3; G.chest = atP(R2, C, [0, 10, 4]);
+      const yawR = rotY(p.yaw);
+      for (const k of ['L', 'R']) {
+        const sd = side[k]; let E, W, H;
+        // Рука: по углам или «прибитая» ладонь
+        if (A.hands === true || A.hands === (p._m ? { L: 'R', R: 'L' }[k] : k)) {
+          const pole = mVec(yawR, A.elbow ? [sd * A.elbow[0], A.elbow[1], A.elbow[2]] : [sd * 0.8, 0.3, -1]);
+          [E, W] = reach2(S[k], [p['h' + k + 'x'], p['h' + k + 'y'], p['h' + k + 'z']], B.upper, B.fore, pole);
+          H = vAdd(W, mVec(yawR, A.handDir || [0, -1.2, B.hand]));
+        } else {
+          const Ra = mMul(R2, limbRot(sd, p['sh' + k + 'e'], p['sh' + k + 'a'], p['sh' + k + 't']));
+          E = atP(Ra, S[k], [0, -B.upper, 0]);
+          const Re = mMul(Ra, rotX(-p['el' + k]));
+          W = atP(Re, E, [0, -B.fore, 0]);
+          H = atP(mMul(Re, rotX(-p['wr' + k])), W, [0, -B.hand, 0]);
+        }
+        if (k === 'R') G.handR = { W, H };
+        G.push({ tone: k, prims: [{ a: S[k], r: 6.3 }, { a: S[k], b: E, ra: 5.4, rb: 4.3 }] });
+        G.push({ tone: k, prims: [{ a: E, b: W, ra: 4.3, rb: 3.2 }] });
+        G.push({ tone: k, hand: k, prims: [{ a: W, b: H, ra: 3.4, rb: 2.9 }] });
+        // Нога: по углам или «прибитая» стопа
+        const HP = atP(R0, O, [sd * B.hipX, B.hipY, 0]); let K, AN, heel, toe;
+        if (A.feet) {
+          const yw = (p.yaw + p['f' + k + 'yaw']) * DG, f = [Math.sin(yw), 0, Math.cos(yw)];
+          const g = [p['f' + k + 'x'], p['f' + k + 'l'], p['f' + k + 'z']], h = p['f' + k + 'h'] * DG;
+          const ball = vAdd(g, vMul(f, 12));   // подушечка стопы — вокруг неё поднимается пятка
+          const fp = (fw, upv) => vAdd(ball, vAdd(vMul(f, fw * Math.cos(h) + upv * Math.sin(h)), [0, -fw * Math.sin(h) + upv * Math.cos(h), 0]));
+          const T = fp(-12, B.ankle); heel = fp(-15.5, 4);
+          toe = h > 0 ? vAdd(ball, vAdd(vMul(f, 1), [0, 3, 0])) : fp(1, 3);   // пальцы остаются на полу, когда пятка поднята
+          [K, AN] = reach2(HP, T, B.thigh, B.shin, vNorm(vAdd(f, [0, 0.05, 0])));
+          const dl = vSub(AN, T); heel = vAdd(heel, dl); toe = vAdd(toe, dl);
+        } else {
+          const Rh = mMul(R0, limbRot(sd, p['hp' + k + 'e'], p['hp' + k + 'a'], p['hp' + k + 't']));
+          K = atP(Rh, HP, [0, -B.thigh, 0]);
+          const Rk = mMul(Rh, rotX(p['kn' + k]));
+          AN = atP(Rk, K, [0, -B.shin, 0]);
+          const Rf = mMul(Rk, mMul(rotY(sd * 8), rotX(-p['an' + k])));
+          heel = atP(Rf, AN, [0, -4.5, -3.5]); toe = atP(Rf, AN, [0, -5.5, 13]);
+        }
+        G.push({ tone: k, prims: [{ a: HP, b: K, ra: 9.2, rb: 6.2 }] });
+        G.push({ tone: k, prims: [{ a: K, b: AN, ra: 6.1, rb: 4.3 }] });
+        G.push({ tone: k, foot: true, prims: [{ a: heel, b: toe, ra: 4, rb: 3 }, { a: AN, r: 4.3 }] });
+      }
+      G.left = mVec(R0, [1, 0, 0]);
+      return G;
+    }
+
+    function moveBody(G, d) {
+      for (const g of G) for (const q of g.prims) { q.a = vAdd(q.a, d); if (q.b) q.b = vAdd(q.b, d); }
+      G.headC = vAdd(G.headC, d); G.chest = vAdd(G.chest, d);
+      if (G.handR) G.handR = { W: vAdd(G.handR.W, d), H: vAdd(G.handR.H, d) };
+    }
+    const lowestPoint = G => { let lo = 1e9; for (const g of G) for (const q of g.prims) lo = Math.min(lo, q.a[1] - (q.b ? q.ra : q.r), q.b ? q.b[1] - q.rb : 1e9); return lo; };
+
+    // Поза → тело. ground: положить на пол самой нижней точкой; anchor: носки стоят на месте.
+    function solveBody(p, A) {
+      let G = buildBody(p, A);
+      if (A.ground) {
+        let sx = 0, sz = 0, n = 0;
+        for (const g of G) if (g.foot) { sx += g.prims[0].b[0]; sz += g.prims[0].b[2]; n++; }
+        const d = [A.anchor ? -sx / n : 0, p.lift - lowestPoint(G), A.anchor ? -sz / n : 0];
+        if (A.hands) {   // ладони «прибиты» — строим тело заново уже на полу
+          G = buildBody({ ...p, x: p.x + d[0], y: p.y + d[1], z: p.z + d[2] }, A);
+        } else moveBody(G, d);
+      }
+      return G;
+    }
+
+    // Плавность между ключевыми позами: io — плавно, o — быстро в начале, i — быстро в конце, lin — ровно
+    const EASE = { io: u => u * u * (3 - 2 * u), o: u => Math.sin(u * Math.PI / 2), i: u => 1 - Math.cos(u * Math.PI / 2), lin: u => u };
+    function poseAtRaw(A, t) {
+      const K = A.k; let i = 0;
+      while (i < K.length - 2 && t >= K[i + 1].t) i++;
+      const a = K[i], b = K[i + 1], u = Math.min(1, Math.max(0, (t - a.t) / ((b.t - a.t) || 1)));
+      const e = EASE[b.e || A.e || 'io'](u), fa = { ...P0, ...A.base, ...a }, fb = { ...P0, ...A.base, ...b }, p = {};
+      for (const key in P0) p[key] = fa[key] + (fb[key] - fa[key]) * e;
+      return p;
+    }
+    // Зеркальная поза: левое ↔ правое (для упражнений «на обе стороны»)
+    const MIRROR_NEG = ['x', 'yaw', 'roll', 'spin', 's1s', 's1t', 's2s', 's2t', 'nks', 'nkt', 'fLx', 'fRx', 'fLyaw', 'fRyaw', 'hLx', 'hRx'];
+    function mirrorPose(p) {
+      const q = {};
+      for (const k in p) q[k.replace(/L(?=[a-z]|$)/, '#').replace(/R(?=[a-z]|$)/, 'L').replace('#', 'R')] = p[k];
+      for (const k of MIRROR_NEG) q[k] = -q[k];
+      return q;
+    }
+    // Поза в момент t (0…1 — доля цикла). alt: вторая половина цикла — зеркальная.
+    function poseAt(A, t) {
+      const one = tt => !A.alt ? poseAtRaw(A, tt) : tt < 0.5 ? poseAtRaw(A, tt * 2) : { ...mirrorPose(poseAtRaw(A, tt * 2 - 1)), _m: 1 };
+      t = ((t % 1) + 1) % 1;
+      const p = one(t);
+      if (A.lag) { const q = one((((t - A.lag) % 1) + 1) % 1); for (const k in p) if (/^(sh|el|wr|cl)/.test(k)) p[k] = q[k]; }
+      return p;
+    }
+    const cycleMs = A => A.dur * (A.alt ? 2 : 1);
+
+    // Плавный переход между двумя телами (u от 0 до 1)
+    function mixBody(G1, G2, u) {
+      const G = G2.map((g, i) => ({ ...g, prims: g.prims.map((q, j) => {
+        const o = G1[i].prims[j]; return q.b ? { ...q, a: vMix(o.a, q.a, u), b: vMix(o.b, q.b, u) } : { ...q, a: vMix(o.a, q.a, u) };
+      }) }));
+      for (const g of G) if (g.hull) { const n = g.hull[0].length; g.hull = [g.prims.slice(0, n), g.prims.slice(n)]; }
+      G.left = G2.left; G.headR = G2.headR; G.headC = vMix(G1.headC, G2.headC, u); G.chest = vMix(G1.chest, G2.chest, u);
+      G.handR = G2.handR && G1.handR ? { W: vMix(G1.handR.W, G2.handR.W, u), H: vMix(G1.handR.H, G2.handR.H, u) } : G2.handR;
+      return G;
+    }
+
+    // ---------- Камера и рисование ----------
+    const FOCUS = 650;   // лёгкая перспектива: ближнее чуть крупнее
+    function makeCam(yaw, pitch) {
+      const ps = yaw * DG, th = pitch * DG;
+      return { ps, th, D: [Math.sin(ps) * Math.cos(th), Math.sin(th), Math.cos(ps) * Math.cos(th)], R: [Math.cos(ps), 0, -Math.sin(ps)],
+               U: [-Math.sin(th) * Math.sin(ps), Math.cos(th), -Math.sin(th) * Math.cos(ps)] };
+    }
+    const project = (c, p) => { const z = vDot(p, c.D), k = FOCUS / (FOCUS - z); return [vDot(p, c.R) * k, vDot(p, c.U) * k, z, k]; };
+
+    // Масштаб и сдвиг, чтобы упражнение целиком помещалось: пол — внизу сцены
+    function computeFit(A, c, W, H) {
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      for (let i = 0; i < 24; i++) for (const g of solveBody(poseAt(A, i / 24), A)) for (const q of g.prims)
+        for (const [pt, r] of [[q.a, q.b ? q.ra : q.r], [q.b, q.rb]]) {
+          if (!pt) continue; const v = project(c, pt), rr = r * v[3];
+          x0 = Math.min(x0, v[0] - rr); x1 = Math.max(x1, v[0] + rr); y0 = Math.min(y0, v[1] - rr); y1 = Math.max(y1, v[1] + rr);
+        }
+      if (A.bar) y1 = Math.max(y1, A.bar + 4);
+      const sc = Math.min(W * 0.86 / (x1 - x0), H * 0.8 / (y1 - y0), H * 0.84 / 185);
+      return { sc, ox: W / 2 - sc * (x0 + x1) / 2, oy: H * 0.9 + sc * y0 };
+    }
+
+    // Капсула (два круга, соединённые касательными) — одна деталь тела на экране
+    function pathCapsule(ctx, x1, y1, r1, x2, y2, r2) {
+      const dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy);
+      if (d <= Math.abs(r1 - r2) + 1e-3) { const b = r1 > r2, x = b ? x1 : x2, y = b ? y1 : y2, r = b ? r1 : r2; ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, 2 * Math.PI); return; }
+      const a = Math.atan2(dy, dx), b = Math.acos((r1 - r2) / d);
+      ctx.moveTo(x1 + r1 * Math.cos(a + b), y1 + r1 * Math.sin(a + b));
+      ctx.arc(x1, y1, r1, a + b, a - b + 2 * Math.PI); ctx.arc(x2, y2, r2, a - b, a + b); ctx.closePath();
+    }
+    // Гладкая «оболочка» вокруг нескольких кругов (для туловища)
+    function pathBlob(ctx, circles) {
+      const pts = [];
+      for (const [x, y, r] of circles) for (let i = 0; i < 24; i++) pts.push([x + r * Math.cos(i * Math.PI / 12), y + r * Math.sin(i * Math.PI / 12)]);
+      pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]), lw = [], uw = [];
+      for (const p of pts) { while (lw.length > 1 && cr(lw[lw.length - 2], lw[lw.length - 1], p) <= 0) lw.pop(); lw.push(p); }
+      for (let i = pts.length - 1; i >= 0; i--) { const p = pts[i]; while (uw.length > 1 && cr(uw[uw.length - 2], uw[uw.length - 1], p) <= 0) uw.pop(); uw.push(p); }
+      uw.pop(); lw.pop(); const h = lw.concat(uw);
+      ctx.moveTo(h[0][0], h[0][1]); for (let i = 1; i < h.length; i++) ctx.lineTo(h[i][0], h[i][1]); ctx.closePath();
+    }
+    const hexRgb = (s, d) => { const m = /^#?([0-9a-f]{6})$/i.exec((s || '').trim()); if (!m) return d; const n = parseInt(m[1], 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+    const mixRgb = (a, b, u) => a.map((v, i) => Math.round(v + (b[i] - v) * u));
+    const rgbStr = (c, al) => al === undefined ? 'rgb(' + c.join(',') + ')' : 'rgba(' + c.join(',') + ',' + al + ')';
+    const LIGHT = [-0.55, -0.83];   // свет сверху слева — для бликов
+
+    // Нарисовать кадр. col — цвета: ink (контур фигуры), bg (фон), phase (цвет фазы).
+    function drawBody(ctx, G, c, f, col, A, extra) {
+      const k = f.sc, sx = v => f.ox + k * v[0], sy = v => f.oy - k * v[1];
+      const bg = col.bg, ink = col.ink;
+      const tones = { near: ink, body: mixRgb(ink, bg, 0.22), far: mixRgb(ink, bg, 0.56) };
+      // Тень на полу — «след» тела сверху; чем выше тело, тем она бледнее
+      if (!A.water) {
+        const fade = Math.max(0.35, 1 - Math.max(0, lowestPoint(G)) / 40);
+        ctx.save();
+        ctx.transform(k * Math.cos(c.ps), k * Math.sin(c.th) * Math.sin(c.ps), -k * Math.sin(c.ps), k * Math.sin(c.th) * Math.cos(c.ps), f.ox, f.oy);
+        for (const [grow, mul, a] of [[6, 1, 0.5], [0, 0.9, 1]]) {
+          ctx.beginPath();
+          for (const g of G) for (const q of g.prims) {
+            if (q.b) pathCapsule(ctx, q.a[0], q.a[2], q.ra * mul + grow, q.b[0], q.b[2], q.rb * mul + grow);
+            else { const r = q.r * mul + grow; ctx.moveTo(q.a[0] + r, q.a[2]); ctx.arc(q.a[0], q.a[2], r, 0, 2 * Math.PI); }
+          }
+          ctx.fillStyle = rgbStr(mixRgb(bg, mixRgb(bg, ink, 0.2), fade * a)); ctx.fill();
+        }
+        ctx.restore();
+      }
+      // Табурет или скамья (простая коробка)
+      if (A.seat) {
+        const st = A.seat, pts = [];
+        for (const x of [-st.w / 2, st.w / 2]) for (const y of [0, st.h]) for (const z of [st.z - st.d / 2, st.z + st.d / 2]) { const v = project(c, [x, y, z]); pts.push([sx(v), sy(v), 0]); }
+        ctx.beginPath(); pathBlob(ctx, pts); ctx.fillStyle = rgbStr(mixRgb(ink, bg, 0.72)); ctx.fill();
+        const top = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => project(c, [a * st.w / 2, st.h, st.z + b * st.d / 2]));
+        ctx.beginPath(); top.forEach((v, i) => i ? ctx.lineTo(sx(v), sy(v)) : ctx.moveTo(sx(v), sy(v))); ctx.closePath();
+        ctx.fillStyle = rgbStr(mixRgb(ink, bg, 0.82)); ctx.fill();
+      }
+      // Ближняя к камере сторона темнее, дальняя светлее
+      const w = vDot(G.left, c.D);
+      const toneOf = { body: tones.body, L: mixRgb(tones.near, tones.far, Math.min(1, Math.max(0, -w * 1.4))),
+                       R: mixRgb(tones.near, tones.far, Math.min(1, Math.max(0, w * 1.4))) };
+      for (const g of G) { let s = 0, n = 0; for (const q of g.prims) { q.pa = project(c, q.a); s += q.pa[2]; n++; if (q.b) { q.pb = project(c, q.b); s += q.pb[2]; n++; } } g.z = s / n; }
+      ctx.lineJoin = 'round';
+      for (const g of G.slice().sort((a, b) => a.z - b.z)) {
+        const shape = (shrink, shift) => {
+          ctx.beginPath();
+          if (g.hull) { for (const set of g.hull) pathBlob(ctx, set.map(q => { const r = q.r * k * q.pa[3]; return [sx(q.pa) + LIGHT[0] * shift * r, sy(q.pa) + LIGHT[1] * shift * r, r * shrink]; })); return; }
+          for (const q of g.prims) {
+            if (q.b) { const r1 = q.ra * k * q.pa[3], r2 = q.rb * k * q.pb[3];
+              pathCapsule(ctx, sx(q.pa) + LIGHT[0] * shift * r1, sy(q.pa) + LIGHT[1] * shift * r1, r1 * shrink, sx(q.pb) + LIGHT[0] * shift * r2, sy(q.pb) + LIGHT[1] * shift * r2, r2 * shrink); }
+            else { const r = q.r * k * q.pa[3], x = sx(q.pa) + LIGHT[0] * shift * r, y = sy(q.pa) + LIGHT[1] * shift * r; ctx.moveTo(x + r * shrink, y); ctx.arc(x, y, r * shrink, 0, 2 * Math.PI); }
+          }
+        };
+        const tone = toneOf[g.tone];
+        shape(1, 0); ctx.lineWidth = Math.max(2.4, k * 1.8); ctx.strokeStyle = rgbStr(bg); ctx.stroke();   // светлый контур отделяет детали
+        ctx.fillStyle = rgbStr(tone); ctx.fill();
+        shape(0.5, 0.36); ctx.fillStyle = rgbStr(mixRgb(tone, [255, 255, 255], 0.13)); ctx.fill();   // блик
+        if (g.head && vDot(mVec(G.headR, [0, 0, 1]), c.D) > -0.3) {   // визор показывает, куда смотрит голова
+          const a = project(c, atP(G.headR, G.headC, [4.6, 1.8, 8.6])), b = project(c, atP(G.headR, G.headC, [-4.6, 1.8, 8.6]));
+          ctx.beginPath(); pathCapsule(ctx, sx(a), sy(a), 2.4 * k * a[3], sx(b), sy(b), 2.4 * k * b[3]); ctx.fillStyle = rgbStr(col.phase); ctx.fill();
+        }
+        if (g.hand === 'R' && A.paddle && G.handR) {   // ракетка в правой руке
+          const dir = vNorm(vSub(G.handR.H, G.handR.W)), hc = vAdd(G.handR.H, vMul(dir, 9));
+          const a = project(c, G.handR.H), b = project(c, hc);
+          ctx.beginPath(); pathCapsule(ctx, sx(a), sy(a), 1.4 * k, sx(b), sy(b), 1.4 * k); ctx.fillStyle = rgbStr(mixRgb(ink, bg, 0.3)); ctx.fill();
+          ctx.beginPath(); ctx.arc(sx(b), sy(b), 8 * k * b[3], 0, 2 * Math.PI); ctx.lineWidth = Math.max(1.5, k); ctx.stroke(); ctx.fillStyle = rgbStr(col.phase); ctx.fill();
+        }
+      }
+      // Перекладина для подтягиваний
+      if (A.bar) {
+        const y = A.bar, a = project(c, [70, y, A.barZ || 0]), b = project(c, [-70, y, A.barZ || 0]);
+        ctx.beginPath(); pathCapsule(ctx, sx(a), sy(a), 2 * k, sx(b), sy(b), 2 * k); ctx.fillStyle = rgbStr(mixRgb(ink, bg, 0.35)); ctx.fill();
+      }
+      // Вода: всё ниже поверхности слегка закрашиваем
+      if (A.water) {
+        const wy = sy(project(c, [0, 0, 0]));
+        ctx.fillStyle = 'rgba(96, 165, 210, 0.28)'; ctx.fillRect(-9999, wy, 99999, 99999);
+        ctx.fillStyle = 'rgba(96, 165, 210, 0.55)'; ctx.fillRect(-9999, wy - 1, 99999, 2.5);
+      }
+      // «Дыхательный» круг вокруг груди
+      if (A.ring && extra) {
+        const s = extra.breath, p = project(c, G.chest);
+        ctx.beginPath(); ctx.arc(sx(p), sy(p), (42 + 16 * s) * k, 0, 2 * Math.PI);
+        ctx.lineWidth = 2; ctx.strokeStyle = rgbStr(col.phase, 0.15 + 0.45 * s); ctx.stroke();
       }
     }
 
+    // ---------- Анимации упражнений ----------
+    // SYM — одинаково для левой и правой стороны (пишем только левую)
+    function SYM(o) {
+      const r = { ...o };
+      for (const k in o) { const m = k.replace(/L(?=[a-z]|$)/, 'R'); if (m !== k) r[m] = /^(fLx|hLx|fLyaw)$/.test(k) ? -o[k] : o[k]; }
+      return r;
+    }
+    // CYCLE — ключевые позы по формуле (для кругов и гребков): n шагов, ровная скорость
+    const CYCLE = (n, fn) => Array.from({ length: n + 1 }, (_, i) => ({ t: i / n, e: 'lin', ...fn(i / n) }));
+    const SIN = t => Math.sin(2 * Math.PI * t), COS = t => Math.cos(2 * Math.PI * t);
+
+    /*
+      АНИМАЦИЯ:
+        dur    — длительность списка поз, мс
+        k      — ключевые позы: t — момент (0…1), e — плавность (необязательно)
+        base   — общее для всех поз этой анимации
+        cam    — угол камеры: 0 — спереди, −90 — сбоку (лицом вправо), −30 — вполоборота
+        camPitch — насколько камера сверху (по умолчанию 10°)
+        feet: true  — стопы «прибиты» к полу; hands: true / 'L' / 'R' — ладони «прибиты»
+        ground: true — положить тело на пол самой нижней точкой; anchor — носки на месте
+        alt: true   — вторая половина цикла зеркальная (смена сторон)
+        lag    — руки чуть запаздывают за телом (доля цикла)
+        ring, paddle, water, bar, seat — дыхательный круг, ракетка, вода, перекладина, табурет
+    */
+    const STAND = { feet: true };
+    const ANIMS = {
+      // ===== Стоя: дыхание, разминка =====
+      idle:      { ...STAND, dur: 3600, cam: -28, k: [{ t: 0 }, { t: 0.5, ...SYM({ shLe: 9 }), s1s: 0.8, x: 0.6 }, { t: 1 }] },
+      breathe:   { ...STAND, dur: 5200, cam: -24, ring: true, base: SYM({ shLa: 25, shLe: 7 }),
+                   k: [{ t: 0 }, { t: 0.45, ...SYM({ shLe: 30, elL: 24, clLe: 4 }), s2f: -5, nkf: -5 }, { t: 0.55, ...SYM({ shLe: 30, elL: 24, clLe: 4 }), s2f: -5, nkf: -5 }, { t: 1 }] },
+      pole:      { ...STAND, dur: 6000, cam: -30, ring: true, base: { y: 92, ...SYM({ shLe: 68, shLa: 38, shLt: 35, elL: 60, fLx: 13 }) },
+                   k: [{ t: 0 }, { t: 0.5, ...SYM({ shLa: 44, shLe: 70 }), s2f: -3, y: 92.6 }, { t: 1 }] },
+      prayer:    { ...STAND, hands: true, dur: 5200, cam: -24, ring: true, elbow: [1, -0.6, 0.1], handDir: [0, 8, 2.5],
+                   base: { hLx: 3.2, hRx: -3.2, hLy: 121, hRy: 121, hLz: 17, hRz: 17, fLx: 7, fLyaw: 4 },
+                   k: [{ t: 0 }, { t: 0.5, s2f: -3, hLy: 122, hRy: 122, nkf: 4 }, { t: 1 }] },
+      head:      { ...STAND, dur: 8000, cam: -30, k: [{ t: 0 }, { t: 0.12, nkf: 28 }, { t: 0.25, nkf: -22 }, { t: 0.37 }, { t: 0.5, nks: 26 }, { t: 0.62 }, { t: 0.75, nks: -26 }, { t: 0.87 }, { t: 1 }] },
+      head_turn: { ...STAND, dur: 4000, cam: -12, k: [{ t: 0 }, { t: 0.25, nkt: 58 }, { t: 0.5 }, { t: 0.75, nkt: -58 }, { t: 1 }] },
+      head_tilt: { ...STAND, dur: 3600, cam: -10, k: [{ t: 0 }, { t: 0.25, nks: 28 }, { t: 0.5 }, { t: 0.75, nks: -28 }, { t: 1 }] },
+      head_nod:  { ...STAND, dur: 3600, cam: -60, k: [{ t: 0 }, { t: 0.25, nkf: 32 }, { t: 0.5 }, { t: 0.75, nkf: -26 }, { t: 1 }] },
+      shrug:     { ...STAND, dur: 4400, cam: -55,
+                   k: CYCLE(16, t => { const a = t < 0.5 ? t * 2 : 2 - t * 2; return SYM({ clLe: 5 - 5 * COS(a), clLp: 7 * SIN(a) }); }) },
+      arms:      { ...STAND, dur: 6400, cam: -28, base: SYM({ shLe: 90, shLa: 90, elL: 4 }),
+                   k: CYCLE(48, t => { const a = t < 0.5 ? t * 4 : (1 - t) * 4; return SYM({ shLe: 90 + 26 * SIN(a), shLa: 90 + 26 * COS(a) }); }) },
+      reach:     { ...STAND, dur: 4200, cam: -26,
+                   k: [{ t: 0 }, { t: 0.42, ...SYM({ shLe: 172, shLa: 18, elL: 3, fLh: 22 }), y: 99.5, s2f: -5, nkf: -12 },
+                       { t: 0.6, ...SYM({ shLe: 174, shLa: 18, elL: 3, fLh: 22 }), y: 99.5, s2f: -5, nkf: -12 }, { t: 1 }] },
+      oh_ext:    { ...STAND, dur: 2600, cam: -70, base: SYM({ shLe: 168, shLa: 14, elL: 125 }),
+                   k: [{ t: 0 }, { t: 0.42, ...SYM({ elL: 6, shLe: 172 }) }, { t: 0.55, ...SYM({ elL: 6, shLe: 172 }) }, { t: 1 }] },
+      angel:     { ...STAND, dur: 4000, cam: -12, base: SYM({ shLe: 88, shLa: 90, shLt: -90, elL: 92 }),
+                   k: [{ t: 0 }, { t: 0.45, ...SYM({ shLe: 152, elL: 16 }) }, { t: 0.55, ...SYM({ shLe: 152, elL: 16 }) }, { t: 1 }] },
+      jerks:     { ...STAND, dur: 2400, cam: -26, e: 'o', base: SYM({ shLe: 80, shLa: 60, shLt: 70, elL: 120 }),
+                   k: [{ t: 0 }, { t: 0.12, ...SYM({ shLa: 112 }) }, { t: 0.25 }, { t: 0.37, ...SYM({ shLa: 112 }) }, { t: 0.5 },
+                       { t: 0.62, ...SYM({ shLa: 118, elL: 4 }) }, { t: 0.75 }, { t: 0.87, ...SYM({ shLa: 118, elL: 4 }) }, { t: 1 }] },
+      twist:     { ...STAND, dur: 2600, cam: -20, base: { ...SYM({ fLx: 14, shLe: 75, shLa: 50, shLt: 70, elL: 115 }) },
+                   k: [{ t: 0, s1t: 18, s2t: 26, nkt: 14 }, { t: 0.5, s1t: -18, s2t: -26, nkt: -14 }, { t: 1, s1t: 18, s2t: 26, nkt: 14 }] },
+      sidebend:  { ...STAND, alt: true, dur: 2600, cam: -8, base: SYM({ fLx: 15 }),
+                   k: [{ t: 0 }, { t: 0.5, s1s: 18, s2s: 20, nks: 6, x: -3, shRe: 160, shRa: 90, elR: 22, shLe: 8, shLa: 50, elL: 4 }, { t: 1 }] },
+      hips:      { ...STAND, hands: true, alt: true, dur: 3600, cam: -26, elbow: [1, 0, -0.7], handDir: [0, -2, 8],
+                   base: { y: 94, ...SYM({ fLx: 12, hLx: 19, hLy: 101, hLz: 3 }) },
+                   k: CYCLE(12, t => ({ x: 5 * COS(t), z: 5 * SIN(t), hLx: 19 + 5 * COS(t), hRx: -19 + 5 * COS(t), hLz: 3 + 5 * SIN(t), hRz: 3 + 5 * SIN(t), s1s: -4 * COS(t), s1f: -3 * SIN(t) })) },
+      halfsquat: { ...STAND, hands: true, alt: true, dur: 3200, cam: -34, elbow: [0.7, 0, -1], handDir: [0, -2, 8],
+                   base: { y: 76, z: -8, pitch: 24, s1f: 24, nkf: -24, ...SYM({ fLx: 6, fLyaw: 4, hLx: 9, hLy: 50, hLz: 16 }) },
+                   k: CYCLE(12, t => ({ x: 4 * COS(t), z: -8 + 4 * SIN(t), hLx: 9 + 2 * COS(t), hRx: -9 + 2 * COS(t), hLz: 16 + 2 * SIN(t), hRz: 16 + 2 * SIN(t) })) },
+      chair:     { ...STAND, dur: 5000, cam: -62, base: { y: 70, z: -14, pitch: 20, s1f: 4, nkf: -10, ...SYM({ fLx: 8, fLyaw: 4, shLe: 158, shLa: 8, elL: 4 }) },
+                   k: [{ t: 0 }, { t: 0.5, y: 69.4, ...SYM({ shLe: 164 }) }, { t: 1 }] },
+      squat:     { ...STAND, dur: 3000, cam: -35, base: SYM({ fLx: 13, fLyaw: 12, shLa: 0, shLe: 5, elL: 10 }),
+                   k: [{ t: 0 }, { t: 0.12, ...SYM({ shLe: 30, elL: 14 }) },
+                       { t: 0.46, y: 55, z: -14, pitch: 20, s1f: 12, s2f: 6, nkf: -30, ...SYM({ shLe: 122, shLa: -4, elL: 4 }) },
+                       { t: 0.56, y: 55.5, z: -14, pitch: 20, s1f: 12, s2f: 6, nkf: -30, ...SYM({ shLe: 122, shLa: -4, elL: 4 }) },
+                       { t: 0.88, ...SYM({ shLe: 22, elL: 12 }) }, { t: 1 }] },
+      garland:   { ...STAND, hands: true, dur: 6000, cam: -24, elbow: [1, -0.25, 0.3], handDir: [0, 8, 2.5],
+                   base: { y: 31, z: -6, pitch: 12, s1f: 12, nkf: -16, ...SYM({ fLx: 21, fLyaw: 32, hLx: 3.2, hLy: 63, hLz: 26 }) },
+                   k: [{ t: 0 }, { t: 0.5, y: 31.8, s2f: -2 }, { t: 1 }] },
+      wall:      { ...STAND, dur: 5000, cam: -80, base: { y: 49, z: -30, nkf: 0, ...SYM({ fLz: 13, fLx: 12, shLe: 4, shLa: 60, elL: 10 }) },
+                   k: [{ t: 0 }, { t: 0.5, y: 48.6, s2f: -2 }, { t: 1 }] },
+      jacks:     { ...STAND, dur: 1000, cam: -14, lag: 0.035, base: { y: 93.5, ...SYM({ fLx: 10, fLyaw: 6, shLe: 8, elL: 12 }) },
+                   k: [{ t: 0 },
+                       { t: 0.2, e: 'o', y: 99, ...SYM({ fLx: 19, fLl: 4, fLh: 18, shLe: 95, elL: 6 }) },
+                       { t: 0.42, e: 'i', y: 91.5, ...SYM({ fLx: 31, shLe: 166, elL: 16 }) },
+                       { t: 0.5, y: 93, ...SYM({ fLx: 31, shLe: 172, elL: 10 }) },
+                       { t: 0.7, e: 'o', y: 99, ...SYM({ fLx: 19, fLl: 4, fLh: 18, shLe: 95, elL: 6 }) },
+                       { t: 0.92, e: 'i', y: 92 }, { t: 1 }] },
+      march:     { ...STAND, alt: true, dur: 620, cam: -40, base: SYM({ shLa: 0, shLe: 6, elL: 20 }),
+                   k: [{ t: 0 }, { t: 0.5, fLl: 24, fLz: 9, fLh: -4, y: 96.4, shRe: 30, elR: 34, shLe: -22, elL: 16 }, { t: 1 }] },
+      run:       { ...STAND, alt: true, dur: 380, cam: -40, base: { y: 97, ...SYM({ shLa: 0, shLe: 10, elL: 88, fLh: 12 }) },
+                   k: [{ t: 0 }, { t: 0.5, e: 'o', y: 100, fLl: 38, fLz: 16, fLh: -2, shRe: 50, elR: 95, shLe: -38, elL: 80 }, { t: 1 }] },
+      step:      { ...STAND, alt: true, dur: 700, cam: -12,
+                   base: { y: 87, z: -4, pitch: 12, s1f: 12, nkf: -18, ...SYM({ fLyaw: 10, shLe: 42, shLa: 25, elL: 88 }) },
+                   k: [{ t: 0, x: -20, fLx: -6, fRx: -34 }, { t: 0.3, x: -5, fLx: 18, fLl: 6, fRx: -34 }, { t: 0.5, x: 8, fLx: 34, fRx: -30 },
+                       { t: 0.75, x: 18, fLx: 34, fRx: -2, fRl: 6 }, { t: 1, x: 20, fLx: 34, fRx: 6 }] },
+      windmill:  { ...STAND, alt: true, dur: 1800, cam: -14, base: { y: 93, ...SYM({ fLx: 30, fLyaw: 14 }) },
+                   k: [{ t: 0, ...SYM({ shLe: 90, shLa: 90, elL: 2 }) },
+                       { t: 0.45, y: 87.5, z: -10, pitch: 40, s1f: 28, s2f: 10, s1t: 22, s2t: 26, nkt: -10, shRe: 92, shRa: -12, elR: 2, shLe: 100, shLa: 165, elL: 2 },
+                       { t: 0.55, y: 87.5, z: -10, pitch: 40, s1f: 28, s2f: 10, s1t: 22, s2t: 26, nkt: -10, shRe: 92, shRa: -12, elR: 2, shLe: 100, shLa: 165, elL: 2 },
+                       { t: 1, ...SYM({ shLe: 90, shLa: 90, elL: 2 }) }] },
+      fold:      { ...STAND, dur: 5200, cam: -76, base: SYM({ shLa: 0, shLe: 4 }),
+                   k: [{ t: 0 }, { t: 0.42, y: 93, z: -16, pitch: 72, s1f: 26, s2f: 14, nkf: 12, ...SYM({ shLe: 168, elL: 8 }) },
+                       { t: 0.6, y: 93, z: -16, pitch: 74, s1f: 26, s2f: 14, nkf: 12, ...SYM({ shLe: 168, elL: 8 }) }, { t: 1 }] },
+      hinge:     { ...STAND, dur: 3200, cam: -80, base: SYM({ shLa: 0, shLe: 4, elL: 4 }),
+                   k: [{ t: 0 }, { t: 0.45, y: 90, z: -18, pitch: 68, nkf: -14, ...SYM({ shLe: 66 }) },
+                       { t: 0.55, y: 90, z: -18, pitch: 68, nkf: -14, ...SYM({ shLe: 66 }) }, { t: 1 }] },
+      pump:      { ...STAND, dur: 1100, cam: -70, base: SYM({ shLa: 0, shLe: 8, elL: 12 }),
+                   k: [{ t: 0 }, { t: 0.45, e: 'o', pitch: 28, s1f: 12, s2f: 6, z: -6, y: 95, nkf: 12, ...SYM({ shLe: 42, elL: 10 }) }, { t: 1 }] },
+      hug:       { ...STAND, dur: 1200, cam: -22, base: SYM({ shLe: 88, shLa: 96, elL: 14 }),
+                   k: [{ t: 0 }, { t: 0.4, e: 'o', shLe: 80, shLa: -15, shLt: 85, elL: 115, shRe: 72, shRa: -20, shRt: 85, elR: 120 }, { t: 1 }] },
+      bow:       { ...STAND, alt: true, dur: 3200, cam: -8, base: { y: 82, ...SYM({ fLx: 33, fLyaw: 4 }) },
+                   k: [{ t: 0, y: 86, ...SYM({ shLe: 80, shLa: 15, shLt: 80, elL: 105 }) },
+                       { t: 0.42, shLe: 90, shLa: 90, elL: 2, wrL: -30, nkt: 62, shRe: 88, shRa: 140, elR: 140 },
+                       { t: 0.65, shLe: 90, shLa: 90, elL: 2, wrL: -30, nkt: 62, shRe: 88, shRa: 140, elR: 140 },
+                       { t: 1, y: 86, ...SYM({ shLe: 80, shLa: 15, shLt: 80, elL: 105 }) }] },
+      split:     { ...STAND, alt: true, dur: 3000, cam: -20,
+                   k: [{ t: 0, ...SYM({ shLe: 45, shLa: 15, shLt: 80, elL: 95 }) },
+                       { t: 0.45, shLe: 176, shLa: 60, elL: 4, wrL: 60, nkf: -14, shRe: 12, shRa: 75, elR: 4, wrR: -60 },
+                       { t: 0.6, shLe: 176, shLa: 60, elL: 4, wrL: 60, nkf: -14, shRe: 12, shRa: 75, elR: 4, wrR: -60 },
+                       { t: 1, ...SYM({ shLe: 45, shLa: 15, shLt: 80, elL: 95 }) }] },
+      calf:      { ...STAND, dur: 1500, cam: -70, k: [{ t: 0 }, { t: 0.4, ...SYM({ fLh: 32 }), y: 100.8 }, { t: 0.55, ...SYM({ fLh: 32 }), y: 100.8 }, { t: 1 }] },
+      shake:     { ...STAND, dur: 320, cam: -26, lag: 0.18,
+                   k: [{ t: 0, y: 95.5, ...SYM({ shLe: 10, elL: 16 }) }, { t: 0.5, y: 96.3, ...SYM({ shLe: 18, elL: 2, clLe: 2 }) }, { t: 1, y: 95.5, ...SYM({ shLe: 10, elL: 16 }) }] },
+      tap:       { ...STAND, alt: true, dur: 700, cam: -26, base: SYM({ shLe: 10 }),
+                   k: [{ t: 0 }, { t: 0.5, e: 'o', shLe: 48, shLa: -35, shLt: 80, elL: 120 }, { t: 1 }] },
+      curl:      { ...STAND, dur: 2000, cam: -58, base: SYM({ shLe: 5, shLa: 40, elL: 10 }),
+                   k: [{ t: 0 }, { t: 0.4, ...SYM({ elL: 140, shLe: 14, shLa: 10 }) }, { t: 0.5, ...SYM({ elL: 140, shLe: 14, shLa: 10 }) }, { t: 1 }] },
+      press_down:{ ...STAND, dur: 1300, cam: -45, base: SYM({ shLe: 26, shLa: 150, elL: 112 }),
+                   k: [{ t: 0 }, { t: 0.35, e: 'o', ...SYM({ shLe: 8, shLa: 90, elL: 2, wrL: -20 }) }, { t: 1 }] },
+      press:     { ...STAND, dur: 2200, cam: -55, base: SYM({ shLe: 68, shLa: 40, elL: 132 }),
+                   k: [{ t: 0 }, { t: 0.4, ...SYM({ shLe: 170, shLa: 22, elL: 5 }) }, { t: 0.55, ...SYM({ shLe: 170, shLa: 22, elL: 5 }) }, { t: 1 }] },
+      lateral:   { ...STAND, dur: 2200, cam: -14, base: { s1f: 5, ...SYM({ shLe: 8, elL: 14 }) },
+                   k: [{ t: 0 }, { t: 0.45, ...SYM({ shLe: 88, elL: 16 }) }, { t: 0.55, ...SYM({ shLe: 88, elL: 16 }) }, { t: 1 }] },
+      row:       { ...STAND, dur: 2000, cam: -80, base: { y: 90, z: -12, pitch: 42, s1f: 4, nkf: -14, ...SYM({ fLx: 12, shLa: 0, shLe: 44, elL: 4 }) },
+                   k: [{ t: 0 }, { t: 0.42, ...SYM({ shLe: -38, shLa: 18, elL: 100 }) }, { t: 0.55, ...SYM({ shLe: -38, shLa: 18, elL: 100 }) }, { t: 1 }] },
+      pull:      { hands: true, bar: 214, dur: 2600, cam: -30, elbow: [1, -0.6, 0.3], handDir: [0, 8, 0],
+                   base: { y: 115, ...SYM({ hLx: 30, hLy: 210, hLz: 0, hpLe: 14, hpLa: 0, knL: 30, anL: -30 }) },
+                   k: [{ t: 0 }, { t: 0.4, y: 152 }, { t: 0.52, y: 152 }, { t: 1 }] },
+      // ===== Выпады, стойки =====
+      lunge:     { ...STAND, alt: true, dur: 2800, cam: -70, base: SYM({ fLx: 9, fLyaw: 5, shLe: 6, elL: 12 }),
+                   k: [{ t: 0 }, { t: 0.1, y: 95.5, z: 6, fLz: 24, fLl: 12, fLh: -12, shLe: -5, shLa: 0, shRe: 8, shRa: 0 },
+                       { t: 0.22, y: 84, z: 34, fLz: 70, fLl: 6, fLh: -10, shLe: -10, shLa: 0, shRe: 14, shRa: 0 },
+                       { t: 0.3, e: 'i', y: 78, z: 46, fLz: 88, fRh: 22, shLe: -12, shLa: 0, shRe: 16, shRa: 0 },
+                       { t: 0.46, y: 57, z: 46, fLz: 88, fRh: 42, shLe: -14, shLa: 0, shRe: 20, shRa: 0 },
+                       { t: 0.54, y: 57.5, z: 46, fLz: 88, fRh: 42, shLe: -14, shLa: 0, shRe: 20, shRa: 0 },
+                       { t: 0.7, e: 'o', y: 78, z: 46, fLz: 88, fRh: 22, shLe: -10, shLa: 0, shRe: 14, shRa: 0 },
+                       { t: 0.8, y: 84, z: 34, fLz: 70, fLl: 6, fLh: -8, shLe: -6, shLa: 0, shRe: 8, shRa: 0 },
+                       { t: 0.9, y: 95.5, z: 6, fLz: 24, fLl: 10, fLh: -10 }, { t: 1 }] },
+      lunge_back:{ ...STAND, alt: true, dur: 2800, cam: -70, base: SYM({ fLx: 9, fLyaw: 5, shLe: 6, elL: 12 }),
+                   k: [{ t: 0 }, { t: 0.1, y: 95.5, z: -4, fRz: -26, fRl: 10, fRh: 10 },
+                       { t: 0.22, y: 86, z: -24, fRz: -70, fRl: 4, fRh: 26 },
+                       { t: 0.3, e: 'i', y: 78, z: -40, fRz: -88, fRh: 38 },
+                       { t: 0.46, y: 57, z: -42, fRz: -88, fRh: 42, shLe: -12, shLa: 0, shRe: 16, shRa: 0 },
+                       { t: 0.54, y: 57.5, z: -42, fRz: -88, fRh: 42, shLe: -12, shLa: 0, shRe: 16, shRa: 0 },
+                       { t: 0.7, e: 'o', y: 78, z: -40, fRz: -88, fRh: 30 },
+                       { t: 0.82, y: 88, z: -22, fRz: -60, fRl: 8, fRh: 18 },
+                       { t: 0.92, y: 95, z: -4, fRz: -16, fRl: 5, fRh: 6 }, { t: 1 }] },
+      split_squat:{ ...STAND, dur: 2600, cam: -72, base: { fLz: 0, fRz: -86, fRh: 40, ...SYM({ fLx: 9, fLyaw: 5, shLe: 6, elL: 10 }) },
+                   k: [{ t: 0, y: 80, z: -38 }, { t: 0.45, y: 57, z: -40 }, { t: 0.55, y: 57, z: -40 }, { t: 1, y: 80, z: -38 }] },
+      lunge_up:  { ...STAND, alt: true, dur: 6000, cam: -66,
+                   base: { y: 61.5, z: 44, fLz: 88, fRz: 0, fRh: 48, s2f: -8, nkf: -14, ...SYM({ fLx: 9, fLyaw: 5, shLe: 170, shLa: 10, elL: 6 }) },
+                   k: [{ t: 0 }, { t: 0.5, y: 59, s2f: -10, ...SYM({ shLe: 174 }) }, { t: 1 }] },
+      pose:      { ...STAND, alt: true, dur: 6000, cam: -8,
+                   base: { y: 72, x: 8, fLx: 52, fLz: 0, fLyaw: 90, fRx: -60, fRz: 0, fRyaw: -8, nkt: 70, ...SYM({ shLe: 90, shLa: 90, elL: 2 }) },
+                   k: [{ t: 0 }, { t: 0.5, y: 71.2, s2f: -2 }, { t: 1 }] },
+      triangle:  { ...STAND, alt: true, dur: 6000, cam: -8,
+                   base: { y: 84.5, x: -6, fLx: 48, fLz: 0, fLyaw: 90, fRx: -50, fRz: 0, fRyaw: -8, s1s: 46, s2s: 18, nkt: 40, nks: -10,
+                           shLe: 70, shLa: 90, elL: 2, shRe: 112, shRa: 90, elR: 2 },
+                   k: [{ t: 0 }, { t: 0.5, s1s: 48, s2f: -2 }, { t: 1 }] },
+      balance:   { ...STAND, alt: true, dur: 4000, cam: -30, base: SYM({ shLe: 72, shLa: 90, elL: 10 }),
+                   k: [{ t: 0, fLl: 34, fLz: 16, fLh: -10, roll: -1.2, x: -1.5 }, { t: 0.5, fLl: 35, fLz: 16, fLh: -10, roll: 1.2, x: -0.5, ...SYM({ shLe: 66 }) },
+                       { t: 1, fLl: 34, fLz: 16, fLh: -10, roll: -1.2, x: -1.5 }] },
+      jump:      { ...STAND, dur: 480, cam: -30, base: SYM({ shLe: 22, shLa: 60, elL: 55, fLh: 14 }),
+                   k: [{ t: 0, y: 98.5 }, { t: 0.5, e: 'o', y: 104.5, ...SYM({ fLl: 6, fLh: 22, elL: 60 }) }, { t: 1, e: 'i', y: 98.5 }] },
+      // ===== Настольный теннис =====
+      tennis:    { ...STAND, paddle: true, dur: 1200, cam: 24,
+                   base: { y: 86, z: -4, pitch: 12, s1f: 10, nkf: -16, ...SYM({ fLx: 22, fLyaw: 10 }), shLe: 50, shLa: 30, elL: 75 },
+                   k: [{ t: 0, s1t: -24, s2t: -18, shRe: 38, shRa: 140, elR: 55 },
+                       { t: 0.35, e: 'o', s1t: 18, s2t: 22, shRe: 112, shRa: -8, elR: 92 },
+                       { t: 1, s1t: -24, s2t: -18, shRe: 38, shRa: 140, elR: 55 }] },
+      tennis_bh: { ...STAND, paddle: true, dur: 1100, cam: 10,
+                   base: { y: 86, z: -4, pitch: 12, s1f: 10, nkf: -16, ...SYM({ fLx: 20, fLyaw: 10 }), shLe: 45, shLa: 20, elL: 80 },
+                   k: [{ t: 0, s2t: 16, shRe: 42, shRa: -58, elR: 96 }, { t: 0.4, e: 'o', s2t: -12, shRe: 72, shRa: 38, elR: 28 },
+                       { t: 1, s2t: 16, shRe: 42, shRa: -58, elR: 96 }] },
+      tennis_serve:{ ...STAND, paddle: true, dur: 1700, cam: 20,
+                   base: { y: 90, pitch: 10, s1f: 8, nkf: -14, ...SYM({ fLx: 18, fLyaw: 10 }) },
+                   k: [{ t: 0, shLe: 40, shLa: 10, elL: 70, shRe: 40, shRa: 60, elR: 70 },
+                       { t: 0.4, shLe: 112, shLa: 5, elL: 20, shRe: 35, shRa: 130, elR: 85, s2t: -14 },
+                       { t: 0.62, e: 'o', shLe: 40, shLa: 10, elL: 70, shRe: 62, shRa: 0, elR: 60, s2t: 12 },
+                       { t: 1, shLe: 40, shLa: 10, elL: 70, shRe: 40, shRa: 60, elR: 70 }] },
+
+      // ===== На полу =====
+      pushup:    { hands: true, ground: true, anchor: true, dur: 2600, cam: -76, camPitch: 12,
+                   base: { pitch: 71, y: 50, anL: -25, anR: -25, nkf: -8, ...SYM({ hLx: 24, hLz: 128 }) },
+                   k: [{ t: 0 }, { t: 0.44, pitch: 85, nkf: -12 }, { t: 0.52, pitch: 85, nkf: -12 }, { t: 0.86, pitch: 71 }, { t: 1 }] },
+      plank_high:{ hands: true, ground: true, anchor: true, dur: 4000, cam: -76, camPitch: 12,
+                   base: { pitch: 71, y: 50, anL: -25, anR: -25, nkf: -8, ...SYM({ hLx: 24, hLz: 128 }) },
+                   k: [{ t: 0 }, { t: 0.5, pitch: 71.6, s2f: -1.5 }, { t: 1 }] },
+      plank:     { hands: true, ground: true, anchor: true, dur: 4000, cam: -76, camPitch: 12, elbow: [0.3, -1, -0.2], handDir: [0, -0.6, 8.5],
+                   base: { pitch: 81.5, y: 30, anL: -25, anR: -25, nkf: -10, ...SYM({ hLx: 12, hLy: 4.8, hLz: 160.4 }) },
+                   k: [{ t: 0 }, { t: 0.5, pitch: 81.9, s2f: -1.5 }, { t: 1 }] },
+      mountain:  { hands: true, alt: true, dur: 340, cam: -70, camPitch: 12,
+                   base: { pitch: 71, x: 0, y: 43.9, z: 89.9, anL: -25, anR: -25, nkf: -10, ...SYM({ hLx: 24, hLz: 128 }) },
+                   k: [{ t: 0 }, { t: 0.5, e: 'o', hpLe: 124, hpLa: 4, knL: 140, anL: -20 }, { t: 1 }] },
+      dog:       { hands: true, feet: true, dur: 4400, cam: -80, camPitch: 10, handDir: [0, -1, 8.5],
+                   base: { pitch: 145, y: 84, z: 43, nkf: 14, ...SYM({ fLx: 11, fLyaw: 4, fLh: 15, hLx: 20, hLz: 94 }) },
+                   k: [{ t: 0 }, { t: 0.5, pitch: 146.5, y: 86, z: 42, ...SYM({ fLh: 10 }) }, { t: 1 }] },
+      child:     { ground: true, dur: 5200, cam: -78, camPitch: 14,
+                   base: { pitch: 104, s1f: 6, s2f: 6, nkf: 12, ...SYM({ hpLe: 150, hpLa: 0, knL: 150, anL: -45, shLe: 172, shLa: 4, elL: 8 }) },
+                   k: [{ t: 0 }, { t: 0.5, s2f: 3, pitch: 103 }, { t: 1 }] },
+      catcow:    { hands: true, ground: true, dur: 4000, cam: -76, camPitch: 12, elbow: [0.2, 0.3, -1],
+                   base: { pitch: 82, ...SYM({ hpLe: 82, hpLa: 0, knL: 90, anL: -40, hLx: 19, hLz: 40 }) },
+                   k: [{ t: 0, pitch: 78, hpLe: 78, hpRe: 78, s1f: 16, s2f: 12, nkf: 26 }, { t: 0.5, pitch: 96, hpLe: 96, hpRe: 96, s1f: -14, s2f: -8, nkf: -30 },
+                       { t: 1, pitch: 78, hpLe: 78, hpRe: 78, s1f: 16, s2f: 12, nkf: 26 }] },
+      cobra:     { hands: true, ground: true, dur: 4000, cam: -78, camPitch: 14, elbow: [0.25, 0.3, -1], handDir: [0, -0.6, 8.5],
+                   base: { pitch: 90, ...SYM({ hpLa: 0, hpLe: 0, anL: -50, hLx: 21, hLy: 4, hLz: 36 }) },
+                   k: [{ t: 0, nkf: 4 }, { t: 0.42, s1f: -30, s2f: -20, nkf: -14 }, { t: 0.6, s1f: -30, s2f: -20, nkf: -14 }, { t: 1, nkf: 4 }] },
+      prone_curl:{ ground: true, dur: 2200, cam: -80, camPitch: 16,
+                   base: { pitch: 90, nkf: -6, ...SYM({ hpLa: 0, hpLe: 0, anL: -40, shLe: 165, shLa: 35, shLt: 60, elL: 125 }) },
+                   k: [{ t: 0 }, { t: 0.42, ...SYM({ knL: 112, anL: 5 }) }, { t: 0.52, ...SYM({ knL: 112, anL: 5 }) }, { t: 1 }] },
+      bridge:    { feet: true, hands: true, dur: 2800, cam: -78, camPitch: 18, elbow: [0.3, 1, 0], handDir: [0, -1, -8.5],
+                   base: { pitch: -90, y: 12.5, z: 0, nkf: 6, ...SYM({ fLx: 13, fLz: 36, fLyaw: 4, hLx: 24, hLy: 3, hLz: -8 }) },
+                   k: [{ t: 0 }, { t: 0.42, pitch: -134, y: 41, z: -12, s2f: 10, nkf: 18 }, { t: 0.56, pitch: -134, y: 41, z: -12, s2f: 10, nkf: 18 }, { t: 1 }] },
+      lying:     { ground: true, dur: 5200, cam: -70, camPitch: 22,
+                   base: { pitch: -90, ...SYM({ shLe: 18, shLa: 90, elL: 10, hpLe: 6, hpLa: 90, anL: -30 }) },
+                   k: [{ t: 0 }, { t: 0.5, s2f: -3, ...SYM({ clLe: 2 }) }, { t: 1 }] },
+      bench:     { feet: true, dur: 2400, cam: -74, camPitch: 22,
+                   base: { pitch: -90, y: 12.5, z: 0, nkf: 6, ...SYM({ fLx: 15, fLz: 36, fLyaw: 4 }) },
+                   k: [{ t: 0, ...SYM({ shLe: 74, shLa: 90, shLt: 0, elL: 98 }) }, { t: 0.42, ...SYM({ shLe: 88, shLa: 12, elL: 5 }) },
+                       { t: 0.55, ...SYM({ shLe: 88, shLa: 12, elL: 5 }) }, { t: 1, ...SYM({ shLe: 74, shLa: 90, elL: 98 }) }] },
+      side_lying:{ ground: true, alt: true, dur: 4400, cam: 0, camPitch: 18,
+                   base: { roll: -90, nks: -8, hpLe: 40, hpLa: 0, knL: 75, shLe: 172, shLa: 0, elL: 25, shRe: 50, shRa: 0, elR: 70, hpRe: 4, hpRa: 90 },
+                   k: [{ t: 0 }, { t: 0.4, hpRe: 42 }, { t: 0.5, hpRe: 42 }, { t: 0.9 }, { t: 1 }] },
+      clamshell: { ground: true, alt: true, dur: 4400, cam: 0, camPitch: 18,
+                   base: { roll: -90, nks: -8, ...SYM({ hpLe: 48, hpLa: 0, knL: 92 }), shLe: 172, shLa: 0, elL: 25, shRe: 20, shRa: 0, elR: 30 },
+                   k: [{ t: 0 }, { t: 0.4, hpRa: 62, hpRe: 50 }, { t: 0.5, hpRa: 62, hpRe: 50 }, { t: 0.9 }, { t: 1 }] },
+      side_plank:{ hands: 'L', ground: true, alt: true, dur: 6000, cam: 0, camPitch: 14, elbow: [0, -1, -0.2], handDir: [0, -0.5, 8.5],
+                   base: { roll: -72, nks: 10, ...SYM({ hpLe: 2, anL: -10 }), hLx: 41, hLy: 3.5, hLz: 24, shRe: 92, shRa: 90, elR: 4 },
+                   k: [{ t: 0 }, { t: 0.5, roll: -73.5, shRe: 96 }, { t: 1 }] },
+      sit_kick:  { alt: true, dur: 1600, cam: -60, camPitch: 12, seat: { h: 44, w: 38, d: 36, z: -4 },
+                   base: { y: 52.5, ...SYM({ hpLe: 90, hpLa: 0, knL: 90, shLe: 38, shLa: 8, elL: 38 }) },
+                   k: [{ t: 0 }, { t: 0.4, knL: 6, anL: 10 }, { t: 0.6, knL: 6, anL: 10 }, { t: 1 }] },
+      boat:      { ground: true, dur: 5000, cam: -76, camPitch: 12,
+                   base: { pitch: -34, s1f: 6, nkf: 8, ...SYM({ hpLe: 102, hpLa: 4, knL: 34, anL: -20, shLe: 56, shLa: 2, elL: 4 }) },
+                   k: [{ t: 0 }, { t: 0.5, pitch: -35, ...SYM({ hpLe: 104 }) }, { t: 1 }] },
+      seated_fold:{ ground: true, dur: 5600, cam: -78, camPitch: 12,
+                   base: { pitch: 4, ...SYM({ hpLe: 94, hpLa: 0, anL: 8, shLe: 70, shLa: 0, elL: 10 }) },
+                   k: [{ t: 0 }, { t: 0.42, pitch: 38, s1f: 14, s2f: 14, nkf: 12, ...SYM({ hpLe: 128, shLe: 112, elL: 6 }) },
+                       { t: 0.62, pitch: 40, s1f: 14, s2f: 14, nkf: 12, ...SYM({ hpLe: 130, shLe: 114, elL: 6 }) }, { t: 1 }] },
+      butterfly: { ground: true, dur: 1800, cam: -18, camPitch: 18,
+                   base: { pitch: 4, nkf: 8, ...SYM({ hpLe: 88, hpLa: 66, hpLt: -150, knL: 138, anL: -10, shLe: 40, shLa: 6, elL: 16 }) },
+                   k: [{ t: 0 }, { t: 0.5, ...SYM({ hpLe: 96 }) }, { t: 1 }] },
+      seated_twist:{ ground: true, alt: true, dur: 6000, cam: -48, camPitch: 16,
+                   base: { pitch: 2, hpRe: 92, hpRa: 0, anR: 6, hpLe: 118, hpLa: -24, knL: 125, s1t: 22, s2t: 28, nkt: 32,
+                           shRe: 40, shRa: -40, shRt: 40, elR: 80, shLe: 32, shLa: 165, elL: 2 },
+                   k: [{ t: 0 }, { t: 0.5, s2t: 31, nkt: 36 }, { t: 1 }] },
+      pigeon:    { ground: true, alt: true, dur: 6000, cam: -40, camPitch: 16,
+                   base: { pitch: 2, s2f: -4, hpLe: 88, hpLa: -20, hpLt: -90, knL: 105, anL: 0, hpRe: 88, hpRa: 180, knR: 4, anR: -60,
+                           ...SYM({ shLe: 22, shLa: 30, elL: 4 }) },
+                   k: [{ t: 0 }, { t: 0.5, s2f: -7, nkf: -6 }, { t: 1 }] },
+      lunge_low: { feet: true, hands: true, alt: true, dur: 6000, cam: -66, camPitch: 12, elbow: [0.4, 0.3, -1],
+                   base: { y: 43, z: 10, pitch: 68, s1f: 2, s2f: -10, nkf: -44, fLz: 46, fRz: -64, fRh: 72, fLx: 11, fRx: -11, ...SYM({ hLx: 26, hLz: 50 }) },
+                   k: [{ t: 0 }, { t: 0.5, s2f: -9, nkf: -36 }, { t: 1 }] },
+      // ===== В воде =====
+      swim:      { water: true, dur: 2000, cam: -80, camPitch: 14,
+                   base: { pitch: 90, y: -5, nkf: -10, ...SYM({ hpLa: 0, anL: -60 }) },
+                   k: CYCLE(24, t => {
+                     const a = 180 - 360 * t, b = -360 * t, elb = x => x >= 0 ? 15 + 35 * Math.sin(x * DG) : 15 + 80 * Math.sin(-x * DG);
+                     const bb = ((b + 180) % 360 + 360) % 360 - 180;
+                     return { shLe: a, shLa: 0, elL: elb(a), shRe: b, shRa: 0, elR: elb(bb), spin: -30 * SIN(t),
+                              nkt: 55 * Math.max(0, SIN(t - 0.5)), hpLe: 8 * SIN(t * 3), hpRe: -8 * SIN(t * 3), knL: 10 + 8 * SIN(t * 3 + 0.25), knR: 10 - 8 * SIN(t * 3 + 0.25) };
+                   }) },
+      swim_back: { water: true, dur: 2200, cam: -80, camPitch: 16,
+                   base: { pitch: -90, y: -6, nkf: -6, ...SYM({ hpLa: 0, anL: -60 }) },
+                   k: CYCLE(24, t => ({ shLe: 360 * t, shLa: 25, elL: 6, shRe: 360 * t + 180, shRa: 25, elR: 6, spin: 25 * SIN(t),
+                                        hpLe: 8 * SIN(t * 3), hpRe: -8 * SIN(t * 3), knL: 10 + 8 * SIN(t * 3), knR: 10 - 8 * SIN(t * 3) })) },
+      swim_breast:{ water: true, dur: 2000, cam: -76, camPitch: 16,
+                   base: { pitch: 90, y: -5, nkf: -8, ...SYM({ shLe: 176, shLa: 4, elL: 4, hpLe: 2, hpLa: 0, anL: -60 }) },
+                   k: [{ t: 0 }, { t: 0.25, ...SYM({ shLe: 160, shLa: 52, elL: 10 }) },
+                       { t: 0.45, nkf: -34, ...SYM({ shLe: 112, shLa: 14, elL: 110, hpLe: 42, hpLa: 34, knL: 112, anL: 25 }) },
+                       { t: 0.62, e: 'o', ...SYM({ shLe: 176, shLa: 4, elL: 4, hpLe: 8, hpLa: 40, knL: 14, anL: -40 }) }, { t: 0.8 }, { t: 1 }] },
+      kick:      { water: true, dur: 640, cam: -78, camPitch: 14,
+                   base: { pitch: 88, y: -5, nkf: -22, ...SYM({ shLe: 174, shLa: 6, elL: 4, hpLa: 0, anL: -60 }) },
+                   k: CYCLE(8, t => ({ hpLe: 12 * SIN(t), hpRe: -12 * SIN(t), knL: 12 + 10 * SIN(t + 0.2), knR: 12 - 10 * SIN(t + 0.2) })) },
+      float:     { water: true, dur: 4000, cam: -60, camPitch: 16,
+                   base: { pitch: -90, y: -7, nkf: -4, ...SYM({ shLe: 100, shLa: 90, elL: 8, hpLe: 24, hpLa: 90, anL: -40 }) },
+                   k: [{ t: 0 }, { t: 0.5, y: -5.5, s2f: -2 }, { t: 1 }] },
+    };
+
+    // ---------- Фигурка на экране тренировки ----------
+    const figCanvas = $('figure'), figCtx = figCanvas.getContext('2d');
+    let figW = 0, figH = 0, figDpr = 1;                // размер холста на экране и плотность пикселей
     let anim = ANIMS.idle;
-    let animStart = 0;
-    let animFrame = null;
-    let animPausedAt = 0;
+    let animStart = 0, animFrame = null, animPausedAt = 0, animLastNow = 0;
+    let camYaw = anim.cam, camYawGoal = anim.cam, camPitch = 10, camPitchGoal = 10;   // камера поворачивается плавно
+    let fit = null, fitGoal = null;                    // масштаб и сдвиг картинки (тоже плавно)
+    let lastBody = null, blendFrom = null, blendStart = 0;   // плавный переход между упражнениями
+    let figColors = { ink: [31, 36, 48], bg: [230, 233, 239], phase: [37, 99, 235] };
+
+    // Цвета берём из CSS: текст, фон и цвет текущей фазы (работа / отдых / подготовка)
+    function readFigColors() {
+      const cs = getComputedStyle($('workout'));
+      figColors = { ink: hexRgb(cs.getPropertyValue('--text'), figColors.ink),
+                    bg: hexRgb(cs.getPropertyValue('--bg'), figColors.bg),
+                    phase: hexRgb(cs.getPropertyValue('--phase'), figColors.phase) };
+    }
+    function camPitchOf(A) { return A.camPitch === undefined ? 10 : A.camPitch; }
+
+    // Холст рисуем в настоящих пикселях экрана — тогда фигурка чёткая
+    function figResize() {
+      const r = figCanvas.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      figDpr = Math.min(3, window.devicePixelRatio || 1);
+      figW = r.width; figH = r.height;
+      figCanvas.width = Math.round(figW * figDpr); figCanvas.height = Math.round(figH * figDpr);
+      fitGoal = computeFit(anim, makeCam(camYawGoal, camPitchGoal), figW, figH);
+      fit = Object.assign({}, fitGoal);
+    }
+    if (window.ResizeObserver) new ResizeObserver(figResize).observe(figCanvas);
+    window.addEventListener('resize', figResize);
 
     function setAnim(name) {
+      readFigColors();
       const next = ANIMS[name] || ANIMS.idle;
       if (next === anim && animFrame) return;
+      if (lastBody) { blendFrom = lastBody; blendStart = performance.now(); }
       anim = next;
       animStart = performance.now();
-      // Вода, ракетка, «дыхательный» круг — только где нужно
-      const water = !!anim.water;
-      $('fig-water').classList.toggle('hidden', !water);
-      $('fig-floor').classList.toggle('hidden', water);
-      $('fig-shadow').classList.toggle('hidden', water);
-      $('fig-paddle').classList.toggle('hidden', !anim.paddle);
+      camYawGoal = anim.cam; camPitchGoal = camPitchOf(anim);
+      if (figW) fitGoal = computeFit(anim, makeCam(camYawGoal, camPitchGoal), figW, figH);
+      if (!fit && fitGoal) fit = Object.assign({}, fitGoal);
       if (!animFrame) animFrame = requestAnimationFrame(animLoop);
-    }
-
-    function lerpPose(a, b, u) {
-      const p = {};
-      for (const k in BASE) p[k] = a[k] + (b[k] - a[k]) * u;
-      return p;
     }
 
     function animLoop(now) {
       animFrame = null;
       if (current !== 'workout') return;
-      if (!paused) {
-        const frames = anim.f.map(fr => ({ ...BASE, ...fr }));
-        // Время кадра может быть чуть раньше старта — поэтому не меньше нуля
-        const t = (Math.max(0, now - animStart) % anim.dur) / anim.dur;
-        let a, b, u;
-        if (anim.seq) {
-          // Вращения: 0 → 1 → … → последняя, равномерно
-          const n = frames.length - 1;
-          const k = Math.min(n - 1, Math.floor(t * n));
-          a = frames[k]; b = frames[k + 1]; u = t * n - k;
-        } else {
-          // Обычные: по кругу 0 → 1 → … → 0, плавно
-          const n = frames.length;
-          const k = Math.floor(t * n);
-          a = frames[k]; b = frames[(k + 1) % n];
-          u = (1 - Math.cos(Math.PI * (t * n - k))) / 2;
-        }
-        applyPose(lerpPose(a, b, u));
-        // «Дыхательный» круг вокруг фигурки
-        const ring = $('fig-ring');
-        if (anim.ring) {
-          const s = (1 - Math.cos(2 * Math.PI * t)) / 2;
-          ring.style.opacity = 0.15 + 0.45 * s;
-          ring.setAttribute('r', 96 + 26 * s);
-        } else ring.style.opacity = 0;
-      }
       animFrame = requestAnimationFrame(animLoop);
+      const dt = Math.min(100, now - (animLastNow || now)); animLastNow = now;
+      // На паузе, без размера или если вместо фигурки видео — не рисуем
+      if (paused || !figW || !fit || !figCanvas.offsetParent || figCanvas.classList.contains('hidden')) return;
+      // Камера и масштаб догоняют цель плавно (примерно за полсекунды)
+      const k = 1 - Math.exp(-dt / 160);
+      camYaw += ((((camYawGoal - camYaw) % 360) + 540) % 360 - 180) * k;
+      camPitch += (camPitchGoal - camPitch) * k;
+      for (const key of ['sc', 'ox', 'oy']) fit[key] += (fitGoal[key] - fit[key]) * k;
+      // Поза в этот момент + лёгкое «дыхание» грудью и плечами
+      const cyc = cycleMs(anim), t = (Math.max(0, now - animStart) % cyc) / cyc;
+      const p = poseAt(anim, t), br = Math.sin(now / 4000 * 2 * Math.PI);
+      p.s2f -= 1.2 * br; p.clLe += 0.6 * br; p.clRe += 0.6 * br;
+      let body = solveBody(p, anim);
+      // Первые 0,45 с после смены упражнения тело плавно перетекает из прошлой позы
+      if (blendFrom) {
+        const u = (now - blendStart) / 450;
+        if (u >= 1) blendFrom = null; else body = mixBody(blendFrom, body, EASE.io(u));
+      }
+      lastBody = body;
+      figCtx.setTransform(figDpr, 0, 0, figDpr, 0, 0);
+      figCtx.clearRect(0, 0, figW, figH);
+      drawBody(figCtx, body, makeCam(camYaw, camPitch), fit, figColors, anim, { breath: (1 - Math.cos(2 * Math.PI * t)) / 2 });
     }
 
     // =====================================================================
