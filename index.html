@@ -8,285 +8,511 @@
 
   <!-- Официальная библиотека Telegram для Mini App. Подключается первой. -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- Наши данные. ?v=3 — номер версии: меняйте его при каждом
+
+  <!-- Шрифт Inter Tight (плотный гротеск, как на образцах). Есть кириллица.
+       Если шрифт не загрузится — будет системный, всё продолжит работать. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Наши данные. ?v=4 — номер версии: меняйте его при каждом
        изменении data.js, иначе телефон может показать старую копию. -->
-  <script src="data.js?v=3"></script>
+  <script src="data.js?v=4"></script>
 
   <style>
-    /* Цвета берём из темы Telegram; после запятой — запасной цвет для браузера */
+    /* ================================================================
+       ЦВЕТА И ШРИФТЫ
+       Цвета берём из темы Telegram; после запятой — запасной цвет.
+       --accent меняется из кода: у каждого вида занятия свой цвет.
+       ================================================================ */
     :root {
-      --bg:     var(--tg-theme-bg-color, #ffffff);
-      --text:   var(--tg-theme-text-color, #000000);
+      --bg:     var(--tg-theme-bg-color, #0c0d10);
+      --text:   var(--tg-theme-text-color, #ffffff);
       --hint:   var(--tg-theme-hint-color, #8e8e93);
-      --button: var(--tg-theme-button-color, #2481cc);
-      --button-text: var(--tg-theme-button-text-color, #ffffff);
-      --card:   var(--tg-theme-secondary-bg-color, #f1f1f4);
+      --accent: #4aa3ff;
+      /* «Стекло»: полупрозрачный цвет текста поверх фона */
+      --glass:     rgba(127,127,127,.12);
+      --glass:     color-mix(in srgb, var(--text) 7%, transparent);
+      --glass-brd: rgba(127,127,127,.18);
+      --glass-brd: color-mix(in srgb, var(--text) 11%, transparent);
+      --glass-hi:  color-mix(in srgb, var(--text) 13%, transparent);
       /* Цвета фаз тренировки */
-      --work: var(--button);
       --rest: #34c759;
-      --prep: #ff9500;
+      --prep: #ff9f0a;
+      --font: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
     html, body { margin: 0; height: 100%; }
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: var(--font);
+      letter-spacing: -0.01em;
       user-select: none; -webkit-user-select: none;
+      -webkit-font-smoothing: antialiased;
     }
-    button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
-
-    /* Экраны: виден только один, у которого нет класса hidden */
-    .screen {
-      min-height: 100%;
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 16px 16px 28px;
-    }
+    button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; letter-spacing: inherit; }
     .hidden { display: none !important; }
     .hint { color: var(--hint); }
 
-    /* Карточка-строка (как «Вид практики» на референсе) */
-    .row-card {
-      display: flex; align-items: center; gap: 12px;
-      width: 100%; text-align: left;
-      background: var(--card); border-radius: 18px;
-      padding: 16px 18px; min-height: 72px;
+    /* ---------- Атмосферный фон: размытые цветные пятна ----------
+       Это и даёт эффект «прозрачности»: карточки — матовое стекло поверх. */
+    .ambient { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+    .ambient .blob {
+      position: absolute; border-radius: 50%;
+      filter: blur(70px); opacity: .45;
+      background: var(--accent);
+      transition: background .6s ease;
+      animation: drift 18s ease-in-out infinite alternate;
     }
-    .row-card .label { font-size: 14px; color: var(--hint); }
-    .row-card .value { font-size: 20px; font-weight: 600; margin-top: 2px; }
-    .row-card .grow  { flex: 1; min-width: 0; }
-    .row-card .chev  { font-size: 26px; color: var(--hint); }
+    .ambient .b1 { width: 70vmax; height: 70vmax; top: -30vmax; right: -25vmax; }
+    .ambient .b2 { width: 55vmax; height: 55vmax; bottom: -25vmax; left: -25vmax; opacity: .25; animation-duration: 24s; }
+    .ambient .b3 { width: 35vmax; height: 35vmax; top: 35%; left: 40%; opacity: .12; background: #fff; animation-duration: 30s; }
+    @keyframes drift {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(-6vmax, 5vmax) scale(1.12); }
+    }
 
-    /* Большая кнопка «Начать занятие» */
+    /* Экраны: виден только один */
+    .screen {
+      position: relative; z-index: 1;
+      min-height: 100%;
+      max-width: 1000px; margin: 0 auto;
+      padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px calc(env(safe-area-inset-bottom, 0px) + 24px);
+    }
+
+    /* ---------- Стеклянная карточка ---------- */
+    .glass {
+      background: var(--glass);
+      border: 1px solid var(--glass-brd);
+      -webkit-backdrop-filter: blur(22px) saturate(150%);
+      backdrop-filter: blur(22px) saturate(150%);
+    }
+    .row-card {
+      display: flex; align-items: center; gap: 14px;
+      width: 100%; text-align: left;
+      border-radius: 22px; padding: 14px 18px; min-height: 74px;
+      transition: transform .12s ease, background .2s;
+    }
+    .row-card:active { transform: scale(0.98); background: var(--glass-hi); }
+    .row-card .label { font-size: 14px; color: var(--hint); font-weight: 500; }
+    .row-card .value { font-size: 21px; font-weight: 650; letter-spacing: -0.03em; margin-top: 2px;
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-card .grow  { flex: 1; min-width: 0; }
+    .row-card .chev  { font-size: 26px; color: var(--hint); line-height: 1; }
+    .row-card .ico   { font-size: 28px; width: 40px; text-align: center; flex: 0 0 40px; }
+    .row-card.dim .value { color: var(--hint); }
+    .badge-on { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 99px;
+                background: var(--accent); color: #0b0b0b; margin-left: 6px; vertical-align: 3px; letter-spacing: 0; }
+
+    /* Большая кнопка «Начать занятие» — градиент как на образце */
     .big-btn {
-      width: 100%; min-height: 60px; border-radius: 30px;
-      font-size: 20px; font-weight: 600;
-      color: var(--button-text);
-      background: linear-gradient(90deg, var(--button), color-mix(in srgb, var(--button) 55%, #ffffff));
+      width: 100%; min-height: 62px; border-radius: 31px;
+      font-size: 20px; font-weight: 650; letter-spacing: -0.02em;
+      color: #0b0b0b;
+      background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 45%, #ffffff));
+      box-shadow: 0 10px 30px -10px var(--accent);
+      transition: transform .12s ease;
     }
     .big-btn:active { transform: scale(0.98); }
+    .big-btn:disabled { opacity: .45; box-shadow: none; }
+
+    /* Заголовки экранов */
+    .eyebrow { font-size: 15px; color: var(--hint); font-weight: 500; }
+    .h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.04em; line-height: 1.05; margin: 2px 0 0; }
+    .screen-head { margin: 4px 2px 16px; }
 
     /* ---------- Главный экран ---------- */
-    /* Строка «Направление» + шестерёнка справа в один уровень */
+    .home-top { display: flex; justify-content: space-between; align-items: center; margin: 6px 2px 4px; }
+    .home-body { display: flex; flex-direction: column; gap: 12px; }
     .dir-line { display: flex; gap: 12px; align-items: stretch; }
     .dir-line .row-card { flex: 1; min-width: 0; }
     .gear-btn {
-      flex: 0 0 72px; min-height: 72px; border-radius: 18px;
-      background: var(--card); color: var(--hint);
-      display: flex; align-items: center; justify-content: center;
+      flex: 0 0 74px; min-height: 74px; border-radius: 22px;
+      color: var(--text); display: flex; align-items: center; justify-content: center;
     }
-    .gear-btn svg { width: 30px; height: 30px; }
+    .gear-btn svg { width: 28px; height: 28px; }
     .gear-btn:active { transform: scale(0.96); }
 
-    .home-body { display: flex; flex-direction: column; gap: 14px; }
+    /* Круглый регулятор минут (как на образце: белая дуга, синяя точка) */
+    .dial-wrap { display: flex; justify-content: center; padding: 6px 0 2px; }
+    #dial { width: min(74vw, 330px); height: auto; touch-action: none; cursor: pointer; overflow: visible; }
+    #dial .track { stroke: var(--glass-hi); }
+    #dial .arc   { stroke: var(--text); }
+    #dial .knob-ring { fill: var(--accent); filter: drop-shadow(0 0 10px var(--accent)); }
+    #dial .knob-dot  { fill: var(--bg); }
+    #dial .num   { fill: var(--text); font-size: 104px; font-weight: 700; letter-spacing: -0.06em; font-family: var(--font); }
+    #dial .unit  { fill: var(--hint); font-size: 26px; font-weight: 600; font-family: var(--font); }
 
-    /* Круглый регулятор минут */
-    .dial-wrap { display: flex; justify-content: center; padding: 8px 0 4px; }
-    #dial { width: min(78vw, 340px); height: auto; touch-action: none; cursor: pointer; }
-    #dial .track { stroke: var(--card); }
-    #dial .arc   { stroke: var(--button); transition: stroke-dashoffset .08s linear; }
-    #dial .knob  { fill: var(--bg); stroke: var(--button); }
-    #dial .num   { fill: var(--text); font-size: 92px; font-weight: 700; }
-    #dial .unit  { fill: var(--hint); font-size: 22px; }
-
-    #summary { text-align: center; font-size: 15px; }
-    details.preview { background: var(--card); border-radius: 18px; padding: 14px 18px; }
-    details.preview summary { font-size: 15px; color: var(--hint); cursor: pointer; }
-    details.preview ol { margin: 10px 0 0; padding-left: 22px; font-size: 15px; line-height: 1.5; }
+    #summary { text-align: center; font-size: 15px; font-weight: 500; }
+    details.preview { border-radius: 22px; padding: 14px 18px; }
+    details.preview summary { font-size: 15px; color: var(--hint); cursor: pointer; font-weight: 500; }
+    details.preview ol { margin: 10px 0 0; padding-left: 22px; font-size: 15px; line-height: 1.55; }
     details.preview .reps { color: var(--hint); }
 
-    /* ---------- Экран выбора направления ---------- */
-    #directions h2 { font-size: 24px; margin: 4px 0 14px; }
-    #dir-list { display: grid; gap: 12px; }
-    .dir-card {
+    /* ---------- Список (виды занятий, программы) ---------- */
+    .list { display: grid; gap: 12px; }
+    .pick-card {
       text-align: left; width: 100%;
-      background: var(--card); border-radius: 18px; padding: 16px 18px;
-      border: 2px solid transparent;
+      border-radius: 22px; padding: 16px 18px;
+      outline: 2px solid transparent; outline-offset: -2px;
+      transition: transform .12s ease;
     }
-    .dir-card.selected { border-color: var(--button); }
-    .dir-card .title { font-size: 19px; font-weight: 600; }
-    .dir-card .title .tick { color: var(--button); float: right; }
-    .dir-card .about { font-size: 15px; margin-top: 6px; }
-    .dir-card .list  { font-size: 13px; color: var(--hint); margin-top: 6px; line-height: 1.4; }
+    .pick-card:active { transform: scale(0.98); }
+    .pick-card.selected { outline-color: var(--accent); }
+    .pick-card .title { font-size: 20px; font-weight: 650; letter-spacing: -0.03em; display: flex; gap: 10px; align-items: center; }
+    .pick-card .title .tick { margin-left: auto; color: var(--accent); }
+    .pick-card .about { font-size: 15px; margin-top: 6px; opacity: .9; }
+    .pick-card .meta  { font-size: 13px; color: var(--hint); margin-top: 6px; line-height: 1.4; }
+    .sport-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .sport-tile { min-height: 132px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+    .sport-tile .big-ico { font-size: 40px; }
+    .sport-tile .swatch { position: absolute; right: -30px; top: -30px; width: 110px; height: 110px; border-radius: 50%;
+                          filter: blur(28px); opacity: .55; }
+    .sport-tile:first-child { grid-column: span 2; min-height: 110px; }
 
-    /* ---------- Экран тренировки ----------
-       Весь экран — видео. Поверх него, слева сверху: время и название.
-       Кнопок нет: касание экрана ставит паузу / продолжает. */
+    /* ---------- Своя тренировка ---------- */
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 12px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { flex: 0 0 auto; padding: 9px 14px; border-radius: 99px; font-size: 15px; font-weight: 600; }
+    .chip.on { background: var(--text); color: var(--bg); border-color: transparent; }
+    .group-title { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--hint);
+                   margin: 16px 4px 8px; font-weight: 600; }
+    .ex-row {
+      display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+      padding: 12px 14px; border-radius: 18px; margin-bottom: 8px;
+    }
+    .ex-row .check {
+      flex: 0 0 30px; height: 30px; border-radius: 50%;
+      border: 2px solid var(--glass-hi);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: #0b0b0b;
+    }
+    .ex-row.on .check { background: var(--accent); border-color: var(--accent); }
+    .ex-row .nm { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+    .ex-row .ds { font-size: 13px; color: var(--hint); margin-top: 2px; }
+    .sticky-bar {
+      position: sticky; bottom: 0; z-index: 3;
+      display: flex; gap: 10px; padding: 12px 0 calc(env(safe-area-inset-bottom, 0px) + 8px);
+      margin-top: 8px;
+    }
+    .sticky-bar .ghost { flex: 0 0 auto; padding: 0 20px; border-radius: 31px; font-weight: 600; min-height: 62px; }
+
+    /* ================================================================
+       ЭКРАН ТРЕНИРОВКИ — всегда тёмный, «как в зале».
+       Сверху: прогресс, время. Центр: анимация. Внизу: название + бегущая строка.
+       Касание экрана — пауза.
+       ================================================================ */
     #workout {
-      position: fixed; inset: 0;
+      position: fixed; inset: 0; z-index: 5;
       max-width: none; margin: 0; padding: 0;
       overflow: hidden; cursor: pointer;
-      background: #cfcfcf;
+      background: #0a0b0d; color: #fff;
+      display: flex; flex-direction: column;
+      --phase: var(--accent);
     }
-    /* Слой видео. Пока видео нет — светло-серый «фон студии» как на образце */
-    .video-layer {
-      position: absolute; inset: 0;
-      background: linear-gradient(180deg, #e9e9e9 0%, #dcdcdc 55%, #cfcfcf 100%);
-    }
-    #ex-video { width: 100%; height: 100%; object-fit: cover; display: block; }
-    #video-stub {
-      position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      color: rgba(0,0,0,.25); font-size: 15px;
-    }
-    /* Лёгкое затемнение, чтобы белый текст читался на любом видео */
-    .video-shade {
-      position: absolute; inset: 0;
-      background: linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,0) 35%);
-      pointer-events: none;
-    }
+    #workout.ph-rest { --phase: var(--rest); }
+    #workout.ph-prep { --phase: var(--prep); }
+    .wo-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+    .wo-bg .blob { position: absolute; border-radius: 50%; filter: blur(80px); background: var(--phase);
+                   transition: background .8s ease; animation: drift 14s ease-in-out infinite alternate; }
+    .wo-bg .b1 { width: 90vmax; height: 90vmax; left: -20vmax; top: 10%; opacity: .32; }
+    .wo-bg .b2 { width: 60vmax; height: 60vmax; right: -30vmax; top: -25vmax; opacity: .18; animation-duration: 20s; }
 
-    /* Время и название — левый верхний угол */
-    .wo-label {
-      position: absolute;
-      top: calc(env(safe-area-inset-top, 0px) + 18px);
-      left: calc(env(safe-area-inset-left, 0px) + 22px);
-      right: 22px;
-      color: #fff;
-      text-shadow: 0 1px 6px rgba(0,0,0,.45);
-      pointer-events: none;
-      z-index: 2; /* время видно и на паузе */
-    }
-    .wo-main { display: flex; align-items: baseline; gap: 0.7em; flex-wrap: wrap;
-               font-size: clamp(28px, 7vw, 46px); line-height: 1.15; }
-    #clock { font-variant-numeric: tabular-nums; }
-    #wo-sub { font-size: clamp(15px, 3.6vw, 20px); margin-top: 6px; opacity: .95; }
+    .wo-top { position: relative; z-index: 2;
+              padding: calc(env(safe-area-inset-top, 0px) + 12px) 20px 0; }
+    .progress { display: flex; gap: 3px; height: 4px; }
+    .progress .seg { flex: 1; border-radius: 2px; background: rgba(255,255,255,.18); overflow: hidden; }
+    .progress .seg i { display: block; height: 100%; width: 0; background: #fff; }
+    .wo-row { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 14px; }
+    #clock { font-size: clamp(56px, 17vw, 96px); font-weight: 700; letter-spacing: -0.05em; line-height: .9;
+             font-variant-numeric: tabular-nums; }
+    #counter { font-size: 16px; font-weight: 600; opacity: .7; margin-top: 6px; }
 
-    /* Пауза: экран темнеет, по центру значок */
+    /* Сцена с фигуркой */
+    .stage { position: relative; z-index: 1; flex: 1; min-height: 0;
+             display: flex; align-items: center; justify-content: center; }
+    #figure { width: 100%; height: 100%; max-height: 62vh; overflow: visible; }
+    #figure .limb { stroke: #fff; stroke-width: 11; stroke-linecap: round; fill: none; }
+    #figure .head { fill: #fff; }
+    #figure .floor { stroke: rgba(255,255,255,.18); stroke-width: 2; }
+    #figure .shadow { fill: rgba(0,0,0,.35); }
+    #figure .ring { fill: none; stroke: var(--phase); stroke-width: 2; opacity: 0; }
+    #figure .paddle { fill: var(--phase); }
+    #figure .water { fill: rgba(80,200,255,.14); }
+    #figure.preview { opacity: .45; }   /* на отдыхе — показ следующего упражнения */
+    #ex-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+    .wo-bottom { position: relative; z-index: 2;
+                 padding: 0 20px calc(env(safe-area-inset-bottom, 0px) + 22px); }
+    .phase-pill { display: inline-flex; align-items: center; gap: 8px;
+                  font-size: 14px; font-weight: 650; padding: 6px 12px; border-radius: 99px;
+                  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.14);
+                  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+    .phase-pill::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--phase);
+                          box-shadow: 0 0 10px var(--phase); }
+    #ex-name { font-size: clamp(30px, 8.5vw, 52px); font-weight: 700; letter-spacing: -0.045em;
+               line-height: 1.02; margin-top: 10px; }
+    #wo-sub { font-size: clamp(17px, 4.5vw, 22px); font-weight: 600; margin-top: 6px; color: var(--phase); min-height: 1.2em; }
+
+    /* Бегущая строка с подсказками */
+    .ticker { margin-top: 14px; overflow: hidden; white-space: nowrap;
+              -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+              mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+    .ticker-track { display: inline-flex; animation: marquee 30s linear infinite; }
+    .ticker-track span { padding-right: 48px; font-size: 16px; font-weight: 500; opacity: .78; }
+    @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    #workout.paused .ticker-track { animation-play-state: paused; }
+
+    /* Пауза: экран темнеет и размывается, по центру кнопки */
     #pause-layer {
-      position: absolute; inset: 0;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-      background: rgba(0,0,0,.45); color: #fff; pointer-events: none;
+      position: absolute; inset: 0; z-index: 4;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
+      background: rgba(0,0,0,.45);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
     }
-    #pause-layer .icon { font-size: 72px; line-height: 1; }
-    #pause-layer .txt  { font-size: 17px; }
-    #workout.paused #video-stub { visibility: hidden; }
+    .pause-title { font-size: 17px; font-weight: 600; opacity: .8; }
+    .pause-controls { display: flex; align-items: center; gap: 34px; }
+    .round-btn { width: 76px; height: 76px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                 color: #fff; transition: transform .12s ease; }
+    .round-btn:active { transform: scale(0.92); }
+    .round-btn svg { width: 54px; height: 54px; }
+    .round-btn.big { width: 96px; height: 96px; background: #fff; color: #0b0b0b; }
+    .round-btn.big svg { width: 38px; height: 38px; }
+    .text-btn { font-size: 16px; font-weight: 600; padding: 12px 22px; border-radius: 99px;
+                background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.16); color: #fff; }
+    .pause-hint { font-size: 14px; opacity: .55; }
 
     /* ---------- Экран «Готово» ---------- */
     #done { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; }
-    #done .emoji { font-size: 80px; }
-    #done h2 { font-size: 30px; margin: 0; }
-    #done p { font-size: 17px; margin: 0 0 12px; }
+    #done .emoji { font-size: 76px; }
+    #done .stats { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 4px 0 14px; }
+    #done .stat { border-radius: 20px; padding: 12px 16px; min-width: 104px; }
+    #done .stat b { display: block; font-size: 24px; letter-spacing: -0.03em; }
+    #done .stat span { font-size: 13px; color: var(--hint); }
 
     /* ---------- Планшет в ландшафте: две колонки ---------- */
     @media (min-width: 700px) and (orientation: landscape) {
-      .home-body { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 18px 32px; }
-      .home-body .dial-wrap { grid-row: span 4; }
-      #dial { width: min(42vw, 400px); }
-      #dir-list { grid-template-columns: 1fr 1fr; }
+      .home-body { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 12px 32px; }
+      .home-body .dial-wrap { grid-row: span 7; }
+      #dial { width: min(40vw, 400px); }
+      .list { grid-template-columns: 1fr 1fr; }
+      .sport-grid { grid-template-columns: repeat(3, 1fr); }
+      .sport-tile:first-child { grid-column: auto; }
+      #workout .stage { position: absolute; inset: 0; }
+      #figure { max-height: 70vh; }
+      .wo-bottom { margin-top: auto; max-width: 60%; }
     }
   </style>
 </head>
 <body>
+  <!-- Цветной размытый фон под стеклом -->
+  <div class="ambient"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
 
   <!-- =============== ГЛАВНЫЙ ЭКРАН =============== -->
   <section id="home" class="screen">
+    <div class="home-top">
+      <div>
+        <div class="eyebrow" id="greet">Доброе утро</div>
+        <div class="h1" id="tagline">Пора на зарядку</div>
+      </div>
+    </div>
+
     <div class="home-body">
-      <!-- Круглый регулятор: тяните синюю точку по кругу -->
+      <!-- Круглый регулятор: тяните точку по кругу -->
       <div class="dial-wrap">
         <svg id="dial" viewBox="0 0 300 300" aria-label="Длительность в минутах">
-          <circle class="track" cx="150" cy="150" r="128" fill="none" stroke-width="10"/>
-          <circle class="arc" id="dial-arc" cx="150" cy="150" r="128" fill="none" stroke-width="10"
+          <circle class="track" cx="150" cy="150" r="128" fill="none" stroke-width="8"/>
+          <circle class="arc" id="dial-arc" cx="150" cy="150" r="128" fill="none" stroke-width="8"
                   stroke-linecap="round" transform="rotate(-90 150 150)"/>
-          <text class="num"  id="dial-num" x="150" y="165" text-anchor="middle">10</text>
-          <text class="unit" x="150" y="200" text-anchor="middle">мин.</text>
-          <circle class="knob" id="dial-knob" cx="150" cy="22" r="15" stroke-width="9"/>
+          <text class="num"  id="dial-num" x="150" y="168" text-anchor="middle">10</text>
+          <text class="unit" x="150" y="206" text-anchor="middle">мин.</text>
+          <g id="dial-knob">
+            <circle class="knob-ring" r="17"/>
+            <circle class="knob-dot" r="7"/>
+          </g>
         </svg>
       </div>
 
-      <!-- Направление + шестерёнка настроек справа -->
+      <!-- 1. Вид занятия -->
+      <button class="row-card glass" id="open-sports">
+        <span class="ico" id="sport-ico">☀️</span>
+        <div class="grow">
+          <div class="label">Вид занятия</div>
+          <div class="value" id="sport-name">Зарядка</div>
+        </div>
+        <span class="chev">›</span>
+      </button>
+
+      <!-- 2. Направление (программа) + шестерёнка -->
       <div class="dir-line">
-        <button class="row-card" id="open-directions">
+        <button class="row-card glass" id="open-directions">
           <div class="grow">
             <div class="label">Направление</div>
             <div class="value" id="dir-name">Общий комплекс</div>
           </div>
           <span class="chev">›</span>
         </button>
-        <button class="gear-btn" id="settings-btn" aria-label="Настройки">
-          <!-- Значок шестерёнки -->
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-               stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-          </svg>
+        <button class="gear-btn glass" id="settings-btn" aria-label="Настройки">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.62.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.66 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.61.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.25.42.49.42h3.84c.24 0 .45-.18.49-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.09.48 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
         </button>
       </div>
+
+      <!-- 3. Своя тренировка (под шестерёнкой) -->
+      <button class="row-card glass" id="open-custom">
+        <div class="grow">
+          <div class="label">Своя тренировка</div>
+          <div class="value" id="custom-name">Выбрать упражнения</div>
+        </div>
+        <span class="chev">›</span>
+      </button>
 
       <div id="summary" class="hint"></div>
 
       <button class="big-btn" id="start-btn">Начать занятие</button>
 
-      <details class="preview">
+      <details class="preview glass">
         <summary>Что войдёт в занятие</summary>
         <ol id="preview-list"></ol>
       </details>
     </div>
   </section>
 
+  <!-- =============== ВЫБОР ВИДА ЗАНЯТИЯ =============== -->
+  <section id="sports" class="screen hidden">
+    <div class="screen-head"><div class="eyebrow">Чем занимаемся</div><div class="h1">Вид занятия</div></div>
+    <div class="sport-grid" id="sport-list"></div>
+  </section>
+
   <!-- =============== ВЫБОР НАПРАВЛЕНИЯ =============== -->
   <section id="directions" class="screen hidden">
-    <h2>Направление</h2>
-    <div id="dir-list"></div>
+    <div class="screen-head"><div class="eyebrow" id="dir-eyebrow">Зарядка</div><div class="h1">Направление</div></div>
+    <div class="list" id="dir-list"></div>
+  </section>
+
+  <!-- =============== СВОЯ ТРЕНИРОВКА =============== -->
+  <section id="custom" class="screen hidden">
+    <div class="screen-head">
+      <div class="eyebrow" id="custom-eyebrow">Зарядка</div>
+      <div class="h1">Своя тренировка</div>
+      <p class="hint" style="font-size:15px;margin:8px 0 0">Отметьте упражнения — пойдут в том порядке, в каком выбрали. Длительность задаётся кругом на главном экране.</p>
+    </div>
+    <div class="chips" id="custom-chips"></div>
+    <div id="custom-list"></div>
+    <div class="sticky-bar">
+      <button class="ghost glass" id="custom-clear">Сбросить</button>
+      <button class="big-btn" id="custom-done">Готово</button>
+    </div>
   </section>
 
   <!-- =============== ТРЕНИРОВКА ===============
        Касание в любом месте экрана — пауза / продолжить. -->
   <section id="workout" class="screen hidden">
-    <!-- Видеоряд (сформируем позже). Пока — серый фон-заглушка. -->
-    <div class="video-layer">
-      <video id="ex-video" class="hidden" muted loop playsinline webkit-playsinline></video>
-      <div id="video-stub">видео упражнения появится позже</div>
-    </div>
-    <div class="video-shade"></div>
+    <div class="wo-bg"><div class="blob b1"></div><div class="blob b2"></div></div>
 
-    <!-- Время и название упражнения: левый верхний угол -->
-    <div class="wo-label">
-      <div class="wo-main">
-        <span id="clock">0:30</span>
-        <span id="ex-name"></span>
+    <div class="wo-top">
+      <div class="progress" id="progress"></div>
+      <div class="wo-row">
+        <div id="clock">0:30</div>
+        <div id="counter">1 / 10</div>
       </div>
+    </div>
+
+    <!-- Сцена: видео (если есть ссылка) или анимированная фигурка -->
+    <div class="stage">
+      <video id="ex-video" class="hidden" muted loop playsinline webkit-playsinline></video>
+      <svg id="figure" viewBox="-60 20 320 270" aria-hidden="true">
+        <rect class="water hidden" id="fig-water" x="-60" y="170" width="320" height="120"/>
+        <ellipse class="shadow" id="fig-shadow" cx="100" cy="262" rx="46" ry="6"/>
+        <line class="floor" id="fig-floor" x1="-40" y1="264" x2="240" y2="264"/>
+        <circle class="ring" id="fig-ring" cx="100" cy="150" r="118"/>
+        <!-- Фигурка: каждая часть тела — отдельная группа, её поворачивает код -->
+        <g id="p-fig">
+          <line class="limb" x1="94" y1="160" x2="106" y2="160"/>
+          <g id="p-legL"><line class="limb" x1="94" y1="160" x2="94" y2="210"/>
+            <g id="p-shinL"><line class="limb" x1="94" y1="210" x2="94" y2="258"/></g></g>
+          <g id="p-legR"><line class="limb" x1="106" y1="160" x2="106" y2="210"/>
+            <g id="p-shinR"><line class="limb" x1="106" y1="210" x2="106" y2="258"/></g></g>
+          <g id="p-torso">
+            <line class="limb" x1="100" y1="160" x2="100" y2="98"/>
+            <g id="p-head"><circle class="head" cx="100" cy="76" r="16"/></g>
+            <g id="p-armL"><line class="limb" x1="100" y1="102" x2="100" y2="140"/>
+              <g id="p-foreL"><line class="limb" x1="100" y1="140" x2="100" y2="174"/></g></g>
+            <g id="p-armR"><line class="limb" x1="100" y1="102" x2="100" y2="140"/>
+              <g id="p-foreR"><line class="limb" x1="100" y1="140" x2="100" y2="174"/>
+                <circle class="paddle hidden" id="fig-paddle" cx="100" cy="186" r="11"/></g></g>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <div class="wo-bottom">
+      <div class="phase-pill" id="phase">Работа</div>
+      <div id="ex-name"></div>
       <div id="wo-sub"></div>
+      <div class="ticker"><div class="ticker-track" id="ticker-track"><span></span><span></span></div></div>
     </div>
 
     <!-- Показывается только на паузе -->
     <div id="pause-layer" class="hidden">
-      <div class="icon">▶</div>
-      <div class="txt">Пауза — коснитесь, чтобы продолжить</div>
+      <div style="text-align:center">
+        <div class="pause-title">Пауза</div>
+        <!-- Какое упражнение сейчас: видно, куда перешли кнопками «назад/вперёд» -->
+        <div id="pause-ex" style="font-size:26px;font-weight:700;letter-spacing:-0.03em;margin-top:6px;padding:0 24px"></div>
+      </div>
+      <div class="pause-controls">
+        <!-- Назад: круговая стрелка против часовой -->
+        <button class="round-btn" id="prev-btn" aria-label="Предыдущее упражнение">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round">
+            <path d="M24 10 A15 15 0 1 1 10.6 18.2"/>
+            <path d="M17.5 10 L25.5 4.5 L25.5 15.5 Z" fill="currentColor" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="round-btn big" id="play-btn" aria-label="Продолжить">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
+        </button>
+        <!-- Вперёд: та же стрелка, отражённая -->
+        <button class="round-btn" id="next-btn" aria-label="Следующее упражнение">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" style="transform:scaleX(-1)">
+            <path d="M24 10 A15 15 0 1 1 10.6 18.2"/>
+            <path d="M17.5 10 L25.5 4.5 L25.5 15.5 Z" fill="currentColor" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      <button class="text-btn" id="end-btn">Завершить занятие</button>
+      <div class="pause-hint">Коснитесь экрана, чтобы продолжить</div>
     </div>
   </section>
 
   <!-- =============== ГОТОВО =============== -->
   <section id="done" class="screen hidden">
     <div class="emoji">🎉</div>
-    <h2>Готово!</h2>
-    <p id="done-text"></p>
+    <div class="h1">Готово!</div>
+    <div class="hint" id="done-sub" style="font-size:16px"></div>
+    <div class="stats" id="done-stats"></div>
     <button class="big-btn" id="home-btn" style="max-width:420px">На главную</button>
   </section>
 
   <script>
     // =====================================================================
-    //  1. Подключение к Telegram
+    //  1. Подключение к Telegram и служебные функции
     // =====================================================================
     const tg = window.Telegram && window.Telegram.WebApp;
     const inTelegram = !!(tg && tg.initData);
+    const $ = id => document.getElementById(id);
 
     if (inTelegram) {
       tg.ready();
       tg.expand();
       // Чтобы свайп по кругу не закрывал приложение (есть в новых версиях)
-      if (tg.isVersionAtLeast && tg.isVersionAtLeast('7.7') && tg.disableVerticalSwipes) {
-        tg.disableVerticalSwipes();
-      }
+      if (tg.isVersionAtLeast && tg.isVersionAtLeast('7.7') && tg.disableVerticalSwipes) tg.disableVerticalSwipes();
     }
 
     // Вибрация через Telegram (в браузере просто ничего не делает)
     function haptic(kind) {
       if (!inTelegram || !tg.HapticFeedback) return;
-      if (kind === 'select')  tg.HapticFeedback.selectionChanged();
+      if (kind === 'select') tg.HapticFeedback.selectionChanged();
       else if (kind === 'success') tg.HapticFeedback.notificationOccurred('success');
       else tg.HapticFeedback.impactOccurred(kind); // 'light' | 'medium' | 'heavy'
     }
@@ -311,7 +537,7 @@
       osc.stop(audio.currentTime + ms / 1000);
     }
 
-    // Не даём экрану погаснуть (Wake Lock). Если не поддерживается — молча пропускаем.
+    // Не даём экрану погаснуть (Wake Lock)
     let wakeLock = null;
     async function keepScreenOn() {
       try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }
@@ -320,167 +546,498 @@
     function releaseScreen() {
       if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
     }
-    // При возврате в приложение блокировку надо взять заново
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && current === 'workout') keepScreenOn();
     });
 
     // =====================================================================
-    //  2. Переключение экранов и кнопка «Назад» Telegram
+    //  2. Сохранение настроек: Telegram CloudStorage (синхронизируется
+    //     между телефоном и планшетом), запасной вариант — localStorage
     // =====================================================================
+    const SETTINGS_KEY = 'zaryadka_settings_v2';
+    const useCloud = inTelegram && tg.CloudStorage && tg.isVersionAtLeast && tg.isVersionAtLeast('6.9');
+
+    function parseJSON(text) { try { return text ? JSON.parse(text) : null; } catch (e) { return null; } }
+
+    function loadSettings(done) {
+      let local = null;
+      try { local = parseJSON(localStorage.getItem(SETTINGS_KEY)); } catch (e) {}
+      if (!useCloud) return done(local);
+      tg.CloudStorage.getItem(SETTINGS_KEY, (err, value) => done(parseJSON(value) || local));
+    }
+
+    let saveTimer = null;
+    function saveSettings() {
+      // Сохраняем не чаще раза в полсекунды (регулятор крутится быстро)
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        const data = JSON.stringify({
+          sport: state.sport, dirBySport: state.dirBySport,
+          minBySport: state.minBySport, customBySport: state.customBySport,
+        });
+        try { localStorage.setItem(SETTINGS_KEY, data); } catch (e) {}
+        if (useCloud) tg.CloudStorage.setItem(SETTINGS_KEY, data);
+      }, 500);
+    }
+
+    // =====================================================================
+    //  3. Переключение экранов и кнопка «Назад» Telegram
+    // =====================================================================
+    const SCREENS = ['home', 'sports', 'directions', 'custom', 'workout', 'done'];
     let current = 'home';
     function show(name) {
-      ['home', 'directions', 'workout', 'done'].forEach(id =>
-        document.getElementById(id).classList.toggle('hidden', id !== name));
+      SCREENS.forEach(id => $(id).classList.toggle('hidden', id !== name));
       current = name;
       window.scrollTo(0, 0);
       if (inTelegram) {
-        if (name === 'directions' || name === 'workout') tg.BackButton.show();
-        else tg.BackButton.hide();
+        if (name === 'home' || name === 'done') tg.BackButton.hide(); else tg.BackButton.show();
       }
     }
-
     function onBack() {
-      if (current === 'directions') show('home');
-      else if (current === 'workout') askExit();
+      if (current === 'workout') askExit();
+      else if (current === 'custom') closeCustom();
+      else if (current !== 'home') show('home');
     }
     if (inTelegram) tg.BackButton.onClick(onBack);
 
     // =====================================================================
-    //  3. Главный экран: выбор минут и направления
+    //  4. Состояние: что выбрано
     // =====================================================================
     const state = {
-      minutes: DEFAULT_MINUTES,
-      direction: DEFAULT_DIRECTION,
-      workout: null, // собранная тренировка
+      sport: DEFAULT_SPORT,
+      dirBySport: {},     // какая программа выбрана в каждом виде (или 'custom')
+      minBySport: {},     // сколько минут в каждом виде
+      customBySport: {},  // своя тренировка: список id упражнений по видам
+      workout: null,      // собранная тренировка
     };
+    const sport   = () => getSport(state.sport);
+    const dirId   = () => state.dirBySport[state.sport] || sport().directions[0].id;
+    const minutes = () => state.minBySport[state.sport] || sport().def;
+    const customIds = () => state.customBySport[state.sport] || [];
 
-    // --- Круглый регулятор ---
-    const dial = document.getElementById('dial');
-    const dialArc = document.getElementById('dial-arc');
-    const dialKnob = document.getElementById('dial-knob');
-    const dialNum = document.getElementById('dial-num');
+    // Подписи на главном экране для каждого вида
+    const TAGLINES = { morning: 'Пора на зарядку', gym: 'Сегодня — в зал', yoga: 'Время для йоги',
+                       pool: 'Ныряем в бассейн', tt: 'К столу!' };
+
+    function greeting() {
+      const h = new Date().getHours();
+      const part = h < 5 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
+      const user = inTelegram && tg.initDataUnsafe && tg.initDataUnsafe.user;
+      return part + (user && user.first_name ? ', ' + user.first_name : '');
+    }
+
+    // =====================================================================
+    //  5. Главный экран: регулятор минут
+    // =====================================================================
+    const dial = $('dial');
+    const dialArc = $('dial-arc');
     const R = 128, C = 2 * Math.PI * R; // радиус и длина окружности
     dialArc.setAttribute('stroke-dasharray', C);
 
     function drawDial() {
-      const frac = state.minutes / MAX_MINUTES;          // доля круга 0..1
+      const frac = minutes() / sport().max;              // доля круга 0..1
       dialArc.setAttribute('stroke-dashoffset', C * (1 - frac));
       const angle = frac * 2 * Math.PI - Math.PI / 2;      // от верхней точки по часовой
-      dialKnob.setAttribute('cx', 150 + R * Math.cos(angle));
-      dialKnob.setAttribute('cy', 150 + R * Math.sin(angle));
-      dialNum.textContent = state.minutes;
+      $('dial-knob').setAttribute('transform',
+        'translate(' + (150 + R * Math.cos(angle)) + ' ' + (150 + R * Math.sin(angle)) + ')');
+      $('dial-num').textContent = minutes();
     }
 
-    // Перевести точку касания в минуты
+    // Перевести точку касания в минуты (с шагом вида занятия)
     function minutesFromPointer(e) {
+      const s = sport();
       const box = dial.getBoundingClientRect();
       const x = e.clientX - (box.left + box.width / 2);
       const y = e.clientY - (box.top + box.height / 2);
       let angle = Math.atan2(y, x) + Math.PI / 2;          // 0 — сверху
       if (angle < 0) angle += 2 * Math.PI;
-      let m = Math.round(angle / (2 * Math.PI) * MAX_MINUTES);
-      // Не даём «перескочить» через верх круга с 30 на 0 и обратно
-      if (state.minutes >= MAX_MINUTES - 5 && m <= 5) m = MAX_MINUTES;
-      if (state.minutes <= MIN_MINUTES + 5 && m >= MAX_MINUTES - 5) m = MIN_MINUTES;
-      return Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, m));
+      let m = Math.round(angle / (2 * Math.PI) * s.max / s.step) * s.step;
+      // Не даём «перескочить» через верх круга
+      const edge = s.max * 0.17;
+      if (minutes() >= s.max - edge && m <= edge) m = s.max;
+      if (minutes() <= s.min + edge && m >= s.max - edge) m = s.min;
+      return Math.min(s.max, Math.max(s.min, m));
     }
 
     function setMinutes(m) {
-      if (m === state.minutes) return;
-      state.minutes = m;
+      if (m === minutes()) return;
+      state.minBySport[state.sport] = m;
       haptic('select');
       drawDial();
       updatePlan();
+      saveSettings();
     }
 
     let dragging = false;
-    dial.addEventListener('pointerdown', e => {
-      dragging = true;
-      dial.setPointerCapture(e.pointerId);
-      setMinutes(minutesFromPointer(e));
-    });
+    dial.addEventListener('pointerdown', e => { dragging = true; dial.setPointerCapture(e.pointerId); setMinutes(minutesFromPointer(e)); });
     dial.addEventListener('pointermove', e => { if (dragging) setMinutes(minutesFromPointer(e)); });
     dial.addEventListener('pointerup',     () => { dragging = false; });
     dial.addEventListener('pointercancel', () => { dragging = false; });
 
-    // --- Пересобрать тренировку под выбор и показать сводку ---
+    // =====================================================================
+    //  6. Главный экран: собрать тренировку и показать сводку
+    // =====================================================================
+    function applyAccent() {
+      document.documentElement.style.setProperty('--accent', sport().accent);
+    }
+
     function updatePlan() {
-      const dir = getDirection(state.direction);
-      state.workout = buildWorkout(state.direction, state.minutes);
+      const s = sport();
+      const isCustom = dirId() === CUSTOM_ID && customIds().length > 0;
+      if (dirId() === CUSTOM_ID && !isCustom) state.dirBySport[state.sport] = s.directions[0].id;
+
+      state.workout = buildWorkout(state.sport, dirId(), minutes(), customIds());
       const list = state.workout.exercises;
+      const total = workoutDuration(state.workout);
 
-      document.getElementById('dir-name').textContent = dir.short;
-      document.getElementById('summary').textContent =
-        list.length + ' ' + plural(list.length, 'упражнение', 'упражнения', 'упражнений') +
-        ' · ≈ ' + formatDuration(workoutDuration(state.workout));
+      $('greet').textContent = greeting();
+      $('tagline').textContent = TAGLINES[s.id] || s.name;
+      $('sport-ico').textContent = s.icon;
+      $('sport-name').textContent = s.name;
 
-      const ol = document.getElementById('preview-list');
+      // Направление: если включена своя тренировка — показываем приглушённо
+      $('dir-name').textContent = isCustom ? 'Своя тренировка' : getDirection(s.id, dirId()).short;
+      $('open-directions').classList.toggle('dim', isCustom);
+
+      // Своя тренировка
+      const n = customIds().length;
+      $('custom-name').innerHTML = '';
+      if (n === 0) $('custom-name').textContent = 'Выбрать упражнения';
+      else {
+        $('custom-name').textContent = n + ' ' + plural(n, 'упражнение', 'упражнения', 'упражнений');
+        if (isCustom) { const b = document.createElement('span'); b.className = 'badge-on'; b.textContent = 'вкл'; $('custom-name').append(b); }
+      }
+
+      const blocks = countBlocks(list);
+      $('summary').textContent = blocks + ' ' + plural(blocks, 'упражнение', 'упражнения', 'упражнений') +
+        (s.id === 'gym' ? ' · ' + list.length + ' ' + plural(list.length, 'подход', 'подхода', 'подходов') : '') +
+        ' · ≈ ' + formatDuration(total);
+      $('start-btn').textContent = 'Начать · ' + Math.round(total / 60) + ' мин';
+      $('start-btn').disabled = list.length === 0;
+
+      // Список «Что войдёт в занятие»: подходы одного упражнения — одной строкой
+      const ol = $('preview-list');
       ol.innerHTML = '';
-      list.forEach(item => {
+      list.forEach((item, i) => {
+        if (item.set && item.set > 1) return; // второй и далее подходы не дублируем
         const li = document.createElement('li');
         li.textContent = item.name + ' ';
         const extra = document.createElement('span');
         extra.className = 'reps';
-        extra.textContent = item.type === 'reps'
-          ? '— ' + item.reps + ' раз'
-          : '— ' + formatDuration(item.duration);
+        const amount = item.type === 'reps' ? item.reps + ' раз' : formatDuration(item.duration);
+        extra.textContent = '— ' + (item.sets ? item.sets + ' × ' : '') + amount;
         li.append(extra);
         ol.append(li);
       });
+
+      applyAccent();
+      drawDial();
     }
 
-    // --- Экран выбора направления ---
-    function renderDirections() {
-      const box = document.getElementById('dir-list');
+    // Сколько разных «блоков» упражнений (подходы одного упражнения — один блок)
+    function countBlocks(list) { return list.filter(item => !item.set || item.set === 1).length; }
+
+    // =====================================================================
+    //  7. Экран «Вид занятия»
+    // =====================================================================
+    function renderSports() {
+      const box = $('sport-list');
       box.innerHTML = '';
-      DIRECTIONS.forEach(dir => {
+      SPORTS.forEach(s => {
         const card = document.createElement('button');
-        card.className = 'dir-card' + (dir.id === state.direction ? ' selected' : '');
-
-        const title = document.createElement('div');
-        title.className = 'title';
-        title.textContent = dir.name;
-        if (dir.id === state.direction) {
-          const tick = document.createElement('span');
-          tick.className = 'tick';
-          tick.textContent = '✓';
-          title.append(tick);
-        }
-        const about = document.createElement('div');
-        about.className = 'about';
-        about.textContent = dir.description;
-
-        // Какие упражнения встречаются в направлении (без повторов)
-        const ids = [...new Set([...dir.warmup, ...dir.main, ...dir.cool])];
-        const list = document.createElement('div');
-        list.className = 'list';
-        list.textContent = ids.map(id => getExercise(id).name).join(' · ');
-
-        card.append(title, about, list);
+        card.className = 'pick-card glass sport-tile' + (s.id === state.sport ? ' selected' : '');
+        card.style.setProperty('--accent', s.accent);
+        card.innerHTML =
+          '<div class="swatch" style="background:' + s.accent + '"></div>' +
+          '<div class="big-ico">' + s.icon + '</div>' +
+          '<div><div class="title">' + s.name + (s.id === state.sport ? '<span class="tick">✓</span>' : '') + '</div>' +
+          '<div class="meta">' + s.directions.length + ' ' + plural(s.directions.length, 'программа', 'программы', 'программ') +
+          ' · ' + s.min + '–' + s.max + ' мин</div></div>';
         card.addEventListener('click', () => {
-          state.direction = dir.id;
+          state.sport = s.id;
           haptic('select');
           updatePlan();
+          saveSettings();
           show('home');
         });
         box.append(card);
       });
     }
+    $('open-sports').addEventListener('click', () => { haptic('light'); renderSports(); show('sports'); });
 
-    document.getElementById('open-directions').addEventListener('click', () => {
-      renderDirections();
-      show('directions');
+    // =====================================================================
+    //  8. Экран «Направление»
+    // =====================================================================
+    function renderDirections() {
+      const s = sport();
+      $('dir-eyebrow').textContent = s.icon + ' ' + s.name;
+      const box = $('dir-list');
+      box.innerHTML = '';
+      s.directions.forEach(dir => {
+        const selected = dir.id === dirId();
+        const card = document.createElement('button');
+        card.className = 'pick-card glass' + (selected ? ' selected' : '');
+
+        const title = document.createElement('div');
+        title.className = 'title';
+        title.textContent = dir.name;
+        if (selected) { const t = document.createElement('span'); t.className = 'tick'; t.textContent = '✓'; title.append(t); }
+
+        const about = document.createElement('div');
+        about.className = 'about';
+        about.textContent = dir.description + (dir.sets ? ' · ' + dir.sets + ' подхода' : '');
+
+        const ids = [...new Set([...dir.warmup, ...dir.main, ...dir.cool])];
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = ids.map(id => getExercise(id).name).join(' · ');
+
+        card.append(title, about, meta);
+        card.addEventListener('click', () => {
+          state.dirBySport[state.sport] = dir.id;
+          haptic('select');
+          updatePlan();
+          saveSettings();
+          show('home');
+        });
+        box.append(card);
+      });
+    }
+    $('open-directions').addEventListener('click', () => { haptic('light'); renderDirections(); show('directions'); });
+
+    // =====================================================================
+    //  9. Экран «Своя тренировка»: выбор конкретных упражнений
+    // =====================================================================
+    let customDraft = [];        // выбор, пока экран открыт
+    let customFilter = 'mine';   // 'mine' — упражнения текущего вида, 'all' — все
+
+    function openCustom() {
+      customDraft = [...customIds()];
+      customFilter = 'mine';
+      $('custom-eyebrow').textContent = sport().icon + ' ' + sport().name;
+      renderCustom();
+      show('custom');
+    }
+
+    function renderCustom() {
+      // Фильтры-«чипсы»
+      const chips = $('custom-chips');
+      chips.innerHTML = '';
+      [['mine', 'Для «' + sport().name + '»'], ['all', 'Все упражнения']].forEach(([id, label]) => {
+        const c = document.createElement('button');
+        c.className = 'chip glass' + (customFilter === id ? ' on' : '');
+        c.textContent = label;
+        c.addEventListener('click', () => { customFilter = id; haptic('select'); renderCustom(); });
+        chips.append(c);
+      });
+
+      // Группы: текущий вид первым, потом остальные (если «Все»)
+      const groups = customFilter === 'mine' ? [sport()] : [sport(), ...SPORTS.filter(s => s.id !== state.sport)];
+      const box = $('custom-list');
+      box.innerHTML = '';
+      groups.forEach(s => {
+        const gt = document.createElement('div');
+        gt.className = 'group-title';
+        gt.textContent = s.icon + ' ' + s.name;
+        box.append(gt);
+        sportExerciseIds(s.id).forEach(id => {
+          const item = getExercise(id);
+          const pos = customDraft.indexOf(id);
+          const row = document.createElement('button');
+          row.className = 'ex-row glass' + (pos >= 0 ? ' on' : '');
+          row.innerHTML = '<div class="check">' + (pos >= 0 ? pos + 1 : '') + '</div>' +
+            '<div style="min-width:0"><div class="nm"></div><div class="ds"></div></div>';
+          row.querySelector('.nm').textContent = item.name;
+          row.querySelector('.ds').textContent =
+            (item.type === 'reps' ? item.reps + ' раз · ' : '') + formatDuration(item.duration) + ' · ' + item.description;
+          row.addEventListener('click', () => {
+            const at = customDraft.indexOf(id);
+            if (at >= 0) customDraft.splice(at, 1); else customDraft.push(id);
+            haptic('select');
+            const y = window.scrollY;
+            renderCustom();
+            window.scrollTo(0, y);
+          });
+          box.append(row);
+        });
+      });
+
+      const n = customDraft.length;
+      $('custom-done').textContent = n ? 'Готово · ' + n : 'Готово';
+    }
+
+    function closeCustom() {
+      // Сохраняем выбор. Если что-то выбрано — включаем свою тренировку.
+      state.customBySport[state.sport] = [...customDraft];
+      if (customDraft.length) state.dirBySport[state.sport] = CUSTOM_ID;
+      updatePlan();
+      saveSettings();
+      show('home');
+    }
+    $('open-custom').addEventListener('click', () => { haptic('light'); openCustom(); });
+    $('custom-done').addEventListener('click', () => { haptic('medium'); closeCustom(); });
+    $('custom-clear').addEventListener('click', () => { customDraft = []; haptic('light'); renderCustom(); });
+
+    // Шестерёнка: экран настроек будет позже, пока — сообщение
+    $('settings-btn').addEventListener('click', () => {
+      haptic('light');
+      const msg = 'Настройки (звук, вибрация, время отдыха) появятся на следующем этапе.';
+      if (inTelegram) tg.showAlert(msg); else alert(msg);
     });
 
     // =====================================================================
-    //  4. Тренировка: таймер
+    //  10. Анимация фигурки
+    //  Поза = углы суставов в градусах (+ по часовой стрелке):
+    //    x, y, r — сдвиг и поворот всей фигуры (вокруг стоп)
+    //    t — корпус (вокруг таза), h — голова
+    //    aL/aR — плечо левой/правой руки, fL/fR — предплечья
+    //    lL/lR — бедро левой/правой ноги, sL/sR — голени
+    //  «Левая» — та, что слева на экране. Рука вниз = 0, вверх = ±180.
+    //  Анимация = список поз; фигурка плавно переходит между ними по кругу.
     // =====================================================================
-    /*
-      Тренировка — это список шагов:
-        prep (5 с «приготовьтесь») → work → rest → work → rest → … → work
-      У каждого шага: kind, dur (секунды), ex (упражнение), index (номер упражнения).
-    */
+    const BASE = { x: 0, y: 0, r: 0, t: 0, h: 0, aL: 10, fL: 0, aR: -10, fR: 0, lL: 3, sL: 0, lR: -3, sR: 0 };
+    const LIE  = { r: -90, x: 92, y: -4 };                  // лёжа (головой влево)
+    const SWIM = { r: -90, x: 92, y: -78 };                 // в воде
+    const KNEEL = { lL: -60, sL: 170, lR: -60, sR: 170, y: 73 };  // сидя на пятках
+
+    // seq: true — позы идут по кругу и сразу начинаются заново (для вращений)
+    const ANIMS = {
+      idle:      { dur: 3200, f: [{}, { aL: 16, aR: -16, y: -1 }] },
+      breathe:   { dur: 5200, ring: true, f: [{ aL: 18, aR: -18 }, { aL: 70, aR: -70, y: -2 }] },
+      head:      { dur: 2600, f: [{ h: -22 }, { h: 22 }] },
+      shrug:     { dur: 1500, f: [{}, { aL: 22, aR: -22, fL: -20, fR: 20, y: -3 }] },
+      arms:      { dur: 1700, seq: true, f: [{ aL: 0, aR: 0 }, { aL: 120, aR: -120 }, { aL: 240, aR: -240 }, { aL: 360, aR: -360 }] },
+      reach:     { dur: 3000, f: [{}, { aL: 175, aR: -175, y: -9 }] },
+      jerks:     { dur: 1300, f: [{ aL: 85, fL: 110, aR: -85, fR: -110 }, { aL: 100, aR: -100 }] },
+      twist:     { dur: 2200, f: [{ aL: 55, aR: -120, h: -18 }, { aL: 120, aR: -55, h: 18 }] },
+      sidebend:  { dur: 4400, f: [{}, { t: -24, aR: -165, aL: 18 }, {}, { t: 24, aL: 165, aR: -18 }] },
+      hips:      { dur: 2200, f: [{ t: -8, x: 4, aL: 35, fL: -120, aR: -35, fR: 120 }, { t: 8, x: -4, aL: 35, fL: -120, aR: -35, fR: 120 }] },
+      halfsquat: { dur: 1600, f: [{ aL: 20, aR: -20 }, { lL: 16, sL: -32, lR: -16, sR: 32, y: 4, aL: 26, fL: -30, aR: -26, fR: 30 }] },
+      squat:     { dur: 2400, f: [{ aL: 70, aR: -70 }, { lL: 36, sL: -72, lR: -36, sR: 72, y: 19, aL: 85, aR: -85 }] },
+      wall:      { dur: 3000, f: [{ lL: 46, sL: -92, lR: -46, sR: 92, y: 30, aL: 10, aR: -10 }, { lL: 46, sL: -92, lR: -46, sR: 92, y: 30, aL: 14, aR: -14 }] },
+      jacks:     { dur: 900,  f: [{}, { lL: 18, lR: -18, aL: 165, aR: -165, y: -9 }] },
+      march:     { dur: 1100, f: [{ lL: -55, sL: 75, aL: -28, aR: 28 }, { lR: -55, sR: 75, aL: 28, aR: -28 }] },
+      run:       { dur: 620,  f: [{ lL: -65, sL: 85, lR: 10, aL: -35, fL: -80, aR: 35, fR: -80, y: -4 }, { lR: -65, sR: 85, lL: 10, aL: 35, fL: -80, aR: -35, fR: -80, y: -4 }] },
+      windmill:  { dur: 3400, f: [{ lL: 16, lR: -16, aL: 90, aR: -90, y: 4 }, { t: -72, lL: 16, lR: -16, aL: 90, aR: -90, y: 4 }, { lL: 16, lR: -16, aL: 90, aR: -90, y: 4 }, { t: 72, lL: 16, lR: -16, aL: 90, aR: -90, y: 4 }] },
+      fold:      { dur: 3600, f: [{}, { t: 100, aL: -100, aR: -100, x: -12 }] },
+      pump:      { dur: 1000, f: [{ t: 20, aL: -20, aR: -20 }, { t: 55, aL: -55, aR: -55 }] },
+      hug:       { dur: 1100, f: [{ aL: 90, aR: -90 }, { aL: 60, fL: 105, aR: -60, fR: -105 }] },
+      bow:       { dur: 4000, f: [{ lL: 24, lR: -24, y: 9, aL: 90, aR: -90, fR: -150 }, { lL: 24, lR: -24, y: 9, aL: 90, fL: 150, aR: -90 }] },
+      split:     { dur: 4200, f: [{ aL: 175, aR: -8 }, { aL: 8, aR: -175 }] },
+      calf:      { dur: 1500, f: [{}, { y: -11 }] },
+      shake:     { dur: 320,  f: [{ aL: 6, aR: -6, fL: 12, fR: -12 }, { aL: 22, aR: -22, fL: -12, fR: 12, y: -2 }] },
+      tap:       { dur: 700,  f: [{ aL: 25, fL: 140, aR: -25, fR: -110 }, { aL: 30, fL: 110, aR: -30, fR: -140 }] },
+      curl:      { dur: 1900, f: [{ aL: 6, aR: -6 }, { aL: 2, fL: 150, aR: -2, fR: -150 }] },
+      press_down:{ dur: 1500, f: [{ aL: 18, fL: 120, aR: -18, fR: -120 }, { aL: 12, aR: -12 }] },
+      press:     { dur: 1900, f: [{ aL: 80, fL: 100, aR: -80, fR: -100 }, { aL: 168, fL: 6, aR: -168, fR: -6 }] },
+      lateral:   { dur: 2000, f: [{ aL: 10, aR: -10 }, { aL: 86, aR: -86 }] },
+      row:       { dur: 1800, f: [{ t: 70, aL: -70, aR: -70, x: -10, lL: 10, lR: 10 }, { t: 70, aL: -25, fL: -45, aR: -25, fR: -45, x: -10, lL: 10, lR: 10 }] },
+      pull:      { dur: 2000, f: [{ aL: 168, aR: -168, y: -6 }, { aL: 130, fL: 70, aR: -130, fR: -70, y: -34 }] },
+      lunge:     { dur: 2600, f: [{}, { lL: -38, sL: 40, lR: 40, sR: 50, y: 30 }] },
+      lunge_up:  { dur: 4000, f: [{ lL: -38, sL: 40, lR: 40, sR: 50, y: 30, aL: 172, aR: -172 }, { lL: -40, sL: 42, lR: 40, sR: 50, y: 31, aL: 178, aR: -178 }] },
+      pose:      { dur: 4000, f: [{ lL: 32, sL: -18, lR: -26, y: 16, aL: 90, aR: -90, h: -10 }, { lL: 34, sL: -20, lR: -26, y: 17, aL: 95, aR: -95, h: -10 }] },
+      triangle:  { dur: 4000, f: [{ lL: 28, lR: -28, y: 12, t: -55, aL: 55, aR: -125 }, { lL: 28, lR: -28, y: 12, t: -62, aL: 62, aR: -118 }] },
+      balance:   { dur: 3000, f: [{ lR: -70, sR: 140, aL: 85, aR: -85, r: -1.5 }, { lR: -70, sR: 140, aL: 90, aR: -90, r: 1.5 }] },
+      dog:       { dur: 4000, f: [{ t: 128, aL: 180, aR: 180, lL: 40, lR: 40, y: 23, h: 0 }, { t: 133, aL: 180, aR: 180, lL: 43, lR: 43, y: 25 }] },
+      child:     { dur: 4500, f: [{ ...KNEEL, t: 100, aL: 170, aR: 170 }, { ...KNEEL, t: 104, y: 75, aL: 166, aR: 166 }] },
+      catcow:    { dur: 3600, f: [{ lL: 0, sL: 90, lR: 0, sR: 90, y: 48, t: 92, aL: -92, aR: -92, h: -25 }, { lL: 0, sL: 90, lR: 0, sR: 90, y: 48, t: 78, aL: -78, aR: -78, h: 25 }] },
+      pushup:    { dur: 2000, f: [{ r: -64, x: 92, aL: 64, aR: 64 }, { r: -74, x: 92, y: 3, aL: 110, fL: -80, aR: 110, fR: -80 }] },
+      bridge:    { dur: 2600, f: [{ ...LIE, lL: -55, sL: 110, lR: -55, sR: 110, aL: 0, aR: 0 }, { ...LIE, y: -26, t: -20, lL: -35, sL: 90, lR: -35, sR: 90, aL: 20, aR: 20 }] },
+      lying:     { dur: 5000, f: [{ ...LIE, aL: -8, aR: 8 }, { ...LIE, y: -6, aL: -8, aR: 8 }] },
+      cobra:     { dur: 4000, f: [{ ...LIE, aL: 90, aR: 90, fL: -50, fR: -50 }, { ...LIE, t: 34, aL: 56, aR: 56 }] },
+      side_lying:{ dur: 2200, f: [{ ...LIE, lL: -30, sL: 60, aL: 175, aR: 175 }, { ...LIE, lL: -30, sL: 60, lR: -42, aL: 175, aR: 175 }] },
+      sit_kick:  { dur: 3200, f: [{ lL: -90, sL: 90, lR: -90, sR: 90, y: 50, aL: -20, aR: -20 }, { lL: -90, sL: 0, lR: -90, sR: 90, y: 50, aL: -20, aR: -20 }, { lL: -90, sL: 90, lR: -90, sR: 90, y: 50, aL: -20, aR: -20 }, { lL: -90, sL: 90, lR: -90, sR: 0, y: 50, aL: -20, aR: -20 }] },
+      swim:      { dur: 1800, seq: true, water: true, f: [{ ...SWIM, aL: 0, aR: 180, lL: -8, lR: 8 }, { ...SWIM, aL: 120, aR: 300, lL: 8, lR: -8 }, { ...SWIM, aL: 240, aR: 420, lL: -8, lR: 8 }, { ...SWIM, aL: 360, aR: 540, lL: -8, lR: 8 }] },
+      swim_back: { dur: 2200, seq: true, water: true, f: [{ ...SWIM, aL: 0, aR: 180 }, { ...SWIM, aL: -120, aR: 60, lL: 6 }, { ...SWIM, aL: -240, aR: -60, lR: 6 }, { ...SWIM, aL: -360, aR: -180 }] },
+      swim_breast:{ dur: 2000, water: true, f: [{ ...SWIM, aL: 180, aR: 180 }, { ...SWIM, aL: 110, fL: 60, aR: 110, fR: 60, lL: -40, sL: 90, lR: -40, sR: 90 }, { ...SWIM, aL: 180, aR: 180 }] },
+      kick:      { dur: 520,  water: true, f: [{ ...SWIM, aL: 180, aR: 180, lL: -12, lR: 12 }, { ...SWIM, aL: 180, aR: 180, lL: 12, lR: -12 }] },
+      float:     { dur: 4000, water: true, f: [{ ...SWIM, y: -82, aL: 170, aR: 170, lL: -6, lR: 6 }, { ...SWIM, y: -86, aL: 160, aR: 160, lL: -10, lR: 10 }] },
+      jump:      { dur: 480,  f: [{ aL: 30, fL: -30, aR: -30, fR: 30 }, { aL: 30, fL: -30, aR: -30, fR: 30, y: -14 }] },
+      step:      { dur: 1100, f: [{ x: -26, lL: 22, sL: -16, lR: -10, sR: 16, y: 4, aL: 20, fL: -70, aR: -20, fR: 70 }, { x: 26, lL: 10, sL: -16, lR: -22, sR: 16, y: 4, aL: 20, fL: -70, aR: -20, fR: 70 }] },
+      tennis:    { dur: 1200, paddle: true, f: [{ lL: 14, lR: -14, y: 2, aR: -20, fR: -40, t: -6, aL: 30 }, { lL: 14, lR: -14, y: 2, aR: -150, fR: -20, t: 8, aL: 30 }] },
+      tennis_bh: { dur: 1100, paddle: true, f: [{ lL: 14, lR: -14, y: 2, aR: 40, fR: 70, t: 6 }, { lL: 14, lR: -14, y: 2, aR: -105, fR: -10, t: -6 }] },
+      tennis_serve:{ dur: 1700, paddle: true, f: [{ aL: 30, aR: -30, fR: -60 }, { aL: 160, aR: -40, fR: -80 }, { aL: 40, aR: -110, fR: -20 }] },
+    };
+
+    // Части фигурки и точки, вокруг которых они вращаются (суставы)
+    const P = {
+      legL: [$('p-legL'), 94, 160], shinL: [$('p-shinL'), 94, 210],
+      legR: [$('p-legR'), 106, 160], shinR: [$('p-shinR'), 106, 210],
+      torso: [$('p-torso'), 100, 160], head: [$('p-head'), 100, 98],
+      armL: [$('p-armL'), 100, 102], foreL: [$('p-foreL'), 100, 140],
+      armR: [$('p-armR'), 100, 102], foreR: [$('p-foreR'), 100, 140],
+    };
+    const KEYMAP = { legL: 'lL', shinL: 'sL', legR: 'lR', shinR: 'sR', torso: 't', head: 'h', armL: 'aL', foreL: 'fL', armR: 'aR', foreR: 'fR' };
+
+    function applyPose(p) {
+      $('p-fig').setAttribute('transform', 'translate(' + p.x + ' ' + p.y + ') rotate(' + p.r + ' 100 258)');
+      for (const name in P) {
+        const [el, cx, cy] = P[name];
+        el.setAttribute('transform', 'rotate(' + p[KEYMAP[name]] + ' ' + cx + ' ' + cy + ')');
+      }
+    }
+
+    let anim = ANIMS.idle;
+    let animStart = 0;
+    let animFrame = null;
+    let animPausedAt = 0;
+
+    function setAnim(name) {
+      const next = ANIMS[name] || ANIMS.idle;
+      if (next === anim && animFrame) return;
+      anim = next;
+      animStart = performance.now();
+      // Вода, ракетка, «дыхательный» круг — только где нужно
+      const water = !!anim.water;
+      $('fig-water').classList.toggle('hidden', !water);
+      $('fig-floor').classList.toggle('hidden', water);
+      $('fig-shadow').classList.toggle('hidden', water);
+      $('fig-paddle').classList.toggle('hidden', !anim.paddle);
+      if (!animFrame) animFrame = requestAnimationFrame(animLoop);
+    }
+
+    function lerpPose(a, b, u) {
+      const p = {};
+      for (const k in BASE) p[k] = a[k] + (b[k] - a[k]) * u;
+      return p;
+    }
+
+    function animLoop(now) {
+      animFrame = null;
+      if (current !== 'workout') return;
+      if (!paused) {
+        const frames = anim.f.map(fr => ({ ...BASE, ...fr }));
+        // Время кадра может быть чуть раньше старта — поэтому не меньше нуля
+        const t = (Math.max(0, now - animStart) % anim.dur) / anim.dur;
+        let a, b, u;
+        if (anim.seq) {
+          // Вращения: 0 → 1 → … → последняя, равномерно
+          const n = frames.length - 1;
+          const k = Math.min(n - 1, Math.floor(t * n));
+          a = frames[k]; b = frames[k + 1]; u = t * n - k;
+        } else {
+          // Обычные: по кругу 0 → 1 → … → 0, плавно
+          const n = frames.length;
+          const k = Math.floor(t * n);
+          a = frames[k]; b = frames[(k + 1) % n];
+          u = (1 - Math.cos(Math.PI * (t * n - k))) / 2;
+        }
+        applyPose(lerpPose(a, b, u));
+        // «Дыхательный» круг вокруг фигурки
+        const ring = $('fig-ring');
+        if (anim.ring) {
+          const s = (1 - Math.cos(2 * Math.PI * t)) / 2;
+          ring.style.opacity = 0.15 + 0.45 * s;
+          ring.setAttribute('r', 96 + 26 * s);
+        } else ring.style.opacity = 0;
+      }
+      animFrame = requestAnimationFrame(animLoop);
+    }
+
+    // =====================================================================
+    //  11. Тренировка: таймер
+    //  Шаги: prep (5 с «приготовьтесь») → work → rest → work → … → work
+    // =====================================================================
     const PREP_SECONDS = 5;
     let steps = [];
     let stepIndex = 0;
@@ -489,25 +1046,48 @@
     let timerId = null;
     let lastTick = 0;
     let lastWhole = 0;   // для сигнала на 3-2-1
+    let doneSeconds = 0; // сколько реально позанимались (для итогов)
 
     function buildSteps(workout) {
       const list = workout.exercises;
       const result = [{ kind: 'prep', dur: PREP_SECONDS, ex: list[0], index: 0 }];
       list.forEach((item, i) => {
         result.push({ kind: 'work', dur: item.duration, ex: item, index: i });
-        if (i < list.length - 1 && item.rest > 0) {
-          result.push({ kind: 'rest', dur: item.rest, ex: list[i + 1], index: i + 1 });
-        }
+        if (i < list.length - 1 && item.rest > 0) result.push({ kind: 'rest', dur: item.rest, ex: list[i + 1], index: i + 1 });
       });
       return result;
+    }
+
+    // Полоски прогресса: по одной на упражнение (подход)
+    function buildProgress() {
+      const box = $('progress');
+      box.innerHTML = '';
+      state.workout.exercises.forEach(() => {
+        const seg = document.createElement('div');
+        seg.className = 'seg';
+        seg.append(document.createElement('i'));
+        box.append(seg);
+      });
+    }
+    function renderProgress() {
+      const step = steps[stepIndex];
+      const segs = $('progress').children;
+      for (let i = 0; i < segs.length; i++) {
+        let fill = 0;
+        if (i < step.index) fill = 1;
+        if (step.kind === 'work' && i === step.index) fill = 1 - remaining / step.dur;
+        segs[i].firstChild.style.width = (Math.max(0, Math.min(1, fill)) * 100) + '%';
+      }
     }
 
     function startWorkout() {
       initAudio();
       steps = buildSteps(state.workout);
       paused = false;
-      renderPause();
+      doneSeconds = 0;
+      buildProgress();
       show('workout');
+      renderPause();
       keepScreenOn();
       goToStep(0);
       clearInterval(timerId);
@@ -521,6 +1101,7 @@
       remaining = step.dur;
       lastWhole = Math.ceil(remaining);
       renderStep();
+      if (paused) return;
       if (step.kind === 'work') { beep(1046, 250); haptic('heavy'); }
       else if (step.kind === 'rest') { beep(660, 200); haptic('medium'); }
     }
@@ -533,13 +1114,12 @@
       if (paused) return;
 
       remaining -= dt;
+      if (steps[stepIndex].kind !== 'prep') doneSeconds += dt;
       const whole = Math.ceil(remaining);
       if (whole !== lastWhole) {
         lastWhole = whole;
-        // Короткие сигналы на 3, 2, 1
-        if (whole >= 1 && whole <= 3) { beep(880, 90); haptic('light'); }
+        if (whole >= 1 && whole <= 3) { beep(880, 90); haptic('light'); } // сигналы 3-2-1
       }
-
       if (remaining <= 0) {
         if (stepIndex < steps.length - 1) goToStep(stepIndex + 1);
         else finishWorkout();
@@ -548,62 +1128,118 @@
       renderTime();
     }
 
-    // Показать видео, название и подпись под ним
+    // Показать фазу, название, подпись, бегущую строку, анимацию
     function renderStep() {
       const step = steps[stepIndex];
       const ex = step.ex; // на отдыхе и подготовке — следующее упражнение
+      const wo = $('workout');
+      wo.classList.remove('ph-work', 'ph-rest', 'ph-prep');
+      wo.classList.add('ph-' + step.kind);
 
-      document.getElementById('ex-name').textContent = '«' + ex.name + '»';
+      $('phase').textContent = step.kind === 'work' ? 'Работа' : step.kind === 'rest' ? 'Отдых · далее' : 'Приготовьтесь';
+      $('ex-name').textContent = ex.name;
+      $('pause-ex').textContent = (step.kind === 'work' ? '' : 'Далее: ') + ex.name;
+      $('counter').textContent = (step.index + 1) + ' / ' + state.workout.exercises.length;
 
-      // Вторая строка: что сейчас происходит
-      let sub = '';
-      if (step.kind === 'prep') sub = 'Приготовьтесь';
-      else if (step.kind === 'rest') sub = 'Отдых · далее это упражнение';
-      else if (ex.type === 'reps') sub = ex.reps + ' раз';
-      document.getElementById('wo-sub').textContent = sub;
+      // Подпись: подход и повторы
+      const parts = [];
+      if (ex.sets) parts.push('Подход ' + ex.set + ' из ' + ex.sets);
+      if (ex.type === 'reps') parts.push(ex.reps + ' раз');
+      $('wo-sub').textContent = parts.join(' · ');
 
-      setVideo(ex);
+      // Бегущая строка: как выполнять + дыхание + ощущения
+      let text;
+      if (step.kind === 'work') text = [ex.description, ...ex.tips].join('   •   ');
+      else if (step.kind === 'rest') text = ['Отдых: дышите спокойно — вдох носом, выдох ртом', 'Пейте воду маленькими глотками', 'Далее: ' + ex.description].join('   •   ');
+      else text = ['Займите исходное положение', ex.description].join('   •   ');
+      setTicker(text);
+
+      // Видео, если есть ссылка; иначе — анимация фигурки
+      const hasVideo = !!ex.video_url;
+      const video = $('ex-video');
+      video.classList.toggle('hidden', !hasVideo);
+      $('figure').classList.toggle('hidden', hasVideo);
+      if (hasVideo) {
+        if (video.getAttribute('src') !== ex.video_url) video.src = ex.video_url;
+        if (!paused) video.play().catch(() => {});
+      } else {
+        video.removeAttribute('src');
+        $('figure').classList.toggle('preview', step.kind !== 'work');
+        setAnim(ex.anim);
+      }
       renderTime();
     }
 
-    // Видео упражнения. Пока ссылок нет — показываем заглушку.
-    const video = document.getElementById('ex-video');
-    function setVideo(ex) {
-      const url = ex.video_url || '';
-      const has = url !== '';
-      video.classList.toggle('hidden', !has);
-      document.getElementById('video-stub').classList.toggle('hidden', has);
-      if (!has) { video.removeAttribute('src'); return; }
-      if (video.getAttribute('src') !== url) video.src = url;
-      if (!paused) video.play().catch(() => {});
+    function setTicker(text) {
+      const track = $('ticker-track');
+      track.children[0].textContent = text;
+      track.children[1].textContent = text;
+      // Скорость ~45 пикселей в секунду, перезапуск с начала
+      track.style.animation = 'none';
+      void track.offsetWidth;
+      track.style.animation = '';
+      track.style.animationDuration = Math.max(12, track.children[0].offsetWidth / 45) + 's';
     }
 
     function renderTime() {
-      document.getElementById('clock').textContent = formatClock(remaining);
+      $('clock').textContent = formatClock(remaining);
+      renderProgress();
     }
 
     // --- Пауза / продолжить: касание по экрану ---
     function renderPause() {
-      document.getElementById('pause-layer').classList.toggle('hidden', !paused);
-      document.getElementById('workout').classList.toggle('paused', paused);
-      if (video.getAttribute('src')) {
-        if (paused) video.pause(); else video.play().catch(() => {});
-      }
+      $('pause-layer').classList.toggle('hidden', !paused);
+      $('workout').classList.toggle('paused', paused);
+      const video = $('ex-video');
+      if (video.getAttribute('src')) { if (paused) video.pause(); else video.play().catch(() => {}); }
+      // Продолжаем анимацию с того же места
+      if (paused) animPausedAt = performance.now();
+      else if (animPausedAt) { animStart += performance.now() - animPausedAt; animPausedAt = 0; }
     }
     function togglePause() {
       paused = !paused;
+      lastTick = Date.now();
       renderPause();
       haptic('medium');
     }
-    document.getElementById('workout').addEventListener('click', togglePause);
+    $('workout').addEventListener('click', togglePause);
 
-    // Выход по кнопке «Назад» Telegram: ставим паузу и спрашиваем
+    // --- Вперёд / назад (на паузе) ---
+    // Номер упражнения, на котором сейчас стоим
+    function currentExercise() {
+      const step = steps[stepIndex];
+      return step.kind === 'rest' ? step.index - 1 : step.index;
+    }
+    function goToExercise(k) {
+      const i = steps.findIndex(s => s.kind === 'work' && s.index === k);
+      if (i >= 0) goToStep(i);
+    }
+    function prevExercise() {
+      const step = steps[stepIndex];
+      const elapsed = step.dur - remaining;
+      if (step.kind === 'prep') return goToStep(0);
+      const cur = currentExercise();
+      // Если упражнение идёт дольше 3 секунд — начинаем его заново, иначе — предыдущее
+      if (step.kind === 'work' && elapsed > 3) goToExercise(cur);
+      else if (step.kind === 'rest') goToExercise(cur);
+      else goToExercise(Math.max(0, cur - 1));
+    }
+    function nextExercise() {
+      const step = steps[stepIndex];
+      const next = step.kind === 'work' ? step.index + 1 : step.index;
+      if (next >= state.workout.exercises.length) finishWorkout();
+      else goToExercise(next);
+    }
+    $('prev-btn').addEventListener('click', e => { e.stopPropagation(); haptic('light'); prevExercise(); });
+    $('next-btn').addEventListener('click', e => { e.stopPropagation(); haptic('light'); nextExercise(); });
+    $('play-btn').addEventListener('click', e => { e.stopPropagation(); togglePause(); });
+    $('end-btn').addEventListener('click', e => { e.stopPropagation(); askExit(); });
+
+    // Выход: ставим паузу и спрашиваем
     function askExit() {
       const wasPaused = paused;
       if (!paused) togglePause();
-      const exit = ok => {
-        if (ok) stopWorkout(); else if (!wasPaused) togglePause();
-      };
+      const exit = ok => { if (ok) stopWorkout(); else if (!wasPaused) togglePause(); };
       if (inTelegram) tg.showConfirm('Закончить занятие?', exit);
       else exit(window.confirm('Закончить занятие?'));
     }
@@ -619,32 +1255,42 @@
       releaseScreen();
       beep(1318, 400);
       haptic('success');
-      const n = state.workout.exercises.length;
-      document.getElementById('done-text').textContent =
-        formatDuration(workoutDuration(state.workout)) + ' · ' +
-        n + ' ' + plural(n, 'упражнение', 'упражнения', 'упражнений');
+      const n = countBlocks(state.workout.exercises);
+      $('done-sub').textContent = sport().icon + ' ' + sport().name + ' · ' + state.workout.name;
+      const stats = [
+        [formatClock(doneSeconds), 'время'],
+        [String(n), plural(n, 'упражнение', 'упражнения', 'упражнений')],
+      ];
+      $('done-stats').innerHTML = '';
+      stats.forEach(([value, label]) => {
+        const d = document.createElement('div');
+        d.className = 'stat glass';
+        d.innerHTML = '<b></b><span></span>';
+        d.querySelector('b').textContent = value;
+        d.querySelector('span').textContent = label;
+        $('done-stats').append(d);
+      });
       show('done');
     }
 
     // =====================================================================
-    //  5. Запуск
+    //  12. Запуск
     // =====================================================================
-    document.getElementById('start-btn').addEventListener('click', () => {
-      haptic('medium');
-      startWorkout();
-    });
-    document.getElementById('home-btn').addEventListener('click', () => show('home'));
+    $('start-btn').addEventListener('click', () => { haptic('medium'); startWorkout(); });
+    $('home-btn').addEventListener('click', () => show('home'));
 
-    // Шестерёнка: экран настроек сделаем на следующем шаге, пока — сообщение
-    document.getElementById('settings-btn').addEventListener('click', () => {
-      haptic('light');
-      const msg = 'Настройки появятся на следующем этапе.';
-      if (inTelegram) tg.showAlert(msg); else alert(msg);
-    });
-
-    drawDial();
     updatePlan();
     show('home');
+    // Подгружаем сохранённый выбор (из облака Telegram или телефона)
+    loadSettings(saved => {
+      if (saved) {
+        if (SPORTS.some(s => s.id === saved.sport)) state.sport = saved.sport;
+        state.dirBySport = saved.dirBySport || {};
+        state.minBySport = saved.minBySport || {};
+        state.customBySport = saved.customBySport || {};
+      }
+      updatePlan();
+    });
   </script>
 </body>
 </html>
