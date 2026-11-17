@@ -70,9 +70,16 @@
     .big-btn:active { transform: scale(0.98); }
 
     /* ---------- Главный экран ---------- */
-    #home header { display: flex; justify-content: space-between; align-items: baseline; }
-    #home h1 { font-size: 26px; margin: 0; }
-    #hello { font-size: 15px; color: var(--hint); }
+    /* Строка «Направление» + шестерёнка справа в один уровень */
+    .dir-line { display: flex; gap: 12px; align-items: stretch; }
+    .dir-line .row-card { flex: 1; min-width: 0; }
+    .gear-btn {
+      flex: 0 0 72px; min-height: 72px; border-radius: 18px;
+      background: var(--card); color: var(--hint);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .gear-btn svg { width: 30px; height: 30px; }
+    .gear-btn:active { transform: scale(0.96); }
 
     .home-body { display: flex; flex-direction: column; gap: 14px; }
 
@@ -105,54 +112,58 @@
     .dir-card .about { font-size: 15px; margin-top: 6px; }
     .dir-card .list  { font-size: 13px; color: var(--hint); margin-top: 6px; line-height: 1.4; }
 
-    /* ---------- Экран тренировки ---------- */
-    #workout { display: flex; flex-direction: column; gap: 12px; }
-    .top-line { display: flex; justify-content: space-between; font-size: 15px; color: var(--hint); }
-    .bar { height: 6px; background: var(--card); border-radius: 3px; overflow: hidden; }
-    .bar > div { height: 100%; width: 0; background: var(--button); transition: width .3s; }
-
-    .wo-body { display: flex; flex-direction: column; align-items: center; gap: 10px; flex: 1; }
-    .wo-left { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-    #phase {
-      font-size: 15px; font-weight: 700; letter-spacing: .08em;
-      padding: 6px 14px; border-radius: 14px; color: #fff; background: var(--work);
+    /* ---------- Экран тренировки ----------
+       Весь экран — видео. Поверх него, слева сверху: время и название.
+       Кнопок нет: касание экрана ставит паузу / продолжает. */
+    #workout {
+      position: fixed; inset: 0;
+      max-width: none; margin: 0; padding: 0;
+      overflow: hidden; cursor: pointer;
+      background: #cfcfcf;
     }
-    .ring-wrap { position: relative; width: min(72vw, 320px); }
-    #ring { width: 100%; height: auto; display: block; }
-    #ring .track { stroke: var(--card); }
-    #ring .arc   { stroke: var(--work); }
-    .ring-center {
+    /* Слой видео. Пока видео нет — светло-серый «фон студии» как на образце */
+    .video-layer {
       position: absolute; inset: 0;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: linear-gradient(180deg, #e9e9e9 0%, #dcdcdc 55%, #cfcfcf 100%);
     }
-    #clock { font-size: clamp(56px, 18vw, 96px); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
-    #reps  { font-size: 22px; font-weight: 600; margin-top: 6px; color: var(--work); }
-
-    .wo-info { text-align: center; max-width: 520px; }
-    #ex-name { font-size: 26px; font-weight: 700; margin: 4px 0 6px; }
-    #ex-desc { font-size: 16px; line-height: 1.4; margin: 0; }
-    #next { font-size: 15px; margin-top: 10px; min-height: 20px; }
-
-    /* Цвет по фазе: класс на экране тренировки */
-    #workout.rest #phase, #workout.rest .bar > div { background: var(--rest); }
-    #workout.rest #ring .arc { stroke: var(--rest); }
-    #workout.rest #reps { color: var(--rest); }
-    #workout.prep #phase { background: var(--prep); }
-    #workout.prep #ring .arc { stroke: var(--prep); }
-    #workout.prep #reps { color: var(--prep); }
-    #workout.paused #clock { opacity: .4; }
-
-    .controls { display: flex; justify-content: center; align-items: center; gap: 22px; margin-top: 6px; }
-    .ctrl {
-      width: 68px; height: 68px; border-radius: 50%;
-      background: var(--card); font-size: 26px;
+    #ex-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    #video-stub {
+      position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
+      color: rgba(0,0,0,.25); font-size: 15px;
     }
-    .ctrl.main { width: 88px; height: 88px; font-size: 34px; background: var(--button); color: var(--button-text); }
-    .ctrl:active { transform: scale(0.94); }
-    .ctrl-labels { display: flex; justify-content: center; gap: 22px; font-size: 13px; color: var(--hint); }
-    .ctrl-labels span { width: 68px; text-align: center; }
-    .ctrl-labels span.main { width: 88px; }
+    /* Лёгкое затемнение, чтобы белый текст читался на любом видео */
+    .video-shade {
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,0) 35%);
+      pointer-events: none;
+    }
+
+    /* Время и название — левый верхний угол */
+    .wo-label {
+      position: absolute;
+      top: calc(env(safe-area-inset-top, 0px) + 18px);
+      left: calc(env(safe-area-inset-left, 0px) + 22px);
+      right: 22px;
+      color: #fff;
+      text-shadow: 0 1px 6px rgba(0,0,0,.45);
+      pointer-events: none;
+      z-index: 2; /* время видно и на паузе */
+    }
+    .wo-main { display: flex; align-items: baseline; gap: 0.7em; flex-wrap: wrap;
+               font-size: clamp(28px, 7vw, 46px); line-height: 1.15; }
+    #clock { font-variant-numeric: tabular-nums; }
+    #wo-sub { font-size: clamp(15px, 3.6vw, 20px); margin-top: 6px; opacity: .95; }
+
+    /* Пауза: экран темнеет, по центру значок */
+    #pause-layer {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+      background: rgba(0,0,0,.45); color: #fff; pointer-events: none;
+    }
+    #pause-layer .icon { font-size: 72px; line-height: 1; }
+    #pause-layer .txt  { font-size: 17px; }
+    #workout.paused #video-stub { visibility: hidden; }
 
     /* ---------- Экран «Готово» ---------- */
     #done { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; }
@@ -166,10 +177,6 @@
       .home-body .dial-wrap { grid-row: span 4; }
       #dial { width: min(42vw, 400px); }
       #dir-list { grid-template-columns: 1fr 1fr; }
-      .wo-body { flex-direction: row; justify-content: center; gap: 48px; }
-      .ring-wrap { width: min(40vw, 360px); }
-      .wo-info { text-align: left; }
-      .controls, .ctrl-labels { justify-content: flex-start; }
     }
   </style>
 </head>
@@ -177,11 +184,6 @@
 
   <!-- =============== ГЛАВНЫЙ ЭКРАН =============== -->
   <section id="home" class="screen">
-    <header>
-      <h1>Зарядка 💪</h1>
-      <span id="hello"></span>
-    </header>
-
     <div class="home-body">
       <!-- Круглый регулятор: тяните синюю точку по кругу -->
       <div class="dial-wrap">
@@ -195,13 +197,24 @@
         </svg>
       </div>
 
-      <button class="row-card" id="open-directions">
-        <div class="grow">
-          <div class="label">Направление</div>
-          <div class="value" id="dir-name">Общий комплекс</div>
-        </div>
-        <span class="chev">›</span>
-      </button>
+      <!-- Направление + шестерёнка настроек справа -->
+      <div class="dir-line">
+        <button class="row-card" id="open-directions">
+          <div class="grow">
+            <div class="label">Направление</div>
+            <div class="value" id="dir-name">Общий комплекс</div>
+          </div>
+          <span class="chev">›</span>
+        </button>
+        <button class="gear-btn" id="settings-btn" aria-label="Настройки">
+          <!-- Значок шестерёнки -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
 
       <div id="summary" class="hint"></div>
 
@@ -220,44 +233,29 @@
     <div id="dir-list"></div>
   </section>
 
-  <!-- =============== ТРЕНИРОВКА =============== -->
+  <!-- =============== ТРЕНИРОВКА ===============
+       Касание в любом месте экрана — пауза / продолжить. -->
   <section id="workout" class="screen hidden">
-    <div class="top-line">
-      <span id="counter">Упражнение 1 из 10</span>
-      <span id="left">осталось 10:00</span>
+    <!-- Видеоряд (сформируем позже). Пока — серый фон-заглушка. -->
+    <div class="video-layer">
+      <video id="ex-video" class="hidden" muted loop playsinline webkit-playsinline></video>
+      <div id="video-stub">видео упражнения появится позже</div>
     </div>
-    <div class="bar"><div id="bar-fill"></div></div>
+    <div class="video-shade"></div>
 
-    <div class="wo-body">
-      <div class="wo-left">
-        <div id="phase">РАБОТА</div>
-        <div class="ring-wrap">
-          <svg id="ring" viewBox="0 0 300 300">
-            <circle class="track" cx="150" cy="150" r="135" fill="none" stroke-width="14"/>
-            <circle class="arc" id="ring-arc" cx="150" cy="150" r="135" fill="none" stroke-width="14"
-                    stroke-linecap="round" transform="rotate(-90 150 150)"/>
-          </svg>
-          <div class="ring-center">
-            <div id="clock">0:30</div>
-            <div id="reps"></div>
-          </div>
-        </div>
+    <!-- Время и название упражнения: левый верхний угол -->
+    <div class="wo-label">
+      <div class="wo-main">
+        <span id="clock">0:30</span>
+        <span id="ex-name"></span>
       </div>
+      <div id="wo-sub"></div>
+    </div>
 
-      <div class="wo-info">
-        <div id="ex-name"></div>
-        <p id="ex-desc"></p>
-        <div id="next" class="hint"></div>
-
-        <div class="controls">
-          <button class="ctrl" id="btn-prev" aria-label="Назад">⏮</button>
-          <button class="ctrl main" id="btn-pause" aria-label="Пауза">⏸</button>
-          <button class="ctrl" id="btn-skip" aria-label="Пропустить">⏭</button>
-        </div>
-        <div class="ctrl-labels">
-          <span>назад</span><span class="main" id="pause-label">пауза</span><span>пропуск</span>
-        </div>
-      </div>
+    <!-- Показывается только на паузе -->
+    <div id="pause-layer" class="hidden">
+      <div class="icon">▶</div>
+      <div class="txt">Пауза — коснитесь, чтобы продолжить</div>
     </div>
   </section>
 
@@ -282,10 +280,6 @@
       // Чтобы свайп по кругу не закрывал приложение (есть в новых версиях)
       if (tg.isVersionAtLeast && tg.isVersionAtLeast('7.7') && tg.disableVerticalSwipes) {
         tg.disableVerticalSwipes();
-      }
-      const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
-      if (user && user.first_name) {
-        document.getElementById('hello').textContent = 'Привет, ' + user.first_name + '!';
       }
     }
 
@@ -512,8 +506,7 @@
       initAudio();
       steps = buildSteps(state.workout);
       paused = false;
-      document.getElementById('workout').classList.remove('paused');
-      setPauseButton();
+      renderPause();
       show('workout');
       keepScreenOn();
       goToStep(0);
@@ -555,91 +548,54 @@
       renderTime();
     }
 
-    // Показать название, повторы, «далее» и цвет фазы
+    // Показать видео, название и подпись под ним
     function renderStep() {
       const step = steps[stepIndex];
-      const total = state.workout.exercises.length;
-      const screen = document.getElementById('workout');
-      screen.classList.remove('work', 'rest', 'prep');
-      screen.classList.add(step.kind);
+      const ex = step.ex; // на отдыхе и подготовке — следующее упражнение
 
-      document.getElementById('phase').textContent =
-        step.kind === 'work' ? 'РАБОТА' : step.kind === 'rest' ? 'ОТДЫХ' : 'ПРИГОТОВЬТЕСЬ';
+      document.getElementById('ex-name').textContent = '«' + ex.name + '»';
 
-      document.getElementById('counter').textContent =
-        'Упражнение ' + (step.index + 1) + ' из ' + total;
+      // Вторая строка: что сейчас происходит
+      let sub = '';
+      if (step.kind === 'prep') sub = 'Приготовьтесь';
+      else if (step.kind === 'rest') sub = 'Отдых · далее это упражнение';
+      else if (ex.type === 'reps') sub = ex.reps + ' раз';
+      document.getElementById('wo-sub').textContent = sub;
 
-      // Во время отдыха и подготовки показываем следующее упражнение
-      const ex = step.ex;
-      document.getElementById('ex-name').textContent =
-        (step.kind === 'work' ? '' : 'Далее: ') + ex.name;
-      document.getElementById('ex-desc').textContent = ex.description;
-      document.getElementById('reps').textContent =
-        ex.type === 'reps' ? ex.reps + ' раз' : '';
-
-      // Что будет после текущего упражнения
-      const nextEx = step.kind === 'work' ? state.workout.exercises[step.index + 1] : null;
-      document.getElementById('next').textContent = nextEx ? 'Потом: ' + nextEx.name : '';
-
+      setVideo(ex);
       renderTime();
     }
 
-    const ringArc = document.getElementById('ring-arc');
-    const RING_C = 2 * Math.PI * 135;
-    ringArc.setAttribute('stroke-dasharray', RING_C);
-
-    function renderTime() {
-      const step = steps[stepIndex];
-      document.getElementById('clock').textContent = formatClock(remaining);
-      // Кольцо «убывает» вместе со временем
-      ringArc.setAttribute('stroke-dashoffset', RING_C * (1 - remaining / step.dur));
-
-      // Сколько всего осталось (без подготовки)
-      let left = Math.max(0, remaining);
-      for (let i = stepIndex + 1; i < steps.length; i++) left += steps[i].dur;
-      if (step.kind === 'prep') left -= remaining;
-      document.getElementById('left').textContent = 'осталось ' + formatClock(left);
-
-      const full = workoutDuration(state.workout);
-      document.getElementById('bar-fill').style.width =
-        Math.min(100, Math.max(0, (1 - left / full) * 100)) + '%';
+    // Видео упражнения. Пока ссылок нет — показываем заглушку.
+    const video = document.getElementById('ex-video');
+    function setVideo(ex) {
+      const url = ex.video_url || '';
+      const has = url !== '';
+      video.classList.toggle('hidden', !has);
+      document.getElementById('video-stub').classList.toggle('hidden', has);
+      if (!has) { video.removeAttribute('src'); return; }
+      if (video.getAttribute('src') !== url) video.src = url;
+      if (!paused) video.play().catch(() => {});
     }
 
-    // --- Кнопки управления ---
-    function setPauseButton() {
-      document.getElementById('btn-pause').textContent = paused ? '▶' : '⏸';
-      document.getElementById('pause-label').textContent = paused ? 'дальше' : 'пауза';
+    function renderTime() {
+      document.getElementById('clock').textContent = formatClock(remaining);
+    }
+
+    // --- Пауза / продолжить: касание по экрану ---
+    function renderPause() {
+      document.getElementById('pause-layer').classList.toggle('hidden', !paused);
+      document.getElementById('workout').classList.toggle('paused', paused);
+      if (video.getAttribute('src')) {
+        if (paused) video.pause(); else video.play().catch(() => {});
+      }
     }
     function togglePause() {
       paused = !paused;
-      document.getElementById('workout').classList.toggle('paused', paused);
-      setPauseButton();
+      renderPause();
       haptic('medium');
     }
-
-    // «Пропуск» — к следующему шагу (с работы — на отдых, с отдыха — к упражнению)
-    function skip() {
-      haptic('light');
-      if (stepIndex < steps.length - 1) goToStep(stepIndex + 1);
-      else finishWorkout();
-    }
-
-    // «Назад»: если упражнение идёт больше 3 секунд — начать его заново,
-    // иначе вернуться к предыдущему упражнению
-    function prev() {
-      haptic('light');
-      const step = steps[stepIndex];
-      const passed = step.dur - remaining;
-      if (step.kind === 'work' && passed > 3) { goToStep(stepIndex); return; }
-      for (let i = stepIndex - 1; i >= 0; i--) {
-        if (steps[i].kind === 'work') { goToStep(i); return; }
-      }
-      goToStep(0);
-    }
-
-    document.getElementById('btn-pause').addEventListener('click', togglePause);
-    document.getElementById('btn-skip').addEventListener('click', skip);
-    document.getElementById('btn-prev').addEventListener('click', prev);
+    document.getElementById('workout').addEventListener('click', togglePause);
 
     // Выход по кнопке «Назад» Telegram: ставим паузу и спрашиваем
     function askExit() {
@@ -678,6 +634,13 @@
       startWorkout();
     });
     document.getElementById('home-btn').addEventListener('click', () => show('home'));
+
+    // Шестерёнка: экран настроек сделаем на следующем шаге, пока — сообщение
+    document.getElementById('settings-btn').addEventListener('click', () => {
+      haptic('light');
+      const msg = 'Настройки появятся на следующем этапе.';
+      if (inTelegram) tg.showAlert(msg); else alert(msg);
+    });
 
     drawDial();
     updatePlan();
