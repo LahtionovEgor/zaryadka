@@ -59,6 +59,7 @@
     }
     .card h2 { font-size: 20px; margin: 0 0 4px; }
     .card .meta { color: var(--button); font-size: 15px; margin-bottom: 8px; }
+    .card .about { font-size: 15px; margin: 0 0 8px; }
     .card .list { color: var(--hint); font-size: 14px; line-height: 1.4; }
   </style>
 </head>
@@ -122,11 +123,16 @@
         program.rounds + ' ' + (program.rounds === 1 ? 'круг' : 'круга') + ' · ' +
         '≈ ' + formatDuration(programDuration(program));
 
+      // Одна строка: для чего этот комплекс
+      const about = document.createElement('p');
+      about.className = 'about';
+      about.textContent = program.description || '';
+
       const list = document.createElement('div');
       list.className = 'list';
-      list.textContent = exercises.map(ex => ex.name).join(' · ');
+      list.textContent = exercises.map(item => item.name).join(' · ');
 
-      card.append(title, meta, list);
+      card.append(title, meta, about, list);
       container.append(card);
     });
   </script>
