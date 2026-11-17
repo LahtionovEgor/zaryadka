@@ -8,6 +8,8 @@
 
   <!-- Официальная библиотека Telegram для Mini App. Подключается первой. -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Наши данные: упражнения и готовые комплексы -->
+  <script src="data.js"></script>
 
   <style>
     /*
@@ -20,38 +22,59 @@
       --hint:   var(--tg-theme-hint-color, #8e8e93);
       --button: var(--tg-theme-button-color, #2481cc);
       --button-text: var(--tg-theme-button-text-color, #ffffff);
+      --card:   var(--tg-theme-secondary-bg-color, #f1f1f4);
     }
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      min-height: 100vh;
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 24px;
+      padding: 20px 16px 32px;
     }
 
-    h1 { font-size: 32px; margin: 0 0 12px; }
-    p  { font-size: 18px; margin: 8px 0; }
+    header { text-align: center; margin-bottom: 20px; }
+    h1 { font-size: 30px; margin: 0 0 6px; }
+    p  { margin: 4px 0; }
     .hint { color: var(--hint); font-size: 14px; }
+
+    /* Список комплексов. На широком экране (планшет) — в две колонки. */
+    #programs {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    @media (min-width: 700px) {
+      #programs { grid-template-columns: 1fr 1fr; }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .card h2 { font-size: 20px; margin: 0 0 4px; }
+    .card .meta { color: var(--button); font-size: 15px; margin-bottom: 8px; }
+    .card .list { color: var(--hint); font-size: 14px; line-height: 1.4; }
   </style>
 </head>
 <body>
-  <main>
+  <header>
     <h1>Зарядка 💪</h1>
     <p id="hello">Привет!</p>
-    <p class="hint">Mini App работает. Скоро здесь будут программы и таймер.</p>
     <!-- Служебная строка для проверки: где и в какой версии открыто -->
     <p class="hint" id="info"></p>
-  </main>
+  </header>
+
+  <!-- Сюда скрипт выведет карточки готовых комплексов -->
+  <main id="programs"></main>
 
   <script>
+    // ---------- Подключение к Telegram ----------
     // Объект Telegram WebApp. Если страницу открыли не в Telegram, его не будет.
     const tg = window.Telegram && window.Telegram.WebApp;
 
@@ -76,6 +99,36 @@
       // Открыто в обычном браузере — это нормально для проверки вёрстки
       info.textContent = 'Открыто вне Telegram (обычный браузер).';
     }
+
+    // ---------- Вывод готовых комплексов ----------
+    // Временный экран этапа 2: просто показываем, что данные загрузились.
+    // На этапе 3 здесь появится настоящий выбор программы.
+    const container = document.getElementById('programs');
+
+    BUILT_IN_PROGRAMS.forEach(program => {
+      const exercises = getProgramExercises(program);
+
+      // Создаём карточку и заполняем её текстом
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const title = document.createElement('h2');
+      title.textContent = program.name;
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent =
+        exercises.length + ' упр. · ' +
+        program.rounds + ' ' + (program.rounds === 1 ? 'круг' : 'круга') + ' · ' +
+        '≈ ' + formatDuration(programDuration(program));
+
+      const list = document.createElement('div');
+      list.className = 'list';
+      list.textContent = exercises.map(ex => ex.name).join(' · ');
+
+      card.append(title, meta, list);
+      container.append(card);
+    });
   </script>
 </body>
 </html>
