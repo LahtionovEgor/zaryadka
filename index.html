@@ -143,19 +143,10 @@
     }
     .gear-btn svg { width: 28px; height: 28px; }
     .gear-btn:active { box-shadow: var(--pressed); }
-    /* Невысокий экран (телефон в Telegram без полного экрана): всё чуть плотнее,
-       чтобы кнопка «Начать» была видна сразу. Размер круга подгоняет код (fitHome). */
-    @media (max-height: 780px) and (orientation: portrait) {
-      .home-top { margin-top: 0; }
-      .home-body { gap: 12px; }
-      .dial-wrap { padding: 6px 0 2px; }
-      #home .row-card { min-height: 62px; padding: 10px 18px; }
-      #home .gear-btn { flex-basis: 62px; min-height: 62px; }
-      #home .big-btn { min-height: 58px; }
-    }
+
 
     /* Круглый регулятор минут: выпуклый диск, в центре — вдавленная «лунка» */
-    .dial-wrap { display: flex; justify-content: center; padding: 14px 0 10px; }
+    .dial-wrap { display: flex; justify-content: center; align-items: center; padding: 14px 0 10px; }
     .dial-disc {
       position: relative; border-radius: 50%;
       width: min(74vw, 320px); aspect-ratio: 1;
@@ -464,6 +455,28 @@
     .mini-btn { padding: 10px 16px; border-radius: 14px; font-size: 15px; font-weight: 700; box-shadow: var(--raised-sm); }
     .mini-btn:active { box-shadow: var(--pressed); }
     .mini-btn:disabled { opacity: .4; }
+
+    /* ---------- Главный экран: компактное меню ----------
+       Вид занятия, Направление и Своя тренировка — ниже и мельче,
+       чтобы кнопка «Начать» была видна без прокрутки. */
+    #home .home-body { gap: 12px; }
+    #home .row-card { min-height: 56px; padding: 8px 16px; border-radius: 18px; gap: 12px; }
+    #home .row-card .label { font-size: 13px; }
+    #home .row-card .value { font-size: 17px; margin-top: 0; }
+    #home .row-card .ico { flex: 0 0 24px; width: 24px; font-size: 20px; }
+    #home .row-card .chev { font-size: 22px; }
+    #home .dir-line { gap: 12px; }
+    #home .gear-btn { flex: 0 0 56px; min-height: 56px; border-radius: 18px; }
+    #home .gear-btn svg { width: 24px; height: 24px; }
+    #home .big-btn { min-height: 58px; }
+    /* Круг: размер ставит код (fitHome) — и ширину, и высоту, чтобы он
+       всегда оставался кругом */
+    .dial-disc { flex: 0 0 auto; }
+    /* Невысокий экран: меньше отступов вокруг круга */
+    @media (max-height: 780px) and (orientation: portrait) {
+      .home-top { margin-top: 0; }
+      .dial-wrap { padding: 6px 0 2px; }
+    }
 
     /* ---------- Планшет в ландшафте: две колонки ---------- */
     @media (min-width: 700px) and (orientation: landscape) {
@@ -886,15 +899,24 @@
       // stopPropagation — чтобы на экране тренировки нажатие не ставило паузу
       btn.addEventListener('click', e => { e.stopPropagation(); toggleFullscreen(); });
     });
+    let autoFullscreen = false;   // true — полный экран включаем сами при запуске
     if (tgFullscreen) {
-      tg.onEvent('fullscreenChanged', renderFullscreenBtn);
+      tg.onEvent('fullscreenChanged', () => { autoFullscreen = false; renderFullscreenBtn(); });
       tg.onEvent('fullscreenFailed', e => {
         renderFullscreenBtn();
+        // Автоматическая попытка при запуске не удалась — молча остаёмся в обычном окне
+        if (autoFullscreen) { autoFullscreen = false; return; }
         if (e && e.error === 'ALREADY_FULLSCREEN') return;
         showMessage(e && e.error === 'UNSUPPORTED'
           ? 'На этом устройстве Telegram не поддерживает полноэкранный режим.'
           : 'Не получилось включить полноэкранный режим.');
       });
+      // Сразу открываемся на весь экран — на телефоне и планшете
+      // (на компьютере Telegram это не поддерживает, там не пробуем)
+      if (/ios|android/.test(tg.platform || '') && !tg.isFullscreen) {
+        autoFullscreen = true;
+        tg.requestFullscreen();
+      }
     } else {
       document.addEventListener('fullscreenchange', renderFullscreenBtn);
       document.addEventListener('webkitfullscreenchange', renderFullscreenBtn);
@@ -1433,13 +1455,18 @@
     function fitHome() {
       if (current !== 'home') return;
       const disc = document.querySelector('.dial-disc');
-      disc.style.width = '';   // сначала обычный размер из CSS
+      disc.style.width = disc.style.height = '';   // сначала обычный размер из CSS
+      // Высоту всегда ставим равной ширине: иначе на iPhone круг вытягивается в эллипс
+      const setSize = px => { disc.style.width = disc.style.height = px + 'px'; };
+      const natural = Math.floor(disc.getBoundingClientRect().width);
+      setSize(natural);
       // Планшет в ландшафте: две колонки, там всё и так помещается
       if (window.matchMedia('(min-width: 700px) and (orientation: landscape)').matches) return;
-      const viewH = inTelegram && tg.viewportStableHeight ? tg.viewportStableHeight : window.innerHeight;
+      // Высота видимой части: берём меньшее из того, что говорят браузер и Telegram
+      const viewH = Math.min(window.innerHeight, (inTelegram && tg.viewportStableHeight) || Infinity);
       const btnBottom = $('start-btn').getBoundingClientRect().bottom + window.scrollY;
-      const over = btnBottom + 16 - viewH;   // насколько кнопка ниже края экрана
-      if (over > 0) disc.style.width = Math.max(170, disc.getBoundingClientRect().width - over) + 'px';
+      const over = btnBottom + 14 - viewH;   // насколько кнопка ниже края экрана
+      if (over > 0) setSize(Math.max(160, natural - Math.ceil(over)));
     }
 
     // Сколько разных «блоков» упражнений (подходы одного упражнения — один блок)
