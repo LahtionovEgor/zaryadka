@@ -1,6 +1,7 @@
 // =====================================================================
 //  data.js — данные приложения «Зарядка»
-//  Здесь: библиотека упражнений, готовые комплексы и функции-помощники.
+//  Здесь: библиотека упражнений, направления (школы) зарядки
+//  и автоподбор упражнений под выбранное время.
 //  Этот файл подключается в index.html ДО основного кода.
 // =====================================================================
 
@@ -17,9 +18,6 @@
     reps        — число повторов (только для type: 'reps', иначе null)
     video_url   — ссылка на видео (появится позже, пока пусто)
     voice_text  — текст для голосовой подсказки (позже, пока пусто)
-
-  Чтобы не писать одно и то же 40 раз, упражнения создаются
-  маленькой функцией ex(...) — она сама добавит пустые video_url и voice_text.
 */
 function ex(id, name, description, duration, rest, type = 'time', reps = null) {
   return { id, name, description, duration, rest, type, reps, video_url: '', voice_text: '' };
@@ -46,7 +44,6 @@ const EXERCISES = [
   ex('jumping_jacks', 'Прыжки «звёздочка»', 'Прыжком ноги в стороны и руки вверх, затем обратно. Приземляйтесь мягко.', 30, 15),
 
   // --- Дыхательная гимнастика Стрельниковой ---
-  // Короткий шумный вдох носом, выдох пассивный через рот.
   ex('palms',       '«Ладошки»',          'Ладони у плеч. Резкий шумный вдох носом — сожмите кулаки. Выдох свободный — разожмите.', 30, 15),
   ex('epaulets',    '«Погончики»',        'Кулаки у пояса. На вдохе носом резко толкните руки вниз, разжав пальцы. Выдох — вернуть.', 30, 15),
   ex('pump',        '«Насос»',            'Лёгкий наклон вперёд, будто накачиваете шину: в конце наклона — короткий вдох носом.', 30, 15),
@@ -74,7 +71,7 @@ const EXERCISES = [
   ex('side_leg_raise', 'Отведение ноги лёжа на боку', 'Нижняя нога согнута, верхняя прямая. Поднимайте её вверх и медленно опускайте. Смена стороны на половине времени.', 40, 15),
   ex('wall_sit',    '«Стульчик» у стены', 'Спина к стене, колени под углом не острее 90° и не выходят за носки. Держите позу.', 30, 20),
   ex('balance',     'Баланс на одной ноге', 'Стойте на одной ноге, колено слегка согнуто. Смена ноги на половине времени.', 40, 10),
-  ex('reverse_lunge', 'Обратные выпады',  'Шаг назад, опуститесь, колено передней ноги над стопой. Чередуйте ноги.', 40, 15),
+  ex('reverse_lunge', 'Обратные выпады',  'Шаг назад, опуститесь, колено передней ноги над стопой. Чередуйте ноги.', 40, 15, 'reps', 12),
 
   // --- Растяжка ---
   ex('cat_cow',      '«Кошка-корова»',    'На четвереньках: прогните спину вниз, затем выгните вверх. Медленно.', 30, 10),
@@ -82,90 +79,170 @@ const EXERCISES = [
 ];
 
 /*
-  ПРОГРАММА (комплекс) — поля:
+  НАПРАВЛЕНИЕ (школа зарядки) — поля:
     id          — уникальный код
-    name        — название
-    description — одна строка: для чего этот комплекс (новое поле)
-    exercises   — список id упражнений по порядку (повторы допускаются)
-    rounds      — сколько раз повторить весь список (кругов)
-    builtIn     — true у готовых комплексов (их нельзя удалить);
-                  у своих программ будет false
+    name        — полное название (в списке выбора)
+    short       — короткое название (на главном экране)
+    description — одна строка: для чего это направление
+    warmup      — упражнения разминки (в начале)
+    main        — основная часть
+    cool        — заминка (в конце)
+  Любая часть может быть пустой — тогда её время уходит в основную.
+
+  Из этих списков приложение САМО собирает тренировку
+  нужной длины (см. buildWorkout ниже).
 */
-const BUILT_IN_PROGRAMS = [
+const DIRECTIONS = [
+  {
+    id: 'full',
+    name: 'Общий комплекс на всё тело',
+    short: 'Общий комплекс',
+    description: 'По умолчанию. Суставы, сила, кардио и растяжка — понемногу всего.',
+    warmup: ['neck', 'shoulders', 'arms', 'torso_twist', 'hips', 'knees', 'ankles'],
+    main:   ['march', 'squats', 'pushups', 'jumping_jacks', 'reverse_lunge', 'glute_bridge', 'windmill', 'calf_raises', 'high_knees', 'wall_sit'],
+    cool:   ['cat_cow', 'forward_fold', 'full_breath'],
+  },
   {
     id: 'soviet',
     name: 'Советская утренняя гимнастика',
+    short: 'Советская',
     description: 'Классика «под радио»: разогреться, размять суставы и проснуться.',
-    exercises: ['march', 'stretch_up', 'neck', 'arm_jerks', 'torso_twist', 'windmill', 'squats', 'pushups', 'jumping_jacks', 'march'],
-    rounds: 1,
-    builtIn: true,
+    warmup: ['march', 'stretch_up', 'neck'],
+    main:   ['arm_jerks', 'torso_twist', 'windmill', 'side_bends', 'squats', 'pushups', 'jumping_jacks'],
+    cool:   ['march'],
   },
   {
     id: 'qigong',
     name: 'Китайская гимнастика (цигун)',
+    short: 'Китайская (цигун)',
     description: 'Плавные движения из Ба Дуань Цзинь: мягко разбудить тело и успокоить дыхание.',
-    exercises: ['rub_palms', 'hold_sky', 'draw_bow', 'split_sky', 'owl_look', 'heel_drops', 'standing_pole'],
-    rounds: 1,
-    builtIn: true,
+    warmup: ['rub_palms'],
+    main:   ['hold_sky', 'draw_bow', 'split_sky', 'owl_look', 'heel_drops'],
+    cool:   ['standing_pole'],
   },
   {
     id: 'strelnikova',
     name: 'Дыхание по Стрельниковой',
+    short: 'Стрельникова',
     description: 'Короткие шумные вдохи носом. Если закружится голова — сделайте паузу.',
-    exercises: ['palms', 'epaulets', 'pump', 'hug', 'full_breath'],
-    rounds: 1,
-    builtIn: true,
+    warmup: [],
+    main:   ['palms', 'epaulets', 'pump', 'hug'],
+    cool:   ['full_breath'],
   },
   {
     id: 'flow',
     name: 'Разгон крови и лимфы',
+    short: 'Разгон крови',
     description: 'Встряхивания, работа икр и лёгкое кардио, в конце — глубокое дыхание.',
-    exercises: ['shaking', 'tapping', 'arms', 'calf_raises', 'high_knees', 'jumping_jacks', 'heel_drops', 'full_breath'],
-    rounds: 1,
-    builtIn: true,
+    warmup: ['shaking', 'tapping', 'arms'],
+    main:   ['calf_raises', 'high_knees', 'jumping_jacks', 'heel_drops'],
+    cool:   ['full_breath'],
   },
   {
     id: 'knees',
     name: 'Крепкие колени',
+    short: 'Колени',
     description: 'Укрепляем мышцы и связки вокруг коленей. Работайте без боли.',
-    exercises: ['knees', 'ankles', 'glute_bridge', 'leg_extension', 'side_leg_raise', 'calf_raises', 'wall_sit', 'balance'],
-    rounds: 2,
-    builtIn: true,
-  },
-  {
-    id: 'mix',
-    name: 'Полная утренняя (микс)',
-    description: 'Понемногу из всех школ: дыхание, суставы, кровь, сила и колени.',
-    exercises: ['march', 'palms', 'hold_sky', 'shaking', 'squats', 'reverse_lunge', 'pushups', 'wall_sit', 'tapping', 'full_breath'],
-    rounds: 1,
-    builtIn: true,
+    warmup: ['knees', 'ankles'],
+    main:   ['glute_bridge', 'leg_extension', 'side_leg_raise', 'calf_raises', 'wall_sit', 'balance'],
+    cool:   ['forward_fold'],
   },
 ];
+
+// Направление по умолчанию
+const DEFAULT_DIRECTION = 'full';
+
+// Границы выбора времени (в минутах)
+const MIN_MINUTES = 3;
+const MAX_MINUTES = 30;
+const DEFAULT_MINUTES = 10;
 
 // ---------------------------------------------------------------------
 //  Функции-помощники
 // ---------------------------------------------------------------------
 
-// Найти упражнение по id. Если такого нет — вернёт undefined.
 function getExercise(id) {
   return EXERCISES.find(item => item.id === id);
 }
 
-// Получить полный список упражнений программы (объекты, а не id).
-// Неизвестные id просто пропускаются, чтобы ничего не сломалось.
-function getProgramExercises(program) {
-  return program.exercises.map(getExercise).filter(Boolean);
+function getDirection(id) {
+  return DIRECTIONS.find(item => item.id === id) || DIRECTIONS[0];
 }
 
-// Общая длительность программы в секундах:
-// все упражнения + отдых между ними, умножить на число кругов.
-// Отдых после самого последнего упражнения не считаем.
-function programDuration(program) {
-  const list = getProgramExercises(program);
+/*
+  Набрать упражнения из списка ids на заданное число секунд (budget).
+  Идём по списку по кругу и добавляем, пока укладываемся.
+  Если одно и то же упражнение выпадает дважды подряд
+  (например, в заминке всего одно), просто удлиняем его.
+*/
+function fillPart(ids, budget) {
+  const pool = ids.map(getExercise).filter(Boolean);
+  const result = [];
+  if (pool.length === 0 || budget <= 0) return result;
+
+  let used = 0;
+  let i = 0;
+  while (true) {
+    const base = pool[i % pool.length];
+    const cost = base.duration + base.rest;
+    // Добавляем, если после этого перебор не больше половины упражнения.
+    // Самое первое добавляем всегда.
+    if (result.length > 0 && used + cost > budget + cost / 2) break;
+
+    const last = result[result.length - 1];
+    if (last && last.id === base.id) {
+      // Удлиняем предыдущее (повторы тоже увеличиваем пропорционально)
+      last.duration += base.duration;
+      if (last.type === 'reps') last.reps += base.reps;
+      used += base.duration;
+    } else {
+      result.push({ ...base }); // копия, чтобы не портить библиотеку
+      used += cost;
+    }
+    i++;
+    if (i > 500) break; // защита от бесконечного цикла
+  }
+  return result;
+}
+
+/*
+  Собрать тренировку под нужное время.
+    directionId — какое направление
+    minutes     — желаемая длительность
+  Время делится так: разминка ~20%, заминка ~15%, остальное — основная часть.
+  Возвращает программу: { id, name, exercises: [объекты], rounds: 1 }.
+*/
+function buildWorkout(directionId, minutes) {
+  const dir = getDirection(directionId);
+  const total = minutes * 60;
+
+  let warmupBudget = dir.warmup.length ? Math.round(total * 0.20) : 0;
+  let coolBudget   = dir.cool.length   ? Math.round(total * 0.15) : 0;
+  let mainBudget   = total - warmupBudget - coolBudget;
+
+  // Если основной части нет — её время отдаём разминке
+  if (dir.main.length === 0) { warmupBudget += mainBudget; mainBudget = 0; }
+
+  const exercises = [
+    ...fillPart(dir.warmup, warmupBudget),
+    ...fillPart(dir.main,   mainBudget),
+    ...fillPart(dir.cool,   coolBudget),
+  ];
+
+  return {
+    id: 'auto_' + dir.id + '_' + minutes,
+    name: dir.name,
+    exercises,
+    rounds: 1,
+  };
+}
+
+// Длительность тренировки в секундах (отдых после последнего не считаем)
+function workoutDuration(workout) {
+  const list = workout.exercises;
   if (list.length === 0) return 0;
-  const oneRound = list.reduce((sum, item) => sum + item.duration + item.rest, 0);
-  const lastRest = list[list.length - 1].rest;
-  return oneRound * program.rounds - lastRest;
+  const sum = list.reduce((s, item) => s + item.duration + item.rest, 0);
+  return sum - list[list.length - 1].rest;
 }
 
 // Красиво показать время: 95 → «1 мин 35 с», 40 → «40 с».
@@ -175,4 +252,18 @@ function formatDuration(seconds) {
   if (min === 0) return sec + ' с';
   if (sec === 0) return min + ' мин';
   return min + ' мин ' + sec + ' с';
+}
+
+// Часы «м:сс»: 75 → «1:15»
+function formatClock(seconds) {
+  const s = Math.max(0, Math.ceil(seconds));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+
+// Склонение: plural(3, 'упражнение', 'упражнения', 'упражнений')
+function plural(n, one, few, many) {
+  const n10 = n % 10, n100 = n % 100;
+  if (n10 === 1 && n100 !== 11) return one;
+  if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return few;
+  return many;
 }
