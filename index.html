@@ -300,7 +300,7 @@
        иначе обрезались бы мягкие тени у диска) */
     .wo-main { position: relative; z-index: 1; flex: 1 1 auto; min-height: 0;
                display: flex; flex-direction: column; align-items: center; gap: 16px;
-               padding: 18px 20px 8px; }
+               padding: calc(18px + var(--main-shift, 0px)) 20px 8px; }   /* --main-shift — к центру (код) */
     .wo-main.scroll { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
     .wo-main.scroll::-webkit-scrollbar { display: none; }
 
@@ -357,7 +357,18 @@
        не обрезается резкой линией */
     .wo-main.scroll { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 26px), transparent);
                       mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 26px), transparent); }
-    .wo-main.scroll::after { content: ''; flex: none; height: 14px; }
+    .wo-main.scroll::after { content: ''; flex: none; height: 14px; grid-column: 1 / -1; }
+
+    /* ---------- Зал (таблица подходов): как в первой версии ----------
+       Диск слева, название и подпись справа, таблица подходов под ними.
+       Класс compact ставит код (fitWorkout) */
+    #workout.compact .wo-main { display: grid; grid-template-columns: var(--ring) minmax(0, 1fr);
+                                align-content: start; align-items: center; column-gap: 18px; row-gap: 14px; }
+    #workout.compact .ring { grid-column: 1; grid-row: 1; }
+    #workout.compact .wo-info { grid-column: 2; grid-row: 1; text-align: left; }
+    #workout.compact .set-panel { grid-column: 1 / -1; }
+    #workout.compact #ex-name { font-size: clamp(22px, 6.4vw, 30px); }
+    #workout.compact #wo-sub { font-size: 16px; }
 
     /* ---------- Зал: вес и повторы СРАЗУ ВСЕХ подходов — прямо на экране тренировки ----------
        Строка — подход. Нажатия по этой панели не ставят паузу. */
@@ -2948,7 +2959,9 @@
       if (wo.contains(document.activeElement) && document.activeElement.matches('input, textarea')) return;
       const W = wo.clientWidth, H = wo.clientHeight;
       if (!W || !H) return;
-      fitName();                                         // название — в одну строку
+      wo.classList.remove('compact');                    // сначала обычный вид
+      wo.style.setProperty('--main-shift', '0px');       // и без сдвига к центру
+      if ($('set-panel').offsetParent === null) fitName(); else $('ex-name').style.fontSize = '';   // название — в одну строку (в зале — переносится, как раньше)
       const topH = $('wo-top').offsetHeight;
       wo.style.setProperty('--wo-top-h', topH + 'px');   // отсюда начинается шторка
       let size;
@@ -2957,43 +2970,45 @@
         size = Math.min(W / 2 - 90, H - topH - 90, 440);
         mainOver = { work: false, pause: false };       // правая колонка прокручивается сама
       } else {
-        // Сколько по высоте занимает середина без диска: подписи и промежутки (base)
-        // и отдельно — панели зала и дистанции (panels)
-        const cs = getComputedStyle(main);
-        const gap = parseFloat(cs.rowGap) || 0;
-        let base = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom), panels = 0;
-        for (const el of main.children) {
-          if (el.id === 'ring' || el.offsetParent === null) continue;   // скрытые не считаем
-          if (el.classList.contains('set-panel')) panels += el.offsetHeight + gap;
-          else base += el.offsetHeight + gap;
-        }
-        // Зал: высота таблицы, если в ней не больше трёх подходов
-        let table = 0;
-        const sp = $('set-panel');
-        if (sp.offsetParent !== null) {
-          const rows = $('sp-sets').children;
-          const pitch = rows.length > 1 ? rows[1].offsetTop - rows[0].offsetTop : 0;   // шаг строк
-          table = sp.offsetHeight - Math.max(0, rows.length - FIT_SETS) * pitch + gap;
-          // Подходов больше трёх — середина прокручивается и снизу затухание:
-          // третий подход должен быть выше него
-          if (rows.length > FIT_SETS) {
-            table += Math.max(0, FADE - parseFloat(getComputedStyle(sp).paddingBottom) - parseFloat(cs.paddingBottom)) + 2;
-          }
-        }
-        // Во время работы строки «Далее» нет — но место под неё считаем, чтобы диск
-        // на работе и на отдыхе был одного размера
-        const nextExtra = !isSimple() && $('wo-next').classList.contains('hidden') ? NEXT_H : 0;
         const footWork = foot.offsetHeight - pa.offsetHeight;   // низ без строки паузы
         const pauseH = $('pa-row').offsetHeight;                // строка паузы целиком
         const mainWork = H - topH - footWork;                   // высота середины (без паузы)
-        const free = mainWork - base - nextExtra - table;       // место под диск
-        const cap = Math.min(W * 0.75, 460);
-        size = table
-          ? Math.min(cap, free)                                 // зал: всё место — диску и трём подходам
-          : Math.min(cap, free, Math.max(220, free - pauseH));  // с запасом под строку паузы (тесно — запас меньше)
-        size = Math.max(RING_MIN, Math.floor(size));
-        const total = base + size + panels;                     // всё, что в середине на самом деле
+        let total;                                              // вся высота середины с диском
+        if ($('set-panel').offsetParent !== null) {
+          // Зал (таблица подходов): как в первой версии — диск слева, название
+          // и подпись справа, таблица под ними целиком
+          wo.classList.add('compact');
+          size = Math.round(Math.min(160, Math.max(116, W * 0.36)));
+          wo.style.setProperty('--ring', size + 'px');          // ширина колонки диска — сразу
+          const cs = getComputedStyle(main);
+          const rg = parseFloat(cs.rowGap) || 0;
+          total = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)
+                + Math.max(size, $('wo-info').offsetHeight);
+          for (const el of [$('set-panel'), $('dist-panel')]) if (el.offsetParent !== null) total += rg + el.offsetHeight;
+        } else {
+          // Обычное упражнение: диск, под ним название и подпись
+          const cs = getComputedStyle(main);
+          const gap = parseFloat(cs.rowGap) || 0;
+          let base = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom), panels = 0;
+          for (const el of main.children) {
+            if (el.id === 'ring' || el.offsetParent === null) continue;   // скрытые не считаем
+            if (el.classList.contains('set-panel')) panels += el.offsetHeight + gap;
+            else base += el.offsetHeight + gap;
+          }
+          // Во время работы строки «Далее» нет — место под неё считаем, чтобы диск
+          // на работе и на отдыхе был одного размера
+          const nextExtra = !isSimple() && $('wo-next').classList.contains('hidden') ? NEXT_H : 0;
+          const free = mainWork - base - nextExtra;             // место под диск
+          const cap = Math.min(W * 0.75, 460);
+          size = Math.min(cap, free, Math.max(220, free - pauseH));   // с запасом под строку паузы
+          size = Math.max(RING_MIN, Math.floor(size));
+          total = base + size + panels;
+        }
         mainOver = { work: total > mainWork + 1, pause: total > mainWork - pauseH + 1 };
+        // Содержимое — по центру середины (а не прижато к верху). Если строка паузы
+        // помещается, центруем над ней — тогда на паузе ничего не сдвигается
+        const room = total + pauseH <= mainWork ? mainWork - pauseH : mainWork;
+        wo.style.setProperty('--main-shift', Math.max(0, Math.floor((room - total) / 2)) + 'px');
       }
       wo.style.setProperty('--ring', Math.floor(size) + 'px');
       setMainScroll();
