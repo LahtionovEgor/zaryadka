@@ -15,9 +15,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Наши данные. ?v=7 — номер версии: меняйте его при каждом
+  <!-- Наши данные. ?v=9 — номер версии: меняйте его при каждом
        изменении data.js, иначе телефон может показать старую копию. -->
-  <script src="data.js?v=8"></script>
+  <script src="data.js?v=9"></script>
 
   <style>
     /* ================================================================
@@ -50,7 +50,7 @@
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { margin: 0; height: 100%; }
+    html, body { margin: 0; height: 100%; overscroll-behavior-x: none; }
     body {
       background: var(--bg);
       color: var(--text);
@@ -134,15 +134,6 @@
     .icon-btn.back-btn { display: none; }
     body.in-browser .icon-btn.back-btn { display: flex; }
     .home-body { display: flex; flex-direction: column; gap: 16px; }
-    .dir-line { display: flex; gap: 16px; align-items: stretch; }
-    .dir-line .row-card { flex: 1; min-width: 0; }
-    .gear-btn {
-      flex: 0 0 74px; min-height: 74px; border-radius: 22px;
-      color: var(--text); display: flex; align-items: center; justify-content: center;
-      transition: box-shadow .15s ease;
-    }
-    .gear-btn svg { width: 28px; height: 28px; }
-    .gear-btn:active { box-shadow: var(--pressed); }
 
 
     /* Круглый регулятор минут: выпуклый диск, в центре — вдавленная «лунка» */
@@ -171,11 +162,23 @@
     #dial .unit  { fill: var(--hint); font-size: 24px; font-weight: 700; font-family: var(--font); }
 
     #summary { text-align: center; font-size: 15px; font-weight: 600; }
-    /* «Что войдёт в занятие» — вдавленный блок */
-    details.preview { border-radius: 22px; padding: 14px 18px; box-shadow: var(--pressed); }
-    details.preview summary { font-size: 15px; color: var(--hint); cursor: pointer; font-weight: 600; }
-    details.preview ol { margin: 10px 0 0; padding-left: 22px; font-size: 15px; line-height: 1.55; }
+    /* «Что войдёт в занятие» — выпадающий список. Заголовок — кнопка со стрелкой.
+       По нажатию список «выпадает», а экран плавно прокручивается вниз (код — раздел 6) */
+    details.preview { border-radius: 18px; padding: 0; box-shadow: var(--raised-sm); transition: box-shadow .15s ease; }
+    details.preview[open] { box-shadow: var(--pressed); }
+    details.preview summary {
+      display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px;
+      list-style: none; cursor: pointer; font-size: 16px; font-weight: 700; color: var(--text);
+    }
+    details.preview summary::-webkit-details-marker { display: none; }
+    .pv-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pv-chev { flex: 0 0 22px; width: 22px; height: 22px; color: var(--hint); transition: transform .25s ease; }
+    details.preview[open] .pv-chev { transform: rotate(180deg); }
+    details.preview ol { margin: 0; padding: 0 18px 16px 40px; font-size: 15px; line-height: 1.55; }
+    details.preview[open] ol { animation: dropDown .3s ease-out; }
     details.preview .reps { color: var(--hint); }
+    /* Плавное появление выпадающих списков */
+    @keyframes dropDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
 
     /* ---------- Список (виды занятий, программы) ---------- */
     .list { display: grid; gap: 16px; }
@@ -191,10 +194,13 @@
     .pick-card .title .tick { margin-left: auto; color: var(--accent); }
     .pick-card .about { font-size: 15px; margin-top: 6px; }
     .pick-card .meta  { font-size: 13px; color: var(--hint); margin-top: 6px; line-height: 1.4; }
-    .sport-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .sport-tile { min-height: 132px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
-    .sport-tile:first-child { grid-column: span 2; min-height: 110px; }
-    .sport-tile:last-child:nth-child(even) { grid-column: span 2; min-height: 110px; }
+    /* Кнопки видов занятий — все одного размера: одинаковая ширина колонок
+       и одинаковая высота рядов (по самой высокой кнопке) */
+    .sport-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 14px; }
+    .sport-tile { min-height: 96px; padding: 14px 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px;
+                  position: relative; overflow: hidden; }
+    .sport-tile .title { font-size: 17px; line-height: 1.2; }
+    .sport-tile .meta { margin-top: 0; }
 
     /* ---------- Своя тренировка ---------- */
     .chips { display: flex; gap: 10px; overflow-x: auto; padding: 6px 6px 16px; margin: 0 -6px; scrollbar-width: none; }
@@ -204,6 +210,9 @@
     .chip.on { box-shadow: var(--pressed) !important; color: var(--accent); }
     /* Чипсы в несколько строк (форма дневника) */
     .chips.wrap { flex-wrap: wrap; overflow: visible; padding: 4px 2px 6px; margin: 0; }
+    /* Виды занятий в форме дневника — кнопки одного размера, сеткой */
+    .chips.sports-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+    .chips.sports-grid .chip { text-align: center; padding: 10px 8px; border-radius: 16px; line-height: 1.2; }
     .group-title { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--hint);
                    margin: 18px 4px 10px; font-weight: 700; }
     .ex-row {
@@ -233,13 +242,17 @@
 
     /* ================================================================
        ЭКРАН ТРЕНИРОВКИ — тот же серый «пластик».
-       Сверху: прогресс, время. Центр: анимация. Внизу: название + бегущая строка.
-       Касание экрана — пауза.
+       Сверху: прогресс, время. Центр: анимация. Внизу: название, панели
+       (зал — подходы, бассейн и бег — дистанция) и выпадающие подсказки.
+       Касание экрана — пауза, свайп влево/вправо — следующее/предыдущее упражнение.
        ================================================================ */
     #workout {
       position: fixed; inset: 0; z-index: 5;
       max-width: none; margin: 0; padding: 0;
       overflow: hidden; cursor: pointer;
+      /* Свайпы влево-вправо обрабатывает приложение (листает упражнения),
+         браузер не должен уводить «назад»; прокрутка вверх-вниз остаётся */
+      touch-action: pan-y; overscroll-behavior: none;
       background: var(--bg); color: var(--text);
       display: flex; flex-direction: column;
       --phase: var(--accent);
@@ -269,8 +282,11 @@
     #figure.preview { opacity: .3; }   /* на отдыхе — показ следующего упражнения */
     #ex-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
-    .wo-bottom { position: relative; z-index: 2;
-                 padding: 0 20px calc(var(--bottom) + 24px); }
+    /* Низ экрана. Если всё не помещается (много подходов, открыты подсказки),
+       фигурка уменьшается, а этот блок можно прокрутить */
+    .wo-bottom { position: relative; z-index: 2; flex: 0 1 auto; min-height: 0;
+                 overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y;
+                 padding: 10px 20px calc(var(--bottom) + 24px); }
     .phase-pill { display: inline-flex; align-items: center; gap: 8px;
                   font-size: 14px; font-weight: 700; padding: 7px 14px; border-radius: 99px;
                   background: var(--bg); box-shadow: var(--raised-sm); }
@@ -279,27 +295,58 @@
                line-height: 1.02; margin-top: 12px; }
     #wo-sub { font-size: clamp(17px, 4.5vw, 22px); font-weight: 700; margin-top: 6px; color: var(--phase); min-height: 1.2em; }
 
-    /* Бегущая строка с подсказками. Это кнопка: нажатие — весь текст целиком */
-    .ticker {
-      display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 14px;
-      padding: 10px 12px; border-radius: 16px; text-align: left;
-      background: var(--bg); box-shadow: var(--raised-sm); transition: box-shadow .15s ease;
-    }
-    .ticker:active { box-shadow: var(--pressed); }
-    .ticker .tk-ico { flex: 0 0 24px; height: 24px; color: var(--accent); }
-    .ticker .tk-view { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
-    .ticker-track { display: inline-flex; animation: marquee 30s linear infinite; }
-    .ticker-track span { padding-right: 48px; font-size: 16px; font-weight: 600; color: #3f4552; }
-    @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-    #workout.paused .ticker-track { animation-play-state: paused; }
+    /* Свайп влево / вправо — название упражнения въезжает с той стороны */
+    @keyframes swipeFromRight { from { opacity: .15; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+    @keyframes swipeFromLeft  { from { opacity: .15; transform: translateX(-40px); } to { opacity: 1; transform: none; } }
+    .swipe-next { animation: swipeFromRight .28s ease-out; }
+    .swipe-prev { animation: swipeFromLeft .28s ease-out; }
 
-    /* ---------- Зал: вес и повторы подхода — прямо на экране тренировки ----------
-       Нажатия по этой панели не ставят паузу. */
-    .set-panel { margin-top: 12px; padding: 10px 14px 12px; border-radius: 18px; background: var(--bg);
+    /* ---------- Подсказки: выпадающее меню (вместо бегущей строки) ----------
+       Нажатие на заголовок раскрывает описание и все советы. Таймер идёт дальше,
+       нажатия здесь не ставят паузу. */
+    .tips-box { margin-top: 12px; border-radius: 16px; background: var(--bg); box-shadow: var(--raised-sm);
+                cursor: default; transition: box-shadow .15s ease; }
+    .tips-box.open { box-shadow: var(--pressed); }
+    .tips-head { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 46px;
+                 padding: 8px 14px; border-radius: 16px; text-align: left; }
+    .tips-head .tk-ico { flex: 0 0 22px; width: 22px; height: 22px; color: var(--accent); }
+    .tips-head .tk-label { flex: 1; min-width: 0; font-size: 16px; font-weight: 700;
+                           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tips-head .tk-chev { flex: 0 0 22px; width: 22px; height: 22px; color: var(--hint); transition: transform .25s ease; }
+    .tips-box.open .tk-chev { transform: rotate(180deg); }
+    .tips-body { display: none; padding: 0 16px 14px; max-height: 36vh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+    .tips-box.open .tips-body { display: block; animation: dropDown .25s ease-out; }
+    .tips-desc { font-size: 16px; line-height: 1.45; margin: 0; }
+    .tips-list { margin: 10px 0 0; padding-left: 20px; font-size: 15px; line-height: 1.45; color: #3f4552; }
+    .tips-list li + li { margin-top: 6px; }
+
+    /* ---------- Зал: вес и повторы СРАЗУ ВСЕХ подходов — прямо на экране тренировки ----------
+       Строка — подход. Нажатия по этой панели не ставят паузу. */
+    .set-panel { margin-top: 12px; padding: 10px 12px 12px; border-radius: 18px; background: var(--bg);
                  box-shadow: var(--pressed); cursor: default; }
     .sp-title { font-size: 14px; font-weight: 700; color: var(--hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .sp-row { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 8px; }
     .sp-label { font-size: 12px; font-weight: 700; color: var(--hint); margin: 0 0 4px 2px; text-transform: uppercase; letter-spacing: .05em; }
+    /* Колонки: номер подхода | вес | × | повторы */
+    .sp-head, .sp-set { display: grid; grid-template-columns: 24px minmax(0, 1.2fr) 10px minmax(0, 1fr); align-items: center; gap: 6px; }
+    .sp-head { margin-top: 8px; padding: 0 4px; }
+    .sp-head .sp-label { margin: 0; text-align: center; }
+    .sp-sets { display: grid; gap: 4px; margin-top: 2px; }
+    .sp-set { padding: 3px 4px; border-radius: 14px; }
+    .sp-set.cur { box-shadow: inset 0 0 0 2px var(--accent); }   /* текущий (или следующий) подход */
+    .sp-no { font-size: 15px; font-weight: 800; color: var(--hint); text-align: center; }
+    .sp-set.done .sp-no { color: var(--accent); }                /* сделанный подход — галочка */
+    .sp-x { font-size: 15px; font-weight: 700; color: var(--hint); text-align: center; }
+    .stepper.sm { gap: 4px; min-width: 0; }
+    .stepper.sm .st-btn { flex: 0 0 32px; width: 32px; height: 32px; font-size: 20px; }
+    .stepper.sm .field.st-input { flex: 1 1 auto; width: auto; min-width: 0; height: 34px; font-size: 17px; }
+
+    /* ---------- Бассейн и бег: дистанция (круги или километры) ---------- */
+    .dist-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .dist-row .stepper.wide .field.st-input { width: 76px; }   /* чтобы «Круги | Км» влезали в ту же строку */
+    /* Переключатель «Круги | Км»: вдавленная дорожка, выбранная часть — выпуклая */
+    .seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 14px; box-shadow: var(--pressed); }
+    .seg button { padding: 8px 14px; border-radius: 11px; font-size: 15px; font-weight: 700; color: var(--hint); }
+    .seg button.on { color: var(--accent); background: var(--bg); box-shadow: var(--raised-sm); }
     /* Кнопки −/+ вокруг числа (панель зала, длительность в дневнике) */
     .stepper { display: flex; align-items: center; gap: 4px; }
     .st-btn { flex: 0 0 38px; width: 38px; height: 38px; border-radius: 50%;
@@ -313,13 +360,18 @@
     .stepper.wide .field.st-input { width: 96px; height: 52px; font-size: 22px; }
 
     /* Пауза: «пульт» с выпуклыми кнопками */
+    /* Содержимое паузы — ниже часов (верх экрана остаётся над этим слоем),
+       расстояния сжимаются на невысоких экранах */
     #pause-layer {
       position: absolute; inset: 0; z-index: 4;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(14px, 3.6vh, 32px);
+      padding: calc(var(--top) + 48px + clamp(50px, 15.3vw, 86px)) 16px calc(var(--bottom) + 16px);
       background: rgba(230,233,239,.97);
     }
     .pause-title { font-size: 17px; font-weight: 700; color: var(--hint); }
-    .pause-controls { display: flex; align-items: center; gap: 30px; }
+    /* Сетка: [назад] [продолжить] [вперёд], под «вперёд» — кнопка «Выполнено» */
+    .pause-controls { display: grid; grid-template-columns: 72px 100px 72px; column-gap: 30px; row-gap: 18px;
+                      align-items: center; justify-items: center; }
     .round-btn { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
                  color: var(--text); background: var(--bg); box-shadow: var(--raised-sm);
                  transition: box-shadow .15s ease, transform .15s ease; }
@@ -332,27 +384,18 @@
                 background: var(--bg); color: var(--text); box-shadow: var(--raised-sm); }
     .text-btn:active { box-shadow: var(--pressed); }
     .pause-hint { font-size: 14px; color: var(--hint); }
-
-    /* ---------- Шторка «Все рекомендации» (по нажатию на бегущую строку) ----------
-       Таймер при этом идёт дальше: читать можно прямо во время упражнения. */
-    #tips-sheet {
-      position: absolute; inset: 0; z-index: 6; cursor: default;
-      display: flex; align-items: flex-end; justify-content: center;
-      background: rgba(31,36,48,.30);
+    /* «Выполнено» — отметить упражнение сделанным и перейти дальше */
+    .mark-btn { grid-column: 3; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+                font-size: 14px; font-weight: 700; padding: 10px 12px; border-radius: 16px;
+                background: var(--bg); color: var(--text); box-shadow: var(--raised-sm); transition: box-shadow .15s ease; }
+    .mark-btn svg { width: 16px; height: 16px; color: var(--accent); }
+    .mark-btn:active { box-shadow: var(--pressed); }
+    /* Узкий телефон: кнопки паузы чуть меньше, чтобы «Выполнено» не вылезала за край */
+    @media (max-width: 350px) {
+      .pause-controls { grid-template-columns: 64px 88px 64px; column-gap: 18px; }
+      .round-btn { width: 64px; height: 64px; }
+      .round-btn.big { width: 88px; height: 88px; }
     }
-    .sheet-card {
-      width: 100%; max-width: 640px; max-height: 82%; overflow-y: auto;
-      background: var(--bg); border-radius: 28px 28px 0 0;
-      padding: 10px 22px calc(var(--bottom) + 20px);
-      box-shadow: 0 -10px 30px rgba(31,36,48,.18);
-    }
-    .sheet-grip { width: 40px; height: 5px; border-radius: 3px; background: #c3c8d2; margin: 0 auto 14px; }
-    .sheet-title { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; margin-top: 4px; }
-    .sheet-sub { font-size: 15px; font-weight: 700; color: var(--accent); margin-top: 4px; }
-    .sheet-desc { font-size: 17px; line-height: 1.5; margin: 14px 0 0; }
-    .sheet-list { margin: 14px 0 20px; padding: 14px 16px 14px 34px; border-radius: 18px; box-shadow: var(--pressed);
-                  font-size: 16px; line-height: 1.5; }
-    .sheet-list li + li { margin-top: 8px; }
 
     /* ---------- Медитация: только мягкий диск с обратным отсчётом ---------- */
     #med-disc { display: none; }
@@ -459,17 +502,18 @@
     #home .row-card .value { font-size: 17px; margin-top: 0; }
     #home .row-card .ico { flex: 0 0 24px; width: 24px; font-size: 20px; }
     #home .row-card .chev { font-size: 22px; }
-    #home .dir-line { gap: 12px; }
-    #home .gear-btn { flex: 0 0 56px; min-height: 56px; border-radius: 18px; }
-    #home .gear-btn svg { width: 24px; height: 24px; }
     #home .big-btn { min-height: 58px; }
     /* Круг: размер ставит код (fitHome) — и ширину, и высоту, чтобы он
        всегда оставался кругом */
     .dial-disc { flex: 0 0 auto; }
-    /* Невысокий экран: меньше отступов вокруг круга */
+    /* Невысокий экран (например, iPhone SE): меньше отступов, карточки ниже —
+       чтобы «Начать» и «Что войдёт в занятие» были видны без прокрутки */
     @media (max-height: 780px) and (orientation: portrait) {
       .home-top { margin-top: 0; }
       .dial-wrap { padding: 6px 0 2px; }
+      #home .home-body { gap: 10px; }
+      #home .row-card { min-height: 52px; }
+      details.preview summary { min-height: 44px; }
     }
 
     /* ---------- Планшет в ландшафте: две колонки ---------- */
@@ -478,9 +522,10 @@
       .home-body .dial-wrap { grid-row: span 7; }
       .dial-disc { width: min(40vw, 400px); }
       .list { grid-template-columns: 1fr 1fr; }
-      .sport-grid { grid-template-columns: repeat(3, 1fr); }
-      .sport-tile:first-child, .sport-tile:last-child:nth-child(even) { grid-column: auto; }
-      #workout .stage { position: absolute; inset: 0; }
+      .sport-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+      /* Фигурка — справа, текст и панели — слева внизу: так они не перекрываются */
+      #workout .stage { position: absolute; top: 0; bottom: 0; right: 0; left: 58%; }
+      #workout.med .stage { left: 0; }   /* медитация: диск по центру */
       #figure { max-height: 70vh; }
       .wo-bottom { margin-top: auto; max-width: 60%; }
       /* Дневник: календарь слева, занятия дня справа */
@@ -536,21 +581,16 @@
         <span class="chev">›</span>
       </button>
 
-      <!-- 2. Направление (программа) + шестерёнка -->
-      <div class="dir-line" id="dir-line">
-        <button class="row-card glass" id="open-directions">
-          <div class="grow">
-            <div class="label">Направление</div>
-            <div class="value" id="dir-name">Общий комплекс</div>
-          </div>
-          <span class="chev">›</span>
-        </button>
-        <button class="gear-btn glass" id="settings-btn" aria-label="Настройки">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.62.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.66 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.61.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.25.42.49.42h3.84c.24 0 .45-.18.49-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.09.48 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
-        </button>
-      </div>
+      <!-- 2. Направление (программа) — на всю ширину -->
+      <button class="row-card glass" id="open-directions">
+        <div class="grow">
+          <div class="label">Направление</div>
+          <div class="value" id="dir-name">Общий комплекс</div>
+        </div>
+        <span class="chev">›</span>
+      </button>
 
-      <!-- 3. Своя тренировка (под шестерёнкой) -->
+      <!-- 3. Своя тренировка -->
       <button class="row-card glass" id="open-custom">
         <div class="grow">
           <div class="label">Своя тренировка</div>
@@ -563,8 +603,13 @@
 
       <button class="big-btn" id="start-btn">Начать занятие</button>
 
+      <!-- «Что войдёт в занятие»: всегда видна на первом экране.
+           Нажатие — список выпадает, экран прокручивается вниз -->
       <details class="preview glass" id="preview">
-        <summary>Что войдёт в занятие</summary>
+        <summary>
+          <span class="pv-label">Что войдёт в занятие</span>
+          <svg class="pv-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
         <ol id="preview-list"></ol>
       </details>
     </div>
@@ -633,47 +678,32 @@
       <div class="phase-pill" id="phase">Работа</div>
       <div id="ex-name"></div>
       <div id="wo-sub"></div>
-      <!-- Зал: вес и повторы. На работе — текущий подход, на отдыхе — только что сделанный.
+      <!-- Зал: вес и повторы СРАЗУ ВСЕХ подходов упражнения (строка — подход).
+           На работе — упражнение, которое делаете, на отдыхе — только что сделанное.
+           Меняете подход — следующие, которые не трогали, подстраиваются сами.
            Нажатия здесь не ставят паузу. -->
       <div id="set-panel" class="set-panel hidden">
         <div class="sp-title" id="sp-title"></div>
-        <div class="sp-row">
-          <div>
-            <div class="sp-label">Вес, кг</div>
-            <div class="stepper">
-              <button class="st-btn" data-field="w" data-step="-2.5" aria-label="Меньше вес">−</button>
-              <input class="field st-input" id="sp-w" inputmode="decimal" autocomplete="off" placeholder="—" aria-label="Вес, кг">
-              <button class="st-btn" data-field="w" data-step="2.5" aria-label="Больше вес">+</button>
-            </div>
-          </div>
-          <div>
-            <div class="sp-label">Повторы</div>
-            <div class="stepper">
-              <button class="st-btn" data-field="r" data-step="-1" aria-label="Меньше повторов">−</button>
-              <input class="field st-input" id="sp-r" inputmode="numeric" autocomplete="off" placeholder="—" aria-label="Повторы">
-              <button class="st-btn" data-field="r" data-step="1" aria-label="Больше повторов">+</button>
-            </div>
-          </div>
-        </div>
+        <div class="sp-head"><span></span><span class="sp-label">Вес, кг</span><span></span><span class="sp-label">Повторы</span></div>
+        <div class="sp-sets" id="sp-sets"></div>
       </div>
-      <!-- Бегущая строка. Нажатие — открыть все рекомендации целиком -->
-      <button class="ticker" id="ticker" aria-label="Показать все рекомендации по упражнению">
-        <svg class="tk-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/></svg>
-        <span class="tk-view"><span class="ticker-track" id="ticker-track"><span></span><span></span></span></span>
-      </button>
-    </div>
-
-    <!-- Все рекомендации по текущему упражнению. Таймер не останавливается. -->
-    <div id="tips-sheet" class="hidden" role="dialog" aria-modal="true" aria-labelledby="tips-title">
-      <div class="sheet-card" id="tips-card">
-        <div class="sheet-grip"></div>
-        <div class="eyebrow" id="tips-eyebrow">Как выполнять</div>
-        <div class="sheet-title" id="tips-title"></div>
-        <div class="sheet-sub" id="tips-sub"></div>
-        <p class="sheet-desc" id="tips-desc"></p>
-        <ul class="sheet-list" id="tips-list"></ul>
-        <button class="big-btn" id="tips-close">Понятно</button>
+      <!-- Бассейн и бег: дистанция — круги или километры -->
+      <div id="dist-panel" class="set-panel hidden">
+        <div class="sp-label">Дистанция</div>
+        <div class="dist-row" id="wo-dist"></div>
+      </div>
+      <!-- Подсказки: выпадающее меню. Нажатие на заголовок — показать или скрыть -->
+      <div class="tips-box" id="tips-box">
+        <button class="tips-head" id="tips-head" aria-expanded="false" aria-controls="tips-body">
+          <svg class="tk-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/></svg>
+          <span class="tk-label" id="tips-label">Как выполнять</span>
+          <svg class="tk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="tips-body" id="tips-body">
+          <p class="tips-desc" id="tips-desc"></p>
+          <ul class="tips-list" id="tips-list"></ul>
+        </div>
       </div>
     </div>
 
@@ -702,6 +732,12 @@
             <path d="M17.5 10 L25.5 4.5 L25.5 15.5 Z" fill="currentColor" stroke-linejoin="round"/>
           </svg>
         </button>
+        <!-- Под кнопкой «вперёд»: отметить упражнение (то, что названо выше) выполненным
+             и перейти дальше — к отдыху или следующему упражнению -->
+        <button class="mark-btn" id="mark-btn" aria-label="Отметить упражнение выполненным">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+          Выполнено
+        </button>
       </div>
       <button class="text-btn" id="end-btn">Завершить занятие</button>
       <div class="pause-hint">Коснитесь экрана, чтобы продолжить</div>
@@ -725,6 +761,11 @@
       <div id="done-gym" class="hidden">
         <div class="group-title">Веса и повторения · кг × раз</div>
         <div id="done-sets"></div>
+      </div>
+      <!-- Бассейн и бег: дистанция — круги или километры, можно поправить -->
+      <div id="done-dist-box" class="hidden">
+        <div class="group-title">Дистанция</div>
+        <div class="dist-row" id="done-dist"></div>
       </div>
       <div class="group-title">Заметка</div>
       <textarea class="field" id="done-note" rows="3" maxlength="500" placeholder="Самочувствие, что получилось, что улучшить"></textarea>
@@ -775,7 +816,7 @@
         <label class="field-box"><span class="field-label">Дата</span><input type="date" class="field" id="f-date"></label>
         <label class="field-box"><span class="field-label">Время</span><input type="time" class="field" id="f-time"></label>
       </div>
-      <div class="field-box"><span class="field-label">Вид занятия</span><div class="chips wrap" id="f-sports"></div></div>
+      <div class="field-box"><span class="field-label">Вид занятия</span><div class="chips wrap sports-grid" id="f-sports"></div></div>
       <label class="field-box" id="f-dir-box"><span class="field-label">Программа</span><select class="field" id="f-dir"></select></label>
       <div class="field-box"><span class="field-label">Длительность, мин</span>
         <div class="stepper wide">
@@ -789,6 +830,8 @@
         <div class="field-label" style="margin-bottom:10px">Веса и повторения · кг × раз</div>
         <div id="f-sets"></div>
       </div>
+      <!-- Только для бассейна и бега -->
+      <div class="field-box hidden" id="f-dist-box"><span class="field-label">Дистанция</span><div class="dist-row" id="f-dist"></div></div>
       <label class="field-box"><span class="field-label">Заметка</span>
         <textarea class="field" id="f-note" rows="3" maxlength="500" placeholder="Самочувствие, что получилось, что улучшить"></textarea></label>
     </div>
@@ -1046,6 +1089,8 @@
         n      — сколько упражнений сделано (если известно)
         gym    — только зал: [{ id: 'bench', sets: [[вес, повторы], …] }, …]
                  вес null — без веса (например, подтягивания)
+        dist   — только бассейн и бег: дистанция (число)
+        du     — в чём дистанция: 'lap' — круги, 'km' — километры
         note   — заметка
         manual — 1: внесено вручную, а не после таймера
       Ключи в хранилище: zaryadka_log_202611_1, zaryadka_log_202611_2… —
@@ -1114,6 +1159,8 @@
       const c = { ...e };
       c.gym = (c.gym || []).filter(b => b.sets.length);
       if (!c.gym.length || !getSport(c.sport).sets) delete c.gym;
+      // Дистанция — только у бассейна и бега и только если её ввели
+      if (!c.dist || !getSport(c.sport).distance) { delete c.dist; delete c.du; }
       c.note = (c.note || '').trim();
       ['note', 'time', 'n', 'manual', 'title', 'dir'].forEach(k => { if (!c[k]) delete c[k]; });
       return c;
@@ -1241,8 +1288,7 @@
       }
     }
     function onBack() {
-      if (current === 'workout' && tipsOpen()) closeTips();
-      else if (current === 'workout') askExit();
+      if (current === 'workout') askExit();
       else if (current === 'custom') closeCustom();
       else if (current === 'entry') leaveEntry();
       else if (current !== 'home') show('home');
@@ -1275,7 +1321,8 @@
 
     // Подписи на главном экране для каждого вида
     const TAGLINES = { morning: 'Пора на зарядку', gym: 'Сегодня — в зал', yoga: 'Время для йоги',
-                       pool: 'Ныряем в бассейн', tt: 'К столу!', meditation: 'Время для тишины' };
+                       pool: 'Ныряем в бассейн', tt: 'К столу!', run: 'Время пробежки', rope: 'Берём скакалку',
+                       bball: 'На площадку!', eyes: 'Отдых для глаз', meditation: 'Время для тишины' };
 
     function greeting() {
       const h = new Date().getHours();
@@ -1369,7 +1416,7 @@
       $('sport-name').textContent = s.name;
 
       // Медитация — просто таймер: без программ, своей тренировки и списка
-      $('dir-line').classList.toggle('hidden', simple);
+      $('open-directions').classList.toggle('hidden', simple);
       $('open-custom').classList.toggle('hidden', simple);
       $('preview').classList.toggle('hidden', simple);
 
@@ -1393,8 +1440,11 @@
         $('summary').textContent = 'Обратный отсчёт · мягкий сигнал в начале и в конце';
       } else {
         const blocks = countBlocks(list);
+        // Зал: сколько всего подходов. Бег и скакалка: сколько отрезков (раундов)
+        const repeats = list.filter(item => item.set).length;
         let text = blocks + ' ' + plural(blocks, 'упражнение', 'упражнения', 'упражнений') +
-          (s.sets ? ' · ' + list.length + ' ' + plural(list.length, 'подход', 'подхода', 'подходов') : '') +
+          (s.sets ? ' · ' + list.length + ' ' + plural(list.length, 'подход', 'подхода', 'подходов')
+                  : repeats ? ' · ' + repeats + ' ' + setWord(s, repeats) : '') +
           ' · ≈ ' + formatDuration(total);
         if (custom) text += ' · время = сумма упражнений';
         else if (minutes() === limits().max && limits().max < s.max) text += ' · максимум без повторов';
@@ -1422,8 +1472,16 @@
       fitHome();
     }
 
-    // Главный экран: уменьшаем круг так, чтобы кнопка «Начать» помещалась
-    // на экран сразу, без прокрутки (но не меньше 170 точек)
+    // Отступы экрана сверху и снизу (вырез камеры и кнопки Telegram, полоска
+    // жестов iPhone): их задаёт CSS (--top, --bottom), читаем готовые числа
+    function screenInsets() {
+      const cs = getComputedStyle($('home'));
+      return { top: Math.max(0, parseFloat(cs.paddingTop) - 18), bottom: Math.max(0, parseFloat(cs.paddingBottom) - 28) };
+    }
+
+    // Главный экран: уменьшаем круг так, чтобы кнопка «Начать» и строка
+    // «Что войдёт в занятие» помещались на экран сразу, без прокрутки
+    // (но круг не меньше 140 точек)
     function fitHome() {
       if (current !== 'home') return;
       const disc = document.querySelector('.dial-disc');
@@ -1434,12 +1492,35 @@
       setSize(natural);
       // Планшет в ландшафте: две колонки, там всё и так помещается
       if (window.matchMedia('(min-width: 700px) and (orientation: landscape)').matches) return;
-      // Высота видимой части: берём меньшее из того, что говорят браузер и Telegram
-      const viewH = Math.min(window.innerHeight, (inTelegram && tg.viewportStableHeight) || Infinity);
-      const btnBottom = $('start-btn').getBoundingClientRect().bottom + window.scrollY;
-      const over = btnBottom + 14 - viewH;   // насколько кнопка ниже края экрана
-      if (over > 0) setSize(Math.max(160, natural - Math.ceil(over)));
+      // Высота видимой части: берём меньшее из того, что говорят браузер и Telegram,
+      // и не заходим на полоску жестов внизу
+      const viewH = Math.min(window.innerHeight, (inTelegram && tg.viewportStableHeight) || Infinity) - screenInsets().bottom;
+      // Последнее, что должно быть видно: строка «Что войдёт в занятие»
+      // (у медитации её нет — тогда кнопка «Начать»)
+      const preview = $('preview');
+      const last = preview.classList.contains('hidden') ? $('start-btn') : preview.querySelector('summary');
+      const bottom = last.getBoundingClientRect().bottom + window.scrollY;
+      const over = bottom + 10 - viewH;   // насколько она ниже края экрана
+      if (over > 0) setSize(Math.max(140, natural - Math.ceil(over)));
     }
+
+    // «Что войдёт в занятие»: раскрыли — список выпадает, а экран плавно
+    // прокручивается вниз, чтобы список был виден. Свернули — обратно наверх.
+    $('preview').addEventListener('toggle', () => {
+      const box = $('preview');
+      haptic('light');
+      if (!box.open) {
+        if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      requestAnimationFrame(() => {
+        const r = box.getBoundingClientRect();
+        const ins = screenInsets();
+        // Список помещается — докручиваем до его конца, не помещается — до его начала
+        const shift = Math.min(r.top - ins.top - 12, r.bottom - (window.innerHeight - ins.bottom - 12));
+        if (shift > 0) window.scrollBy({ top: shift, behavior: 'smooth' });
+      });
+    });
 
     // Сколько разных «блоков» упражнений (подходы одного упражнения — один блок)
     function countBlocks(list) { return list.filter(item => !item.set || item.set === 1).length; }
@@ -1457,7 +1538,7 @@
           : s.directions.length + ' ' + plural(s.directions.length, 'программа', 'программы', 'программ');
         card.innerHTML =
           '<div class="title">' + s.name + (s.id === state.sport ? '<span class="tick">✓</span>' : '') + '</div>' +
-          '<div class="meta">' + what + ' · ' + s.min + '–' + s.max + ' мин</div>';
+          '<div class="meta">' + what + '<br>' + s.min + '–' + s.max + ' мин</div>';
         card.addEventListener('click', () => {
           state.sport = s.id;
           haptic('select');
@@ -1488,9 +1569,13 @@
         title.textContent = dir.name;
         if (selected) { const t = document.createElement('span'); t.className = 'tick'; t.textContent = '✓'; title.append(t); }
 
+        // Подходы (отрезки): в зале — сколько обычно, в беге и скакалке — от и до
         const about = document.createElement('div');
         about.className = 'about';
-        about.textContent = dir.description + (dir.sets ? ' · ' + dir.sets + ' подхода' : '');
+        const sets = !dir.sets ? '' : dir.minSets
+          ? dir.minSets + '\u2060–\u2060' + dir.maxSets + '\u00a0' + setWord(s, dir.maxSets)   // «3–12 отрезков» без переноса
+          : dir.sets + ' ' + setWord(s, dir.sets);
+        about.textContent = dir.description + (sets ? ' · ' + sets : '');
 
         // Группы мышц и сколько программа может длиться без повторов
         const lim = planLimits(s.id, dir.id);
@@ -1591,12 +1676,6 @@
     $('custom-done').addEventListener('click', () => { haptic('medium'); closeCustom(); });
     $('custom-clear').addEventListener('click', () => { customDraft = []; haptic('light'); renderCustom(); });
 
-    // Шестерёнка: экран настроек будет позже, пока — сообщение
-    $('settings-btn').addEventListener('click', () => {
-      haptic('light');
-      showMessage('Настройки (звук, вибрация, время отдыха) появятся на следующем этапе.');
-    });
-
     // =====================================================================
     //  10. Анимация фигурки — объёмный 3D-манекен
     //  Фигурка — скелет из 18 суставов в 3D. Каждый кадр:
@@ -1652,6 +1731,8 @@
         elL, wrL           — сгиб локтя и кисти
         hpLe, hpLa, hpLt   — нога в бедре: подъём / куда / вращение (как у руки)
         knL, anL           — сгиб колена; стопа на себя (+) или носок (−)
+        eyX, eyY, eyO      — куда смотрят глаза (визор скользит по лицу): влево-вправо,
+                             вверх-вниз, в градусах; насколько открыты (1 — открыты, 0 — закрыты)
       «Прибитые» стопы (если у анимации feet: true):
         fLx, fLz — где стоит стопа, fLl — приподнять над полом, fLh — подъём пятки, fLyaw — носок наружу
       «Прибитые» ладони (если hands: true): hLx, hLy, hLz — где запястье.
@@ -1664,6 +1745,7 @@
       hpLe: 3, hpLa: 90, hpLt: 0, knL: 0, anL: 0, hpRe: 3, hpRa: 90, hpRt: 0, knR: 0, anR: 0,
       fLx: 10, fLz: 0, fLl: 0, fLh: 0, fLyaw: 8, fRx: -10, fRz: 0, fRl: 0, fRh: 0, fRyaw: -8,
       hLx: 22, hLy: 4.5, hLz: 40, hRx: -22, hRy: 4.5, hRz: 40,
+      eyX: 0, eyY: 0, eyO: 1,
     };
 
     // Поворот руки или ноги: поднять на el градусов в направлении az, повернуть на tw
@@ -1723,7 +1805,7 @@
           W = atP(Re, E, [0, -B.fore, 0]);
           H = atP(mMul(Re, rotX(-p['wr' + k])), W, [0, -B.hand, 0]);
         }
-        if (k === 'R') G.handR = { W, H };
+        G['hand' + k] = { W, H };   // запястье и кончики пальцев (для ракетки, мяча, скакалки)
         G.push({ tone: k, prims: [{ a: S[k], r: 6.3 }, { a: S[k], b: E, ra: 5.4, rb: 4.3 }] });
         G.push({ tone: k, prims: [{ a: E, b: W, ra: 4.3, rb: 3.2 }] });
         G.push({ tone: k, hand: k, prims: [{ a: W, b: H, ra: 3.4, rb: 2.9 }] });
@@ -1751,13 +1833,15 @@
         G.push({ tone: k, foot: true, prims: [{ a: heel, b: toe, ra: 4, rb: 3 }, { a: AN, r: 4.3 }] });
       }
       G.left = mVec(R0, [1, 0, 0]);
+      G.fwd = mVec(rotY(p.yaw), [0, 0, 1]);   // куда фигурка смотрит (по горизонтали)
+      G.eye = [p.eyX, p.eyY, p.eyO];          // взгляд: влево-вправо, вверх-вниз, открыты ли глаза
       return G;
     }
 
     function moveBody(G, d) {
       for (const g of G) for (const q of g.prims) { q.a = vAdd(q.a, d); if (q.b) q.b = vAdd(q.b, d); }
       G.headC = vAdd(G.headC, d); G.chest = vAdd(G.chest, d);
-      if (G.handR) G.handR = { W: vAdd(G.handR.W, d), H: vAdd(G.handR.H, d) };
+      for (const h of ['handL', 'handR']) if (G[h]) G[h] = { W: vAdd(G[h].W, d), H: vAdd(G[h].H, d) };
     }
     const lowestPoint = G => { let lo = 1e9; for (const g of G) for (const q of g.prims) lo = Math.min(lo, q.a[1] - (q.b ? q.ra : q.r), q.b ? q.b[1] - q.rb : 1e9); return lo; };
 
@@ -1786,7 +1870,7 @@
       return p;
     }
     // Зеркальная поза: левое ↔ правое (для упражнений «на обе стороны»)
-    const MIRROR_NEG = ['x', 'yaw', 'roll', 'spin', 's1s', 's1t', 's2s', 's2t', 'nks', 'nkt', 'fLx', 'fRx', 'fLyaw', 'fRyaw', 'hLx', 'hRx'];
+    const MIRROR_NEG = ['x', 'yaw', 'roll', 'spin', 's1s', 's1t', 's2s', 's2t', 'nks', 'nkt', 'fLx', 'fRx', 'fLyaw', 'fRyaw', 'hLx', 'hRx', 'eyX'];
     function mirrorPose(p) {
       const q = {};
       for (const k in p) q[k.replace(/L(?=[a-z]|$)/, '#').replace(/R(?=[a-z]|$)/, 'L').replace('#', 'R')] = p[k];
@@ -1810,7 +1894,10 @@
       }) }));
       for (const g of G) if (g.hull) { const n = g.hull[0].length; g.hull = [g.prims.slice(0, n), g.prims.slice(n)]; }
       G.left = G2.left; G.headR = G2.headR; G.headC = vMix(G1.headC, G2.headC, u); G.chest = vMix(G1.chest, G2.chest, u);
-      G.handR = G2.handR && G1.handR ? { W: vMix(G1.handR.W, G2.handR.W, u), H: vMix(G1.handR.H, G2.handR.H, u) } : G2.handR;
+      for (const h of ['handL', 'handR'])
+        G[h] = G2[h] && G1[h] ? { W: vMix(G1[h].W, G2[h].W, u), H: vMix(G1[h].H, G2[h].H, u) } : G2[h];
+      G.fwd = G2.fwd;
+      G.eye = G1.eye && G2.eye ? G1.eye.map((v, i) => v + (G2.eye[i] - v) * u) : G2.eye;
       return G;
     }
 
@@ -1823,14 +1910,32 @@
     }
     const project = (c, p) => { const z = vDot(p, c.D), k = FOCUS / (FOCUS - z); return [vDot(p, c.R) * k, vDot(p, c.U) * k, z, k]; };
 
-    // Масштаб и сдвиг, чтобы упражнение целиком помещалось: пол — внизу сцены
+    // Масштаб и сдвиг, чтобы упражнение целиком помещалось: пол — внизу сцены.
+    // A.focus — крупный план: видны только голова и плечи (A.focus см от макушки)
     function computeFit(A, c, W, H) {
       let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-      for (let i = 0; i < 24; i++) for (const g of solveBody(poseAt(A, i / 24), A)) for (const q of g.prims)
-        for (const [pt, r] of [[q.a, q.b ? q.ra : q.r], [q.b, q.rb]]) {
-          if (!pt) continue; const v = project(c, pt), rr = r * v[3];
-          x0 = Math.min(x0, v[0] - rr); x1 = Math.max(x1, v[0] + rr); y0 = Math.min(y0, v[1] - rr); y1 = Math.max(y1, v[1] + rr);
+      const circles = [];   // все детали тела во всех позах: [x, y, радиус] на экране
+      for (let i = 0; i < 24; i++) {
+        const G = solveBody(poseAt(A, i / 24), A);
+        for (const g of G) for (const q of g.prims)
+          for (const [pt, r] of [[q.a, q.b ? q.ra : q.r], [q.b, q.rb]]) {
+            if (!pt) continue; const v = project(c, pt);
+            circles.push([v[0], v[1], r * v[3]]);
+          }
+        // Скакалка над головой: верх петли — на высоте двух высот кистей
+        if (A.rope !== undefined && G.handL && G.handR) {
+          const m = vMix(G.handL.H, G.handR.H, 0.5), v = project(c, [m[0], 2 * m[1] + 3, m[2]]);
+          circles.push([v[0], v[1], 2]);
         }
+      }
+      if (A.focus) {
+        for (const [, y, r] of circles) y1 = Math.max(y1, y + r);
+        y0 = y1 - A.focus;
+        for (const [x, y, r] of circles) if (y + r >= y0) { x0 = Math.min(x0, x - r); x1 = Math.max(x1, x + r); }
+        const sc = Math.min(W * 0.7 / (x1 - x0), H * 0.84 / (y1 - y0));
+        return { sc, ox: W / 2 - sc * (x0 + x1) / 2, oy: H + sc * y0 };   // низ кадра обрезает грудь
+      }
+      for (const [x, y, r] of circles) { x0 = Math.min(x0, x - r); x1 = Math.max(x1, x + r); y0 = Math.min(y0, y - r); y1 = Math.max(y1, y + r); }
       if (A.bar) y1 = Math.max(y1, A.bar + 4);
       const sc = Math.min(W * 0.86 / (x1 - x0), H * 0.8 / (y1 - y0), H * 0.84 / 185);
       return { sc, ox: W / 2 - sc * (x0 + x1) / 2, oy: H * 0.9 + sc * y0 };
@@ -1860,13 +1965,111 @@
     const rgbStr = (c, al) => al === undefined ? 'rgb(' + c.join(',') + ')' : 'rgba(' + c.join(',') + ',' + al + ')';
     const LIGHT = [-0.55, -0.83];   // свет сверху слева — для бликов
 
+    // ---------- Скакалка ----------
+    // Петля от левой кисти к правой, вращается вокруг линии кистей: сзади вверх,
+    // над головой, спереди вниз и под ногами. A.rope — момент цикла, когда скакалка
+    // проходит под ногами (0…1), A.ropeTurns — сколько оборотов за цикл.
+    // front: false — рисуем часть за телом, true — перед телом.
+    function drawRope(ctx, G, c, k, sx, sy, col, A, t, chestZ, front) {
+      if (!G.handL || !G.handR) return;
+      const turns = A.ropeTurns || (A.alt ? 2 : 1);
+      const ph = 2 * Math.PI * ((((t * turns - A.rope) % 1) + 1) % 1);   // 0 — под ногами
+      const hl = G.handL.H, hr = G.handR.H;
+      const R = Math.max(40, (hl[1] + hr[1]) / 2);                       // нижняя точка петли — у пола
+      const d = vAdd(vMul([0, -1, 0], Math.cos(ph)), vMul(G.fwd, -Math.sin(ph)));
+      const pts = [];
+      for (let i = 0; i <= 24; i++) {
+        const s = i / 24;
+        pts.push(project(c, vAdd(vMix(hl, hr, s), vMul(d, R * Math.pow(Math.sin(Math.PI * s), 0.6)))));
+      }
+      ctx.save();
+      ctx.lineWidth = Math.max(1.6, k * 1.3); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.strokeStyle = rgbStr(col.phase);
+      ctx.beginPath();
+      let on = false;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p = pts[i], q = pts[i + 1];
+        if (((p[2] + q[2]) / 2 >= chestZ) !== front) { on = false; continue; }
+        if (!on) { ctx.moveTo(sx(p), sy(p)); on = true; }
+        ctx.lineTo(sx(q), sy(q));
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ---------- Мяч (баскетбол) ----------
+    // A.ball: 'dribble' — ведение правой рукой; 'cross' — перевод с руки на руку;
+    // 'shoot' — в руке до броска (A.release), потом летит к кольцу; 'hold2' — в обеих руках;
+    // 'catch' — появляется в руках в прыжке (подбор); 'pass' — передача в стену и обратно.
+    // Возвращает { p: центр мяча, a: прозрачность } или null — мяча не видно.
+    const BALL_R = 12;
+    const ballOnHand = (G, h) => vAdd(h.H, vAdd(vMul(G.fwd, 3), [0, BALL_R - 4, 0]));
+    function ballAt(G, A, t) {
+      const R = G.handR, L = G.handL;
+      if (!R || !L) return null;
+      const between = vAdd(vMix(L.H, R.H, 0.5), vMul(G.fwd, 8));   // в обеих руках, чуть впереди
+      if (A.ball === 'dribble' || A.ball === 'cross') {
+        // Мяч падает от руки к полу и возвращается. Быстрее всего — у пола, как настоящий
+        let from = R, to = R, u = t;
+        if (A.ball === 'cross') { u = (t * 2) % 1; from = t < 0.5 ? R : L; to = t < 0.5 ? L : R; }
+        const top = vMix(from.H, to.H, u);
+        const side = A.ball === 'cross' ? [0, 0, 0] : vMul(G.left, -4);
+        const y = BALL_R + Math.max(0, top[1] - 2 * BALL_R) * Math.abs(Math.cos(Math.PI * u));
+        return { p: [top[0] + side[0] + G.fwd[0] * 6, y, top[2] + side[2] + G.fwd[2] * 6], a: 1 };
+      }
+      if (A.ball === 'hold2') return { p: between, a: 1 };
+      if (A.ball === 'catch') {
+        if (t < 0.44 || t > 0.95) return null;
+        return { p: between, a: Math.min(1, (t - 0.44) / 0.06, (0.95 - t) / 0.06) };
+      }
+      if (A.ball === 'pass') {
+        if (t < 0.3 || t > 0.92) return { p: between, a: 1 };
+        if (t < 0.55) return { p: vAdd(between, vMul(G.fwd, 320 * (t - 0.3))), a: 1 - (t - 0.3) / 0.25 };
+        if (t > 0.7) return { p: vAdd(between, vMul(G.fwd, 320 * (0.92 - t))), a: (t - 0.7) / 0.22 };
+        return null;
+      }
+      if (A.ball === 'shoot') {
+        const rel = A.release;
+        if (t < rel) return { p: ballOnHand(G, R), a: 1 };
+        const u = t - rel;
+        if (u < 0.3) {
+          // Точка броска — один раз считаем, где была рука в момент броска
+          if (!A._relP) { const B = solveBody(poseAt(A, rel), A); A._relP = ballOnHand(B, B.handR); }
+          const P = A._relP;
+          return { p: [P[0] + G.fwd[0] * 170 * u, P[1] + 330 * u - 380 * u * u, P[2] + G.fwd[2] * 170 * u], a: 1 - u / 0.3 };
+        }
+        if (t > 0.86) return { p: ballOnHand(G, R), a: (t - 0.86) / 0.14 };   // новый мяч в руке
+        return null;
+      }
+      return null;
+    }
+    function drawBall(ctx, b, c, k, sx, sy, col) {
+      const v = project(c, b.p), r = BALL_R * k * v[3], x = sx(v), y = sy(v);
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, b.a));
+      ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI);
+      ctx.fillStyle = rgbStr(col.phase); ctx.fill();
+      ctx.lineWidth = Math.max(1.4, k * 1.2); ctx.strokeStyle = rgbStr(col.bg); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x - r * 0.32, y - r * 0.36, r * 0.36, 0, 2 * Math.PI);
+      ctx.fillStyle = rgbStr(mixRgb(col.phase, [255, 255, 255], 0.28)); ctx.fill();   // блик
+      // Швы: крест и две дуги, как у баскетбольного мяча
+      ctx.beginPath();
+      ctx.moveTo(x - r, y); ctx.lineTo(x + r, y);
+      ctx.moveTo(x, y - r); ctx.lineTo(x, y + r);
+      ctx.moveTo(x - r * 0.72, y - r * 0.69); ctx.quadraticCurveTo(x - r * 0.25, y, x - r * 0.72, y + r * 0.69);
+      ctx.moveTo(x + r * 0.72, y - r * 0.69); ctx.quadraticCurveTo(x + r * 0.25, y, x + r * 0.72, y + r * 0.69);
+      ctx.lineWidth = Math.max(1, r * 0.09); ctx.strokeStyle = rgbStr(mixRgb(col.phase, col.ink, 0.5)); ctx.stroke();
+      ctx.restore();
+    }
+
     // Нарисовать кадр. col — цвета: ink (контур фигуры), bg (фон), phase (цвет фазы).
     function drawBody(ctx, G, c, f, col, A, extra) {
       const k = f.sc, sx = v => f.ox + k * v[0], sy = v => f.oy - k * v[1];
       const bg = col.bg, ink = col.ink;
       const tones = { near: ink, body: mixRgb(ink, bg, 0.22), far: mixRgb(ink, bg, 0.56) };
       // Тень на полу — «след» тела сверху; чем выше тело, тем она бледнее
-      if (!A.water) {
+      // (на крупном плане пола не видно — тень не нужна)
+      if (!A.water && !A.focus) {
         const fade = Math.max(0.35, 1 - Math.max(0, lowestPoint(G)) / 40);
         ctx.save();
         ctx.transform(k * Math.cos(c.ps), k * Math.sin(c.th) * Math.sin(c.ps), -k * Math.sin(c.ps), k * Math.sin(c.th) * Math.cos(c.ps), f.ox, f.oy);
@@ -1889,6 +2092,13 @@
         ctx.beginPath(); top.forEach((v, i) => i ? ctx.lineTo(sx(v), sy(v)) : ctx.moveTo(sx(v), sy(v))); ctx.closePath();
         ctx.fillStyle = rgbStr(mixRgb(ink, bg, 0.82)); ctx.fill();
       }
+      // Скакалка и мяч: то, что за телом, рисуем до него, то, что перед, — после
+      const t = extra ? extra.t || 0 : 0;
+      const chestZ = project(c, G.chest)[2];
+      const ball = A.ball ? ballAt(G, A, t) : null;
+      const ballFront = !!ball && project(c, ball.p)[2] >= chestZ - 8;
+      if (A.rope !== undefined) drawRope(ctx, G, c, k, sx, sy, col, A, t, chestZ, false);
+      if (ball && !ballFront) drawBall(ctx, ball, c, k, sx, sy, col);
       // Ближняя к камере сторона темнее, дальняя светлее
       const w = vDot(G.left, c.D);
       const toneOf = { body: tones.body, L: mixRgb(tones.near, tones.far, Math.min(1, Math.max(0, -w * 1.4))),
@@ -1910,8 +2120,12 @@
         ctx.fillStyle = rgbStr(tone); ctx.fill();
         shape(0.5, 0.36); ctx.fillStyle = rgbStr(mixRgb(tone, [255, 255, 255], 0.13)); ctx.fill();   // блик
         if (g.head && vDot(mVec(G.headR, [0, 0, 1]), c.D) > -0.3) {   // визор показывает, куда смотрит голова
-          const a = project(c, atP(G.headR, G.headC, [4.6, 1.8, 8.6])), b = project(c, atP(G.headR, G.headC, [-4.6, 1.8, 8.6]));
-          ctx.beginPath(); pathCapsule(ctx, sx(a), sy(a), 2.4 * k * a[3], sx(b), sy(b), 2.4 * k * b[3]); ctx.fillStyle = rgbStr(col.phase); ctx.fill();
+          // Взгляд (гимнастика для глаз): визор скользит по лицу; закрытые глаза — тонкая полоска
+          const ey = G.eye || [0, 0, 1];
+          const Rv = mMul(G.headR, mMul(rotY(ey[0]), rotX(-ey[1])));
+          const a = project(c, atP(Rv, G.headC, [4.6, 1.8, 8.6])), b = project(c, atP(Rv, G.headC, [-4.6, 1.8, 8.6]));
+          const vr = 2.4 * Math.max(0.22, Math.min(1.4, ey[2]));
+          ctx.beginPath(); pathCapsule(ctx, sx(a), sy(a), vr * k * a[3], sx(b), sy(b), vr * k * b[3]); ctx.fillStyle = rgbStr(col.phase); ctx.fill();
         }
         if (g.hand === 'R' && A.paddle && G.handR) {   // ракетка в правой руке
           const dir = vNorm(vSub(G.handR.H, G.handR.W)), hc = vAdd(G.handR.H, vMul(dir, 9));
@@ -1920,6 +2134,8 @@
           ctx.beginPath(); ctx.arc(sx(b), sy(b), 8 * k * b[3], 0, 2 * Math.PI); ctx.lineWidth = Math.max(1.5, k); ctx.stroke(); ctx.fillStyle = rgbStr(col.phase); ctx.fill();
         }
       }
+      if (A.rope !== undefined) drawRope(ctx, G, c, k, sx, sy, col, A, t, chestZ, true);
+      if (ball && ballFront) drawBall(ctx, ball, c, k, sx, sy, col);
       // Перекладина для подтягиваний
       if (A.bar) {
         const y = A.bar, a = project(c, [70, y, A.barZ || 0]), b = project(c, [-70, y, A.barZ || 0]);
@@ -1962,8 +2178,23 @@
         alt: true   — вторая половина цикла зеркальная (смена сторон)
         lag    — руки чуть запаздывают за телом (доля цикла)
         ring, paddle, water, bar, seat — дыхательный круг, ракетка, вода, перекладина, табурет
+        rope   — скакалка: момент цикла (0…1), когда она проходит под ногами; ropeTurns — оборотов за цикл
+        ball, release — мяч (см. ballAt) и момент броска
+        focus  — крупный план головы и плеч: сколько сантиметров от макушки видно
     */
     const STAND = { feet: true };
+    // Сидя на табурете (гимнастика для глаз): крупный план, видно, куда смотрит визор
+    const SIT = { seat: { h: 44, w: 38, d: 36, z: -4 }, focus: 80, cam: -14, camPitch: 4 };
+    const SIT_POSE = { y: 52.5, nkf: -2, ...SYM({ hpLe: 90, hpLa: 0, knL: 90, shLe: 30, shLa: 14, elL: 52 }) };
+    // Скакалка: кисти у бёдер, локти прижаты
+    const ROPE_ARMS = SYM({ shLe: 20, shLa: 64, elL: 70 });
+    // Прыжок вверх с махом руками (подбор и выпрыгивания)
+    const JUMP_UP_K = [{ t: 0, y: 95, ...SYM({ shLe: 30, shLa: 40, elL: 60 }) },
+      { t: 0.24, y: 82, pitch: 14, s1f: 8, nkf: -10, ...SYM({ shLe: -24, shLa: 10, elL: 16 }) },
+      { t: 0.48, e: 'o', y: 110, nkf: -8, ...SYM({ fLl: 14, fLh: 30, shLe: 168, shLa: 22, elL: 18 }) },
+      { t: 0.56, y: 109, nkf: -8, ...SYM({ fLl: 12, fLh: 28, shLe: 166, shLa: 22, elL: 22 }) },
+      { t: 0.78, e: 'i', y: 86, pitch: 10, ...SYM({ shLe: 70, shLa: 40, elL: 120 }) },
+      { t: 1, y: 95, ...SYM({ shLe: 30, shLa: 40, elL: 60 }) }];
     const ANIMS = {
       // ===== Стоя: дыхание, разминка =====
       idle:      { ...STAND, dur: 3600, cam: -28, k: [{ t: 0 }, { t: 0.5, ...SYM({ shLe: 9 }), s1s: 0.8, x: 0.6 }, { t: 1 }] },
@@ -2221,6 +2452,111 @@
       float:     { water: true, dur: 4000, cam: -60, camPitch: 16,
                    base: { pitch: -90, y: -7, nkf: -4, ...SYM({ shLe: 100, shLa: 90, elL: 8, hpLe: 24, hpLa: 90, anL: -40 }) },
                    k: [{ t: 0 }, { t: 0.5, y: -5.5, s2f: -2 }, { t: 1 }] },
+
+      // ===== Бег =====
+      // Лёгкий бег: стопа уходит назад (захлёст), руки работают в такт
+      jog:       { ...STAND, alt: true, dur: 400, cam: -55,
+                   base: { y: 96.5, pitch: 5, nkf: -5, ...SYM({ fLx: 9, fLh: 12, shLa: 0, shLe: 10, elL: 90 }) },
+                   k: [{ t: 0 }, { t: 0.5, e: 'o', y: 98.6, fLl: 24, fLz: -12, fLh: 70, shLe: 34, elL: 84, shRe: -26, elR: 96 }, { t: 1 }] },
+      // Растяжка икры у стены: задняя нога прямая, пятка на полу
+      calf_stretch: { ...STAND, alt: true, dur: 6000, cam: -72,
+                   base: { y: 89, z: 6, pitch: 20, s1f: 2, nkf: -14, fLz: 30, fRz: -42, fLx: 9, fRx: -9, fLyaw: 4, fRyaw: -6,
+                           ...SYM({ shLe: 86, shLa: 6, elL: 30, wrL: -60 }) },
+                   k: [{ t: 0 }, { t: 0.5, y: 88.4, pitch: 21 }, { t: 1 }] },
+
+      // ===== Скакалка =====
+      rope:      { ...STAND, rope: 0.5, dur: 440, cam: -20, base: { ...ROPE_ARMS, ...SYM({ fLx: 7, fLyaw: 4, fLh: 14 }) },
+                   k: [{ t: 0, y: 98 }, { t: 0.5, e: 'o', y: 103, ...SYM({ fLl: 4, fLh: 22, elL: 66 }) }, { t: 1, e: 'i', y: 98 }] },
+      rope_run:  { ...STAND, rope: 0.5, alt: true, dur: 320, cam: -26, base: { y: 97.5, ...ROPE_ARMS, ...SYM({ fLx: 7, fLh: 16 }) },
+                   k: [{ t: 0 }, { t: 0.5, e: 'o', y: 100, fLl: 14, fLz: 4, fLh: 8, fRh: 26 }, { t: 1 }] },
+      rope_knees:{ ...STAND, rope: 0.5, alt: true, dur: 340, cam: -40, base: { y: 97.5, ...ROPE_ARMS, ...SYM({ fLx: 7, fLh: 16 }) },
+                   k: [{ t: 0 }, { t: 0.5, e: 'o', y: 100, fLl: 34, fLz: 14, fLh: -2, fRh: 26 }, { t: 1 }] },
+      rope_one:  { ...STAND, rope: 0.5, dur: 440, cam: -36,
+                   base: { x: 3, fLx: 6, fRx: -8, fRz: -6, fRl: 18, fRh: 60, fLyaw: 4, ...ROPE_ARMS },
+                   k: [{ t: 0, y: 97.5, fLh: 14 }, { t: 0.5, e: 'o', y: 102, fLl: 4, fLh: 22 }, { t: 1, e: 'i', y: 97.5, fLh: 14 }] },
+      // Два прыжка за цикл: влево-вправо и вперёд-назад
+      rope_side: { ...STAND, rope: 0.5, ropeTurns: 2, dur: 880, cam: -16, base: { ...ROPE_ARMS, ...SYM({ fLyaw: 4, fLh: 14 }) },
+                   k: [{ t: 0, y: 98, x: 6, fLx: 13, fRx: -1 }, { t: 0.25, e: 'o', y: 103, x: 0, fLx: 7, fRx: -7, ...SYM({ fLl: 4, fLh: 22 }) },
+                       { t: 0.5, e: 'i', y: 98, x: -6, fLx: 1, fRx: -13 }, { t: 0.75, e: 'o', y: 103, x: 0, fLx: 7, fRx: -7, ...SYM({ fLl: 4, fLh: 22 }) },
+                       { t: 1, e: 'i', y: 98, x: 6, fLx: 13, fRx: -1 }] },
+      rope_fb:   { ...STAND, rope: 0.5, ropeTurns: 2, dur: 880, cam: -60, base: { ...ROPE_ARMS, ...SYM({ fLx: 7, fLyaw: 4, fLh: 14 }) },
+                   k: [{ t: 0, y: 98, z: 6, ...SYM({ fLz: 6 }) }, { t: 0.25, e: 'o', y: 103, z: 0, ...SYM({ fLz: 0, fLl: 4, fLh: 22 }) },
+                       { t: 0.5, e: 'i', y: 98, z: -6, ...SYM({ fLz: -6 }) }, { t: 0.75, e: 'o', y: 103, z: 0, ...SYM({ fLz: 0, fLl: 4, fLh: 22 }) },
+                       { t: 1, e: 'i', y: 98, z: 6, ...SYM({ fLz: 6 }) }] },
+
+      // ===== Баскетбол =====
+      // Ведение правой рукой в низкой стойке, левая рука закрывает мяч
+      dribble:   { ...STAND, ball: 'dribble', dur: 560, cam: -34,
+                   base: { y: 84, z: -4, pitch: 16, s1f: 8, nkf: -16, ...SYM({ fLx: 18, fLyaw: 12 }), shLe: 48, shLa: 30, elL: 80, shRa: 30 },
+                   k: [{ t: 0, shRe: 36, elR: 60, wrR: 25 }, { t: 0.2, e: 'o', shRe: 26, elR: 22, wrR: -30 },
+                       { t: 0.65, shRe: 30, elR: 34, wrR: -5 }, { t: 1, shRe: 36, elR: 60, wrR: 25 }] },
+      dribble_low: { ...STAND, ball: 'dribble', dur: 380, cam: -34,
+                   base: { y: 72, z: -10, pitch: 26, s1f: 10, nkf: -26, ...SYM({ fLx: 22, fLyaw: 14 }), shLe: 50, shLa: 30, elL: 80, shRa: 25 },
+                   k: [{ t: 0, shRe: 22, elR: 40, wrR: 20 }, { t: 0.2, e: 'o', shRe: 16, elR: 14, wrR: -25 },
+                       { t: 0.65, shRe: 18, elR: 22 }, { t: 1, shRe: 22, elR: 40, wrR: 20 }] },
+      // Перевод с руки на руку: вторая половина цикла — зеркальная
+      dribble_cross: { ...STAND, ball: 'cross', alt: true, dur: 520, cam: -10,
+                   base: { y: 80, z: -6, pitch: 18, s1f: 8, nkf: -20, ...SYM({ fLx: 20, fLyaw: 12 }) },
+                   k: [{ t: 0, shRe: 34, shRa: 40, elR: 55, wrR: 20, shLe: 26, shLa: 40, elL: 40 },
+                       { t: 0.25, e: 'o', shRe: 24, shRa: 0, elR: 20, wrR: -30, shLe: 22, shLa: 30, elL: 30 },
+                       { t: 1, shRe: 26, shRa: 40, elR: 40, shLe: 34, shLa: 40, elL: 55, wrL: 20 }] },
+      // Бросок в прыжке: присед, мяч ко лбу, прыжок, бросок, рука «в корзину»
+      shoot:     { ...STAND, ball: 'shoot', release: 0.42, dur: 1800, cam: -40, base: SYM({ fLx: 10, fLyaw: 6 }),
+                   k: [{ t: 0, y: 95, shRe: 40, shRa: 20, elR: 120, wrR: 0, shLe: 40, shLa: 60, elL: 110 },
+                       { t: 0.22, y: 86, pitch: 8, s1f: 4, nkf: -6, shRe: 100, shRa: 12, elR: 110, wrR: -50, shLe: 95, shLa: 55, elL: 90 },
+                       { t: 0.4, e: 'o', y: 103, ...SYM({ fLl: 6, fLh: 24 }), shRe: 158, shRa: 8, elR: 20, wrR: -40, shLe: 130, shLa: 55, elL: 55 },
+                       { t: 0.52, y: 102, ...SYM({ fLl: 5, fLh: 22 }), shRe: 165, shRa: 8, elR: 6, wrR: 70, shLe: 128, shLa: 55, elL: 50 },
+                       { t: 0.7, e: 'i', y: 91, shRe: 150, shRa: 8, elR: 8, wrR: 70, shLe: 110, shLa: 55, elL: 50 },
+                       { t: 1, y: 95, shRe: 40, shRa: 20, elR: 120, wrR: 0, shLe: 40, shLa: 60, elL: 110 }] },
+      // Проход под кольцо: шаг, толчок левой, правое колено вверх, бросок правой
+      layup:     { ...STAND, ball: 'shoot', release: 0.5, dur: 1700, cam: -60,
+                   k: [{ t: 0, y: 95, ...SYM({ fLx: 9 }), shRe: 40, shRa: 30, elR: 110, shLe: 40, shLa: 50, elL: 110 },
+                       { t: 0.25, y: 90, z: 14, pitch: 8, fLx: 9, fRx: -9, fLz: 34, fRz: -4, fRh: 30, shRe: 60, shRa: 20, elR: 100, shLe: 55, shLa: 40, elL: 100 },
+                       { t: 0.46, e: 'o', y: 112, z: 20, fLx: 9, fRx: -9, fLz: 30, fLl: 14, fLh: 40, fRz: 34, fRl: 46, fRh: -10,
+                         shRe: 170, shRa: 10, elR: 15, wrR: -20, shLe: 100, shLa: 50, elL: 60 },
+                       { t: 0.56, y: 110, z: 20, fLx: 9, fRx: -9, fLz: 30, fLl: 12, fLh: 40, fRz: 34, fRl: 40, fRh: -10,
+                         shRe: 172, shRa: 10, elR: 10, wrR: 50, shLe: 100, shLa: 50, elL: 60 },
+                       { t: 0.78, e: 'i', y: 92, z: 18, fLx: 9, fRx: -9, fLz: 28, fRz: 20, shRe: 60, shRa: 30, elR: 60, shLe: 50, shLa: 50, elL: 80 },
+                       { t: 1, y: 95, ...SYM({ fLx: 9 }), shRe: 40, shRa: 30, elR: 110, shLe: 40, shLa: 50, elL: 110 }] },
+      rebound:   { ...STAND, ball: 'catch', dur: 1400, cam: -30, base: SYM({ fLx: 12, fLyaw: 8 }), k: JUMP_UP_K },
+      jump_up:   { ...STAND, dur: 1400, cam: -30, base: SYM({ fLx: 12, fLyaw: 8 }), k: JUMP_UP_K },
+      // Передача от груди в стену: шаг вперёд, руки выпрямляются
+      pass:      { ...STAND, ball: 'pass', dur: 1300, cam: -62,
+                   k: [{ t: 0, y: 93, ...SYM({ fLx: 10, shLe: 36, shLa: 24, shLt: 30, elL: 120, wrL: -20 }) },
+                       { t: 0.3, e: 'o', y: 92, z: 8, pitch: 6, fLz: 24, fLx: 10, fRx: -10, ...SYM({ shLe: 84, shLa: 8, shLt: 0, elL: 8, wrL: 40 }) },
+                       { t: 0.45, y: 92, z: 8, pitch: 6, fLz: 24, fLx: 10, fRx: -10, ...SYM({ shLe: 84, shLa: 8, elL: 8, wrL: 40 }) },
+                       { t: 1, y: 93, ...SYM({ fLx: 10, shLe: 36, shLa: 24, shLt: 30, elL: 120, wrL: -20 }) }] },
+
+      // ===== Гимнастика для глаз (сидя, крупный план) =====
+      // Голова неподвижна — двигается визор: так видно, куда смотрят глаза
+      eyes_blink:  { ...SIT, dur: 1400, base: SIT_POSE,
+                     k: [{ t: 0 }, { t: 0.08, eyO: 0.05 }, { t: 0.16 }, { t: 0.3, eyO: 0.05 }, { t: 0.38 }, { t: 0.52, eyO: 0.05 }, { t: 0.6 }, { t: 1 }] },
+      eyes_updown: { ...SIT, dur: 3200, base: SIT_POSE,
+                     k: [{ t: 0 }, { t: 0.22, eyY: 30 }, { t: 0.32, eyY: 30 }, { t: 0.5 }, { t: 0.72, eyY: -26 }, { t: 0.82, eyY: -26 }, { t: 1 }] },
+      eyes_sides:  { ...SIT, dur: 3200, base: SIT_POSE,
+                     k: [{ t: 0 }, { t: 0.22, eyX: 36 }, { t: 0.32, eyX: 36 }, { t: 0.5 }, { t: 0.72, eyX: -36 }, { t: 0.82, eyX: -36 }, { t: 1 }] },
+      eyes_diag:   { ...SIT, dur: 4800, base: SIT_POSE,
+                     k: [{ t: 0 }, { t: 0.12, eyX: 30, eyY: -22 }, { t: 0.25 }, { t: 0.37, eyX: -30, eyY: 24 }, { t: 0.5 },
+                         { t: 0.62, eyX: -30, eyY: -22 }, { t: 0.75 }, { t: 0.87, eyX: 30, eyY: 24 }, { t: 1 }] },
+      eyes_circle: { ...SIT, dur: 4000, base: SIT_POSE, k: CYCLE(24, t => ({ eyX: 32 * COS(t), eyY: 24 * SIN(t) })) },
+      eyes_eight:  { ...SIT, dur: 5200, base: SIT_POSE, k: CYCLE(32, t => ({ eyX: 34 * SIN(t), eyY: 18 * Math.sin(4 * Math.PI * t) })) },
+      eyes_closed: { ...SIT, dur: 5600, base: { ...SIT_POSE, eyO: 0 },
+                     k: [{ t: 0 }, { t: 0.15, eyY: 24 }, { t: 0.3, eyY: -22 }, { t: 0.42 }, { t: 0.6, eyX: 32 }, { t: 0.78, eyX: -32 }, { t: 0.9 }, { t: 1 }] },
+      eyes_far:    { ...SIT, dur: 5000, base: { ...SIT_POSE, eyY: 3 }, k: [{ t: 0 }, { t: 0.5, s2f: -1.5, nkf: -4 }, { t: 1 }] },
+      eyes_squeeze:{ ...SIT, dur: 4000, base: SIT_POSE,
+                     k: [{ t: 0 }, { t: 0.08, eyO: 0, nkf: 3 }, { t: 0.45, eyO: 0, nkf: 3 }, { t: 0.55, eyO: 1.35, nkf: -3 }, { t: 0.9, eyO: 1.35, nkf: -3 }, { t: 1 }] },
+      // Палец приближается к носу и уходит обратно
+      eyes_near:   { ...SIT, hands: 'R', elbow: [1, -0.8, 0.1], handDir: [0, 8.5, 1], dur: 4000,
+                     base: { ...SIT_POSE, hRx: -2, hRy: 109.5, eyY: -4 },
+                     k: [{ t: 0, hRz: 50 }, { t: 0.45, hRz: 18, eyO: 0.85 }, { t: 0.55, hRz: 18, eyO: 0.85 }, { t: 1, hRz: 50 }] },
+      // Пальминг: ладони закрывают глаза
+      eyes_palm:   { ...SIT, hands: true, elbow: [0.6, -1, 0.8], handDir: [0, 8, 1.5], dur: 5200,
+                     base: { ...SIT_POSE, nkf: 8, eyO: 0, ...SYM({ hLx: 5, hLy: 109, hLz: 13 }) },
+                     k: [{ t: 0 }, { t: 0.5, s2f: -1.5, nkf: 9 }, { t: 1 }] },
+      // Массаж висков: кончики пальцев рисуют маленькие круги
+      eyes_massage:{ ...SIT, hands: true, elbow: [0.5, -1, 0.35], handDir: [0, 9, -0.5], dur: 2400,
+                     base: { ...SIT_POSE, eyO: 0, ...SYM({ hLx: 12, hLy: 106, hLz: 8 }) },
+                     k: CYCLE(12, t => ({ hLy: 106 + 1.6 * SIN(t), hRy: 106 + 1.6 * SIN(t), hLz: 8 + 1.6 * COS(t), hRz: 8 + 1.6 * COS(t) })) },
     };
 
     // ---------- Фигурка на экране тренировки ----------
@@ -2246,6 +2582,8 @@
     function figResize() {
       const r = figCanvas.getBoundingClientRect();
       if (!r.width || !r.height) return;
+      // Места почти нет (раскрыты подсказки, много подходов) — фигурку не рисуем
+      if (r.height < 60) { figW = 0; figCanvas.width = 1; figCanvas.height = 1; return; }
       figDpr = Math.min(3, window.devicePixelRatio || 1);
       figW = r.width; figH = r.height;
       figCanvas.width = Math.round(figW * figDpr); figCanvas.height = Math.round(figH * figDpr);
@@ -2293,7 +2631,7 @@
       lastBody = body;
       figCtx.setTransform(figDpr, 0, 0, figDpr, 0, 0);
       figCtx.clearRect(0, 0, figW, figH);
-      drawBody(figCtx, body, makeCam(camYaw, camPitch), fit, figColors, anim, { breath: (1 - Math.cos(2 * Math.PI * t)) / 2 });
+      drawBody(figCtx, body, makeCam(camYaw, camPitch), fit, figColors, anim, { breath: (1 - Math.cos(2 * Math.PI * t)) / 2, t });
     }
 
     // =====================================================================
@@ -2312,7 +2650,10 @@
     let woStarted = null;  // когда начали (дата и время для дневника)
     let doneSet = [];      // doneSet[i] = true — упражнение (подход) номер i выполнено
     let woSets = [];       // зал: что вы ввели для подхода номер i — { w: вес, r: повторы }
-    let panelIndex = null; // какой подход сейчас в панели «вес и повторы»
+    let panelFirst = null; // зал: первый подход упражнения, которое сейчас в панели «вес и повторы»
+    let woDist = { dist: null, du: 'lap' };   // бассейн и бег: дистанция этого занятия
+    // Подсказки на отдыхе (у вида занятия могут быть свои — restTips в data.js)
+    const DEFAULT_REST_TIPS = ['Дышите спокойно — вдох носом, выдох ртом', 'Пейте воду маленькими глотками'];
 
     function buildSteps(workout) {
       const list = workout.exercises;
@@ -2355,9 +2696,17 @@
       woStarted = new Date();
       doneSet = [];
       woSets = [];
-      panelIndex = null;
+      panelFirst = null;
+      buildSetRows(null);
       buildProgress();
-      closeTips();
+      setTipsOpen(false);
+      // Бассейн и бег: панель «Дистанция» (круги или км)
+      const s = sport();
+      woDist = { dist: null, du: s.distance || 'lap' };
+      $('dist-panel').classList.toggle('hidden', !s.distance);
+      if (s.distance) renderDistEditor($('wo-dist'), woDist, () => {}, false);
+      // «Выполнено» на паузе не нужна медитации: там одно упражнение
+      $('mark-btn').classList.toggle('hidden', isSimple());
       $('workout').classList.toggle('med', isSimple());   // медитация — свой вид экрана
       show('workout');
       renderPause();
@@ -2410,7 +2759,7 @@
       renderTime();
     }
 
-    // Показать фазу, название, подпись, бегущую строку, анимацию
+    // Показать фазу, название, подпись, подсказки, анимацию
     function renderStep() {
       const step = steps[stepIndex];
       const ex = step.ex; // на отдыхе и подготовке — следующее упражнение
@@ -2420,7 +2769,7 @@
 
       const med = isSimple();
       $('phase').textContent = step.kind === 'work' ? (med ? 'Медитация' : 'Работа')
-        : step.kind === 'rest' ? 'Отдых · далее' : 'Приготовьтесь';
+        : step.kind === 'rest' ? (sport().restLabel || 'Отдых') + ' · далее' : 'Приготовьтесь';
       $('med-label').textContent = step.kind === 'work' ? 'осталось' : 'приготовьтесь';
       $('ex-name').textContent = ex.name;
       $('pause-ex').textContent = (step.kind === 'work' ? '' : 'Далее: ') + ex.name;
@@ -2430,13 +2779,8 @@
       $('wo-sub').textContent = subLine(ex, step.index);
       renderSetPanel();
 
-      // Бегущая строка: как выполнять + дыхание + ощущения
-      let text;
-      if (step.kind === 'work') text = [ex.description, ...ex.tips].join('   •   ');
-      else if (step.kind === 'rest') text = ['Отдых: дышите спокойно — вдох носом, выдох ртом', 'Пейте воду маленькими глотками', 'Далее: ' + ex.description].join('   •   ');
-      else text = ['Займите исходное положение', ex.description].join('   •   ');
-      setTicker(text);
-      if (tipsOpen()) fillTips();   // шторка открыта — показываем текст нового упражнения
+      // Подсказки (выпадающее меню): как выполнять + дыхание + ощущения
+      fillTips();
 
       // Видео, если есть ссылка; иначе — анимация фигурки
       const hasVideo = !!ex.video_url;
@@ -2454,22 +2798,14 @@
       renderTime();
     }
 
-    function setTicker(text) {
-      const track = $('ticker-track');
-      track.children[0].textContent = text;
-      track.children[1].textContent = text;
-      // Скорость ~45 пикселей в секунду, перезапуск с начала
-      track.style.animation = 'none';
-      void track.offsetWidth;
-      track.style.animation = '';
-      track.style.animationDuration = Math.max(12, track.children[0].offsetWidth / 45) + 's';
-    }
-
-    // «Подход 1 из 3 · 60 кг × 8» (в зале — с весом), «10 раз».
+    // «Подход 1 из 3 · 60 кг × 8» (в зале — с весом), «Отрезок 2 из 6» (бег), «10 раз».
     // i — номер упражнения в списке тренировки (по нему ищем введённый вес)
     function subLine(ex, i) {
       const parts = [];
-      if (ex.sets) parts.push('Подход ' + ex.set + ' из ' + ex.sets);
+      if (ex.sets) {
+        const word = setWord(sport(), 1);   // «подход», «отрезок», «раунд»
+        parts.push(word[0].toUpperCase() + word.slice(1) + ' ' + ex.set + ' из ' + ex.sets);
+      }
       if (loggable(ex) && i != null && state.workout.exercises[i] === ex) {
         const v = setValue(i);
         const reps = v.r == null ? '—' : v.r;
@@ -2484,31 +2820,47 @@
       renderProgress();
     }
 
-    // ---------- Зал: панель «вес и повторы» ----------
+    // ---------- Зал: вес и повторы сразу всех подходов упражнения ----------
     /*
-      Какой вес подставить в подход (по порядку):
-        1) что вы ввели сами;
-        2) если в предыдущем подходе этого упражнения вы поменяли вес — тот же вес;
-        3) вес этого подхода в прошлый раз;
-        4) вес предыдущего подхода.
-      Повторы: что ввели → как в прошлый раз → по плану программы.
+      В панели — все подходы упражнения, строка — подход: на работе — упражнение,
+      которое вы делаете, на отдыхе — то, что только что сделали.
+      Меняете вес или повторы в подходе — следующие подходы, которые вы сами
+      не трогали, подстраиваются: так данные вносятся сразу на все подходы.
+      Что подставить в подход (по порядку):
+        1) что вы ввели сами в этом подходе;
+        2) что ввели в ближайшем предыдущем подходе этого упражнения;
+        3) как было в этом подходе в прошлый раз;
+        4) вес — как в предыдущем подходе; повторы — по плану программы.
       i — номер подхода в списке упражнений тренировки.
     */
     function setValue(i) {
       const list = state.workout.exercises;
       const item = list[i];
-      const own = woSets[i] || {};
       const last = lastSetsOf(item.id)[(item.set || 1) - 1];
+      // Своё значение: в этом подходе или в ближайшем предыдущем этого же упражнения
+      const own = field => {
+        for (let j = i; j >= 0 && list[j].id === item.id; j--) if (woSets[j] && field in woSets[j]) return { v: woSets[j][field] };
+        return null;
+      };
       const prev = i > 0 && list[i - 1].id === item.id ? i - 1 : -1;   // предыдущий подход того же упражнения
+      const ow = own('w'), or = own('r');
       let w = null;
-      if ('w' in own) w = own.w;
-      else if (prev >= 0 && woSets[prev] && 'w' in woSets[prev]) w = setValue(prev).w;
+      if (ow) w = ow.v;
       else if (last) w = last[0];
       else if (prev >= 0) w = setValue(prev).w;
       let r = item.reps;
-      if ('r' in own) r = own.r;
+      if (or) r = or.v;
       else if (last && last[1] != null) r = last[1];
       return { w, r };
+    }
+
+    // Все подходы упражнения, в которое входит подход i: { first, last } — номера в списке
+    function blockOf(i) {
+      const list = state.workout.exercises, id = list[i].id;
+      let first = i, last = i;
+      while (first > 0 && list[first - 1].id === id) first--;
+      while (last < list.length - 1 && list[last + 1].id === id) last++;
+      return { first, last };
     }
 
     // Какой подход в панели: на работе — текущий, на отдыхе — только что сделанный
@@ -2521,93 +2873,141 @@
       return null;
     }
 
+    // Кнопки −/+ вокруг поля: вес шагом 2,5 кг, повторы — по одному
+    const stepperHtml = field => {
+      const w = field === 'w';
+      return '<div class="stepper sm">' +
+        '<button class="st-btn" data-field="' + field + '" data-step="' + (w ? -2.5 : -1) + '" aria-label="' + (w ? 'Меньше вес' : 'Меньше повторов') + '">−</button>' +
+        '<input class="field st-input" data-field="' + field + '" inputmode="' + (w ? 'decimal' : 'numeric') + '" autocomplete="off" placeholder="—" aria-label="' + (w ? 'Вес, кг' : 'Повторы') + '">' +
+        '<button class="st-btn" data-field="' + field + '" data-step="' + (w ? 2.5 : 1) + '" aria-label="' + (w ? 'Больше вес' : 'Больше повторов') + '">+</button></div>';
+    };
+
+    // Строки подходов (перестраиваются, только когда сменилось упражнение)
+    function buildSetRows(blk) {
+      const box = $('sp-sets');
+      box.innerHTML = '';
+      if (!blk) return;
+      for (let j = blk.first; j <= blk.last; j++) {
+        const row = document.createElement('div');
+        row.className = 'sp-set';
+        row.dataset.i = j;
+        row.innerHTML = '<span class="sp-no"></span>' + stepperHtml('w') + '<span class="sp-x">×</span>' + stepperHtml('r');
+        box.append(row);
+      }
+    }
+
+    // Обновить числа и отметки в строках. Поле, в котором вы печатаете, не трогаем
+    function updateSetRows() {
+      const step = steps[stepIndex];
+      $('sp-sets').querySelectorAll('.sp-set').forEach(row => {
+        const j = +row.dataset.i;
+        const v = setValue(j);
+        // Выделен подход, который делаете сейчас (на отдыхе — следующий)
+        row.classList.toggle('cur', !!step && step.kind !== 'prep' && step.index === j);
+        row.classList.toggle('done', !!doneSet[j]);
+        row.querySelector('.sp-no').textContent = doneSet[j] ? '✓' : String(state.workout.exercises[j].set || 1);
+        row.querySelectorAll('input').forEach(input => {
+          if (document.activeElement === input) return;
+          const x = v[input.dataset.field];
+          input.value = input.dataset.field === 'w' ? fmtNum(x) : x == null ? '' : String(x);
+        });
+      });
+    }
+
     function renderSetPanel() {
       const i = panelTarget();
       const panel = $('set-panel');
-      // Подход сменился, а вы печатали — убираем клавиатуру
-      if (i !== panelIndex && panel.contains(document.activeElement)) document.activeElement.blur();
-      panelIndex = i;
+      const blk = i == null ? null : blockOf(i);
+      const first = blk ? blk.first : null;
+      if (first !== panelFirst) {
+        // Сменилось упражнение, а вы печатали — убираем клавиатуру и перестраиваем строки
+        if (panel.contains(document.activeElement)) document.activeElement.blur();
+        panelFirst = first;
+        buildSetRows(blk);
+      }
       panel.classList.toggle('hidden', i == null);
       if (i == null) return;
       const item = state.workout.exercises[i];
       $('sp-title').textContent = steps[stepIndex].kind === 'rest'
-        ? 'Сделано: ' + item.name + ', подход ' + item.set + ' из ' + item.sets
-        : 'Подход ' + item.set + ' из ' + item.sets + ': вес и повторы';
-      const v = setValue(i);
-      // Пока вы печатаете в поле — его не трогаем
-      if (document.activeElement !== $('sp-w')) $('sp-w').value = fmtNum(v.w);
-      if (document.activeElement !== $('sp-r')) $('sp-r').value = v.r == null ? '' : String(v.r);
+        ? 'Сделано: ' + item.name
+        : 'Все подходы: вес и повторы';
+      updateSetRows();
     }
 
-    // Запомнить введённое и обновить подпись (на отдыхе там следующий подход,
-    // и его подсказка зависит от только что введённого веса)
-    function setOwn(field, value) {
-      if (panelIndex == null) return;
-      woSets[panelIndex] = { ...(woSets[panelIndex] || {}), [field]: value };
+    // Запомнить введённое и обновить подпись под названием
+    function setOwn(i, field, value) {
+      woSets[i] = { ...(woSets[i] || {}), [field]: value };
       const step = steps[stepIndex];
       $('wo-sub').textContent = subLine(step.ex, step.index);
     }
 
-    // Кнопки −/+ : вес шагом 2,5 кг, повторы — по одному
-    document.querySelectorAll('#set-panel .st-btn').forEach(btn => btn.addEventListener('click', () => {
-      if (panelIndex == null) return;
+    // Кнопки −/+ (одна общая «слушалка» на все строки)
+    $('sp-sets').addEventListener('click', e => {
+      const btn = e.target.closest('.st-btn');
+      if (!btn) return;
+      const i = +btn.closest('.sp-set').dataset.i;
       const field = btn.dataset.field;
-      const cur = setValue(panelIndex)[field] || 0;
+      const cur = setValue(i)[field] || 0;
       const v = Math.max(0, Math.round((cur + parseFloat(btn.dataset.step)) * 100) / 100);
-      setOwn(field, field === 'r' ? Math.round(v) : v);
+      setOwn(i, field, field === 'r' ? Math.round(v) : v);
       haptic('select');
-      renderSetPanel();
-    }));
-    // Ввод цифрами с клавиатуры телефона
-    [['sp-w', 'w'], ['sp-r', 'r']].forEach(([id, field]) => {
-      const input = $(id);
-      input.addEventListener('input', () => {
-        const v = parseNum(input.value);
-        setOwn(field, field === 'r' && v != null ? Math.round(v) : v);
-      });
-      input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
-      input.addEventListener('blur', () => {
-        renderSetPanel();
-        if (current === 'workout') window.scrollTo(0, 0);   // iPhone мог сдвинуть экран под клавиатуру
-      });
+      updateSetRows();
     });
-    // Нажатия по панели не ставят паузу
+    // Ввод цифрами с клавиатуры телефона: следующие подходы подстраиваются сразу
+    $('sp-sets').addEventListener('input', e => {
+      const input = e.target.closest('input');
+      if (!input) return;
+      const i = +input.closest('.sp-set').dataset.i, field = input.dataset.field;
+      const v = parseNum(input.value);
+      setOwn(i, field, field === 'r' && v != null ? Math.round(v) : v);
+      updateSetRows();
+    });
+    $('sp-sets').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.blur) e.target.blur(); });
+    // Нажатия по панелям не ставят паузу
     $('set-panel').addEventListener('click', e => e.stopPropagation());
+    $('dist-panel').addEventListener('click', e => e.stopPropagation());
+    // Убрали клавиатуру: показываем числа красиво (62,5), iPhone мог сдвинуть экран — возвращаем
+    $('workout').addEventListener('focusout', () => setTimeout(() => {
+      if (current !== 'workout' || $('workout').contains(document.activeElement)) return;
+      updateSetRows();
+      window.scrollTo(0, 0);
+    }, 0));
 
-    // --- Шторка «Все рекомендации»: нажатие на бегущую строку ---
+    // ---------- Подсказки: выпадающее меню ----------
     // Таймер не останавливается: можно читать во время упражнения.
-    function tipsOpen() { return !$('tips-sheet').classList.contains('hidden'); }
+    function tipsOpen() { return $('tips-box').classList.contains('open'); }
+    function setTipsOpen(open) {
+      $('tips-box').classList.toggle('open', open);
+      $('tips-head').setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    // Текст подсказок для текущего шага. На отдыхе — отдых и следующее упражнение
     function fillTips() {
       const step = steps[stepIndex];
       if (!step) return;
       const ex = step.ex;
-      let eyebrow = 'Как выполнять', tips = ex.tips;
+      let label = 'Как выполнять', desc = ex.description, tips = ex.tips;
       if (step.kind === 'rest') {
-        eyebrow = 'Отдых · далее';
-        tips = ['Дышите спокойно — вдох носом, выдох ртом', 'Пейте воду маленькими глотками', ...ex.tips];
+        label = 'Отдых и что дальше';
+        tips = [...(sport().restTips || DEFAULT_REST_TIPS), ...ex.tips];
       } else if (step.kind === 'prep') {
-        eyebrow = 'Приготовьтесь · далее';
+        label = 'Приготовьтесь: как выполнять';
+        desc = 'Займите исходное положение. ' + ex.description;
       }
-      $('tips-eyebrow').textContent = eyebrow;
-      $('tips-title').textContent = ex.name;
-      $('tips-sub').textContent = subLine(ex, step.index);
-      $('tips-desc').textContent = ex.description;
+      $('tips-label').textContent = label;
+      $('tips-desc').textContent = desc;
       const ul = $('tips-list');
       ul.innerHTML = '';
       tips.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.append(li); });
       ul.classList.toggle('hidden', tips.length === 0);
+      $('tips-body').scrollTop = 0;
     }
-    function openTips(e) {
+    $('tips-head').addEventListener('click', e => {
       e.stopPropagation();          // не ставим паузу
-      fillTips();
-      $('tips-sheet').classList.remove('hidden');
+      setTipsOpen(!tipsOpen());
       haptic('light');
-    }
-    function closeTips() { $('tips-sheet').classList.add('hidden'); }
-    $('ticker').addEventListener('click', openTips);
-    // Касание по затемнению — закрыть; касание по самой шторке — ничего (и без паузы)
-    $('tips-sheet').addEventListener('click', e => { e.stopPropagation(); if (e.target === $('tips-sheet')) closeTips(); });
-    $('tips-close').addEventListener('click', e => { e.stopPropagation(); closeTips(); });
+    });
+    // Нажатия внутри подсказок тоже не ставят паузу
+    $('tips-box').addEventListener('click', e => e.stopPropagation());
 
     // --- Пауза / продолжить: касание по экрану ---
     function renderPause() {
@@ -2625,9 +3025,12 @@
       renderPause();
       haptic('medium');
     }
-    $('workout').addEventListener('click', togglePause);
+    $('workout').addEventListener('click', () => {
+      if (Date.now() - swipedAt < 500) return;   // это был свайп, а не касание
+      togglePause();
+    });
 
-    // --- Вперёд / назад (на паузе) ---
+    // --- Вперёд / назад (на паузе и свайпом) ---
     // Номер упражнения, на котором сейчас стоим
     function currentExercise() {
       const step = steps[stepIndex];
@@ -2658,6 +3061,70 @@
     $('play-btn').addEventListener('click', e => { e.stopPropagation(); togglePause(); });
     $('end-btn').addEventListener('click', e => { e.stopPropagation(); askExit(); });
 
+    // --- «Выполнено» (на паузе, под кнопкой «вперёд») ---
+    // Отмечает упражнение, названное на экране паузы (на отдыхе — следующее),
+    // выполненным — оно попадёт в дневник, даже если таймер не дошёл до конца.
+    // Затем — дальше: к отдыху после него или к следующему упражнению. Таймер продолжает идти.
+    function markDone() {
+      const step = steps[stepIndex];
+      const k = step.index;
+      doneSet[k] = true;
+      haptic('success');
+      if (paused) { paused = false; lastTick = Date.now(); renderPause(); }
+      const w = steps.findIndex(s => s.kind === 'work' && s.index === k);
+      if (w < 0 || w + 1 >= steps.length) return finishWorkout();
+      goToStep(w + 1);
+    }
+    $('mark-btn').addEventListener('click', e => { e.stopPropagation(); markDone(); });
+
+    // --- Свайп по экрану: влево — следующее упражнение, вправо — предыдущее ---
+    // Работает и во время упражнения, и на паузе (пауза при этом остаётся).
+    let swipe = null;      // где начали вести пальцем
+    let swipedAt = 0;      // когда был свайп: следом браузер может прислать «касание»
+    $('workout').addEventListener('touchstart', e => {
+      swipe = null;
+      if (e.touches.length !== 1 || isSimple()) return;
+      if (e.target.closest('input, textarea, .tips-body')) return;   // в полях и тексте подсказок — не листаем
+      const t = e.touches[0];
+      swipe = { x: t.clientX, y: t.clientY, time: Date.now() };
+    }, { passive: true });
+    // Ведём пальцем в сторону — браузер не должен листать страницу «назад»
+    $('workout').addEventListener('touchmove', e => {
+      if (!swipe || e.touches.length !== 1) return;
+      const t = e.touches[0];
+      const dx = Math.abs(t.clientX - swipe.x), dy = Math.abs(t.clientY - swipe.y);
+      if (dx > 10 && dx > dy && e.cancelable) e.preventDefault();
+    }, { passive: false });
+    $('workout').addEventListener('touchend', e => {
+      if (!swipe) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - swipe.x, dy = t.clientY - swipe.y, dt = Date.now() - swipe.time;
+      swipe = null;
+      // Свайп — это быстрое и заметное движение в сторону, а не вверх-вниз
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5 || dt > 800) return;
+      swipedAt = Date.now();
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      haptic('light');
+      if (dx < 0) nextExercise(); else prevExerciseStrict();
+      if (current === 'workout') swipeAnim(dx < 0 ? 'swipe-next' : 'swipe-prev');
+    });
+    // Свайп вправо — всегда предыдущее упражнение (а не «заново текущее», как у кнопки)
+    function prevExerciseStrict() {
+      const step = steps[stepIndex];
+      if (step.kind === 'prep') return goToStep(0);
+      const cur = currentExercise();
+      goToExercise(step.kind === 'rest' ? cur : Math.max(0, cur - 1));
+    }
+    // Название упражнения въезжает с той стороны, куда листали
+    function swipeAnim(cls) {
+      ['ex-name', 'wo-sub', 'pause-ex'].forEach(id => {
+        const el = $(id);
+        el.classList.remove('swipe-next', 'swipe-prev');
+        void el.offsetWidth;   // перезапуск анимации
+        el.classList.add(cls);
+      });
+    }
+
     // Выход: ставим паузу и спрашиваем. Если позанимались хотя бы минуту —
     // показываем итоги и записываем в дневник то, что успели сделать.
     function askExit() {
@@ -2671,7 +3138,6 @@
 
     function stopWorkout() {
       clearInterval(timerId);
-      closeTips();
       releaseScreen();
       show('home');
     }
@@ -2681,7 +3147,6 @@
       leaveStep();
       clearInterval(timerId);
       releaseScreen();
-      closeTips();
       if (!early) {
         if (isSimple()) bell(); else beep(1318, 400);
         haptic('success');
@@ -2726,15 +3191,35 @@
         min: Math.max(1, Math.round(doneSeconds / 60)),
         n,
         gym: s.sets ? workoutGym() : [],
+        dist: s.distance ? woDist.dist : null,   // бассейн и бег: что ввели на тренировке
+        du: woDist.du,
         note: '',
       };
 
       $('done-title').textContent = early ? 'Занятие завершено' : 'Готово!';
       $('done-sub').textContent = simple ? s.name : s.name + ' · ' + state.workout.name;
+      renderDoneStats();
+
+      // Зал: таблица «вес × повторы» — проверить и поправить
+      $('done-gym').classList.toggle('hidden', !s.sets);
+      if (s.sets) renderSetsEditor($('done-sets'), doneEntry.gym, onDoneEdit);
+      // Бассейн и бег: дистанция — ввести или поправить
+      $('done-dist-box').classList.toggle('hidden', !s.distance);
+      if (s.distance) renderDistEditor($('done-dist'), doneEntry, () => { renderDoneStats(); onDoneEdit(); }, true);
+      $('done-note').value = '';
+      show('done');
+      $('done-saved').textContent = 'Записываю в дневник…';
+      saveDone();
+    }
+
+    // Плашки итогов: время, упражнения, подходы, дистанция
+    function renderDoneStats() {
+      const e = doneEntry;
       const stats = [[formatClock(doneSeconds), 'время']];
-      if (!simple) stats.push([String(n), plural(n, 'упражнение', 'упражнения', 'упражнений')]);
-      const k = doneEntry.gym.reduce((t, b) => t + b.sets.length, 0);
+      if (!isSimple()) stats.push([String(e.n), plural(e.n, 'упражнение', 'упражнения', 'упражнений')]);
+      const k = e.gym.reduce((t, b) => t + b.sets.length, 0);
       if (k) stats.push([String(k), plural(k, 'подход', 'подхода', 'подходов')]);
+      if (e.dist) stats.push(e.du === 'km' ? [fmtNum(e.dist), 'км'] : [String(e.dist), plural(e.dist, 'круг', 'круга', 'кругов')]);
       $('done-stats').innerHTML = '';
       stats.forEach(([value, label]) => {
         const d = document.createElement('div');
@@ -2744,14 +3229,6 @@
         d.querySelector('span').textContent = label;
         $('done-stats').append(d);
       });
-
-      // Зал: таблица «вес × повторы» — проверить и поправить
-      $('done-gym').classList.toggle('hidden', !s.sets);
-      if (s.sets) renderSetsEditor($('done-sets'), doneEntry.gym, onDoneEdit);
-      $('done-note').value = '';
-      show('done');
-      $('done-saved').textContent = 'Записываю в дневник…';
-      saveDone();
     }
 
     // Сохранить запись тренировки (сразу после занятия и после правок).
@@ -2914,6 +3391,7 @@
       about.className = 'about';
       const bits = [entryTitle(e), formatMinutes(e.min || 0)];
       if (e.n) bits.push(e.n + ' ' + plural(e.n, 'упражнение', 'упражнения', 'упражнений'));
+      if (e.dist) bits.push(distText(e.dist, e.du));   // бассейн и бег
       about.textContent = bits.filter(Boolean).join(' · ');
       card.append(title, about);
       (e.gym || []).forEach(b => {
@@ -2974,6 +3452,8 @@
       }
       form.gym = form.gym || [];
       form.dir = form.dir || '';
+      form.dist = form.dist || null;
+      form.du = form.du || getSport(form.sport).distance || 'lap';
       setsTouched = minTouched = !!entry;
       if (!entry) setFormDir(defaultDir(form.sport));
       formDirty = false;
@@ -3013,6 +3493,7 @@
           if (x.id === form.sport) return;
           form.sport = x.id;
           if (!minTouched) form.min = x.def;
+          if (form.dist == null && x.distance) form.du = x.distance;   // бассейн — в кругах, бег — в км
           setFormDir(defaultDir(x.id));
           formDirty = true;
           haptic('select');
@@ -3038,6 +3519,9 @@
       // Зал: веса и повторы
       $('f-gym-box').classList.toggle('hidden', !s.sets);
       if (s.sets) renderSetsEditor($('f-sets'), form.gym, () => { setsTouched = true; formDirty = true; });
+      // Бассейн и бег: дистанция
+      $('f-dist-box').classList.toggle('hidden', !s.distance);
+      if (s.distance) renderDistEditor($('f-dist'), form, () => { formDirty = true; }, true);
     }
 
     $('f-date').addEventListener('change', () => { form.date = $('f-date').value; formDirty = true; });
@@ -3198,6 +3682,69 @@
         redraw();
       });
       box.append(sel);
+    }
+
+    // =====================================================================
+    //  15б. Дистанция (бассейн и бег): число и единица — круги или километры.
+    //  obj — где хранить: { dist: число или null, du: 'lap' | 'km' }.
+    //  Одна и та же панель на экране тренировки, «Готово» и в дневнике.
+    //  wide — крупные кнопки (экран «Готово» и дневник).
+    // =====================================================================
+    const DIST_UNITS = { lap: { step: 1, label: 'Круги' }, km: { step: 0.1, label: 'Км' } };
+
+    // 12 → «12 кругов», 1.2 км → «1,2 км»
+    function distText(v, u) {
+      if (!v) return '';
+      return u === 'km' ? fmtNum(v) + ' км' : v + ' ' + plural(v, 'круг', 'круга', 'кругов');
+    }
+
+    function renderDistEditor(box, obj, onChange, wide) {
+      box.innerHTML = '';
+      if (!DIST_UNITS[obj.du]) obj.du = 'lap';
+      // Число: кнопки −/+ и поле для ввода цифрами
+      const stepper = document.createElement('div');
+      stepper.className = 'stepper' + (wide ? ' wide' : '');
+      stepper.innerHTML = '<button class="st-btn" aria-label="Меньше">−</button>' +
+        '<input class="field st-input" inputmode="decimal" autocomplete="off" placeholder="—" aria-label="Дистанция">' +
+        '<button class="st-btn" aria-label="Больше">+</button>';
+      const [minus, plus] = stepper.querySelectorAll('button');
+      const input = stepper.querySelector('input');
+      const show = () => { if (document.activeElement !== input) input.value = obj.dist == null ? '' : fmtNum(obj.dist); };
+      // Круги — целым числом, километры — с десятыми; 0 — пусто
+      const clean = v => v == null ? null : obj.du === 'lap' ? (Math.round(v) || null) : (Math.round(v * 100) / 100 || null);
+      const bump = k => {
+        obj.dist = clean(Math.max(0, (obj.dist || 0) + k * DIST_UNITS[obj.du].step));
+        haptic('select');
+        show();
+        onChange();
+      };
+      minus.addEventListener('click', () => bump(-1));
+      plus.addEventListener('click', () => bump(1));
+      input.addEventListener('input', () => { obj.dist = clean(parseNum(input.value)); onChange(); });
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+      input.addEventListener('blur', show);
+      // Переключатель «Круги | Км»
+      const seg = document.createElement('div');
+      seg.className = 'seg';
+      seg.setAttribute('role', 'group');
+      seg.setAttribute('aria-label', 'Единица дистанции');
+      Object.keys(DIST_UNITS).forEach(u => {
+        const b = document.createElement('button');
+        b.textContent = DIST_UNITS[u].label;
+        b.classList.toggle('on', obj.du === u);
+        b.addEventListener('click', () => {
+          if (obj.du === u) return;
+          obj.du = u;
+          obj.dist = clean(obj.dist);
+          seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+          haptic('select');
+          show();
+          onChange();
+        });
+        seg.append(b);
+      });
+      box.append(stepper, seg);
+      show();
     }
 
     // =====================================================================
