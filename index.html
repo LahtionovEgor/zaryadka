@@ -38,9 +38,13 @@
       --raised:    8px 8px 16px var(--dark), -8px -8px 16px var(--light);
       --raised-sm: 5px 5px 10px var(--dark), -5px -5px 10px var(--light);
       --pressed:   inset 5px 5px 10px var(--dark), inset -5px -5px 10px var(--light);
-      /* Цвета фаз тренировки */
-      --rest: #16803d;
-      --prep: #b45309;
+      /* Цвета фаз тренировки (как на макете «Таймер»): работа — оранжевый,
+         отдых — зелёный, подготовка — синий. Вторые цвета (-ink) — для текста:
+         чуть темнее, чтобы надписи читались на сером фоне (контраст ≥ 4.5:1) */
+      --work: #ea580c;  --work-ink: #bc3e0b;
+      --rest: #16803d;  --rest-ink: #12703a;
+      --prep: #2563eb;  --prep-ink: #1d4ed8;
+      --play: #ea580c;   /* значок на большой кнопке «пауза / продолжить» */
       --font: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       /* Отступы от краёв экрана. Telegram сам задаёт переменные --tg-…,
          в полноэкранном режиме они не нулевые: сверху вырез камеры
@@ -241,9 +245,14 @@
     .sticky-bar .ghost:active { box-shadow: var(--pressed); }
 
     /* ================================================================
-       ЭКРАН ТРЕНИРОВКИ — тот же серый «пластик».
-       Сверху: прогресс, время. Центр: анимация. Внизу: название, панели
-       (зал — подходы, бассейн и бег — дистанция) и выпадающие подсказки.
+       ЭКРАН ТРЕНИРОВКИ — макет «Мягкая объёмность · Таймер».
+       Сверху: полоска прогресса (по «лунке» на упражнение), фаза («● Работа»)
+       и счётчик «1 / 8». В центре: выпуклый диск, кольцо на нём показывает,
+       сколько осталось, в середине — крупное время. Ниже: название, подпись
+       («Подход 1 из 3 · 10 раз»), кнопка «Как выполнять» (открывает шторку
+       с анимацией), панели зала и дистанции. Внизу: назад / пауза / вперёд.
+       Пауза — тот же экран, только «вдавленный»: диск и большая кнопка
+       вдавливаются, время и полоска становятся серыми.
        Касание экрана — пауза, свайп влево/вправо — следующее/предыдущее упражнение.
        ================================================================ */
     #workout {
@@ -255,45 +264,78 @@
       touch-action: pan-y; overscroll-behavior: none;
       background: var(--bg); color: var(--text);
       display: flex; flex-direction: column;
-      --phase: var(--accent);
+      /* Цвет фазы: --phase — кольцо, полоска, точка, визор фигурки;
+         --phase-ink — подписи (темнее, чтобы текст читался) */
+      --phase: var(--work); --phase-ink: var(--work-ink);
+      --ring: 270px;        /* размер диска — подбирает код (fitWorkout) */
     }
-    #workout.ph-rest { --phase: var(--rest); }
-    #workout.ph-prep { --phase: var(--prep); }
-    /* Верх экрана — над слоем паузы (5 больше 4): кнопка «на весь экран»
-       нажимается и на паузе, а часы остаются видны */
-    .wo-top { position: relative; z-index: 5;
+    #workout.ph-rest { --phase: var(--rest); --phase-ink: var(--rest-ink); }
+    #workout.ph-prep { --phase: var(--prep); --phase-ink: var(--prep-ink); }
+
+    /* ---------- Верх: полоска прогресса, фаза и счётчик ----------
+       Он выше шторки «Как выполнять» — виден всегда */
+    .wo-top { position: relative; z-index: 7; flex: none;
               padding: calc(var(--top) + 14px) 20px 0; }
-    /* Полоска прогресса — вдавленный желобок */
-    .progress { display: flex; gap: 4px; height: 8px; padding: 2px; border-radius: 6px; box-shadow: var(--pressed); }
-    .progress .seg { flex: 1; border-radius: 3px; overflow: hidden; }
-    .progress .seg i { display: block; height: 100%; width: 0; background: var(--phase); border-radius: 3px; }
-    .wo-row { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 18px; }
-    #clock { font-size: clamp(56px, 17vw, 96px); font-weight: 800; letter-spacing: -0.05em; line-height: .9;
-             font-variant-numeric: tabular-nums; }
-    .wo-right { display: flex; align-items: center; gap: 12px; }
-    #counter { font-size: 15px; font-weight: 700; color: var(--hint);
-               padding: 6px 12px; border-radius: 99px; box-shadow: var(--raised-sm); }
+    /* Полоска прогресса: на каждое упражнение (подход) — своя вдавленная «лунка»,
+       сделанное заливается цветом фазы */
+    .progress { display: flex; gap: 6px; }
+    .progress.many { gap: 3px; }          /* много подходов — промежутки уже */
+    .progress .seg { flex: 1; min-width: 0; height: 8px; border-radius: 4px; overflow: hidden;
+                     background: var(--bg);
+                     box-shadow: inset 2px 2px 3px var(--dark), inset -2px -2px 3px var(--light); }
+    .progress .seg i { display: block; height: 100%; width: 0; border-radius: 4px;
+                       background: var(--phase); transition: background-color .3s ease; }
+    .wo-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; }
+    /* Фаза: цветная точка и слово — «● Работа», «● Отдых», на паузе — серое «Пауза» */
+    .wo-phase { display: flex; align-items: center; gap: 8px; min-width: 0;
+                font-size: 15px; font-weight: 800; color: var(--phase-ink); white-space: nowrap; }
+    .wo-phase::before { content: ''; flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--phase); }
+    .wo-right { display: flex; align-items: center; gap: 12px; flex: none; }
+    #counter { font-size: 15px; font-weight: 800; color: var(--hint); font-variant-numeric: tabular-nums;
+               padding: 8px 14px; border-radius: 99px; background: var(--bg); box-shadow: var(--raised-sm); }
 
-    /* Сцена с фигуркой */
-    .stage { position: relative; z-index: 1; flex: 1; min-height: 0;
-             display: flex; align-items: center; justify-content: center; }
-    /* Объёмный манекен рисуется на холсте <canvas> (см. раздел 10 в коде) */
-    #figure { width: 100%; height: 100%; max-height: 62vh; display: block; }
-    #figure.preview { opacity: .3; }   /* на отдыхе — показ следующего упражнения */
-    #ex-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    /* ---------- Середина: диск, упражнение, «Как выполнять», панели ----------
+       Если всё не помещается (зал на маленьком экране), диск уменьшается,
+       а середину можно прокрутить (класс scroll ставит код — только когда нужно,
+       иначе обрезались бы мягкие тени у диска) */
+    .wo-main { position: relative; z-index: 1; flex: 1 1 auto; min-height: 0;
+               display: flex; flex-direction: column; align-items: center; gap: 16px;
+               padding: 18px 20px 8px; }
+    .wo-main.scroll { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+    .wo-main.scroll::-webkit-scrollbar { display: none; }
 
-    /* Низ экрана. Если всё не помещается (много подходов, открыты подсказки),
-       фигурка уменьшается, а этот блок можно прокрутить */
-    .wo-bottom { position: relative; z-index: 2; flex: 0 1 auto; min-height: 0;
-                 overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y;
-                 padding: 10px 20px calc(var(--bottom) + 24px); }
-    .phase-pill { display: inline-flex; align-items: center; gap: 8px;
-                  font-size: 14px; font-weight: 700; padding: 7px 14px; border-radius: 99px;
-                  background: var(--bg); box-shadow: var(--raised-sm); }
-    .phase-pill::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--phase); }
-    #ex-name { font-size: clamp(30px, 8.5vw, 52px); font-weight: 800; letter-spacing: -0.045em;
-               line-height: 1.02; margin-top: 12px; }
-    #wo-sub { font-size: clamp(17px, 4.5vw, 22px); font-weight: 700; margin-top: 6px; color: var(--phase); min-height: 1.2em; }
+    /* Диск: выпуклый «пластик», на паузе — вдавленный. У обоих состояний тени
+       одинакового вида (внешние + внутренние), поэтому «нажатие» плавное */
+    .ring {
+      position: relative; flex: none;
+      width: var(--ring); height: var(--ring); border-radius: 50%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: var(--bg);
+      box-shadow: calc(var(--ring) * .06) calc(var(--ring) * .06) calc(var(--ring) * .12) var(--dark),
+                  calc(var(--ring) * -.06) calc(var(--ring) * -.06) calc(var(--ring) * .12) var(--light),
+                  inset 0 0 0 var(--dark), inset 0 0 0 var(--light);
+      transition: box-shadow .3s ease, width .3s ease, height .3s ease;
+    }
+    /* Кольцо: полное в начале упражнения, «тает» к концу (от верхней точки по часовой) */
+    .ring-svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+    .ring-arc { fill: none; stroke: var(--phase); stroke-width: 8; stroke-linecap: round;
+                transition: stroke-dashoffset .25s linear, stroke .3s ease, opacity .3s ease; }
+    /* Время: размер шрифта — от размера диска */
+    #clock { font-size: calc(var(--ring) * .31); font-weight: 800; letter-spacing: -0.05em; line-height: 1;
+             font-variant-numeric: tabular-nums; color: var(--text); transition: color .3s ease; }
+    #clock.long  { font-size: calc(var(--ring) * .26); }   /* «12:30» */
+    #clock.xlong { font-size: calc(var(--ring) * .22); }   /* «120:00» */
+    /* Подпись в диске — только в медитации («осталось») */
+    .ring-label { display: none; font-size: calc(var(--ring) * .055); font-weight: 700; color: var(--hint); margin-top: 4px; }
+
+    /* Название и подпись под диском. На отдыхе сверху — «Далее» */
+    .wo-info { width: 100%; max-width: 560px; text-align: center; }
+    .wo-next { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+               color: var(--hint); margin-bottom: 4px; }
+    #ex-name { font-size: clamp(24px, 6.6vw, 36px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.12;
+               overflow-wrap: anywhere; }
+    #wo-sub { font-size: clamp(15px, 4.2vw, 19px); font-weight: 700; color: var(--phase-ink);
+              margin-top: 5px; min-height: 1.3em; }
 
     /* Свайп влево / вправо — название упражнения въезжает с той стороны */
     @keyframes swipeFromRight { from { opacity: .15; transform: translateX(40px); } to { opacity: 1; transform: none; } }
@@ -301,24 +343,32 @@
     .swipe-next { animation: swipeFromRight .28s ease-out; }
     .swipe-prev { animation: swipeFromLeft .28s ease-out; }
 
-    /* ---------- Подсказки: выпадающее меню (вместо бегущей строки) ----------
-       Нажатие на заголовок раскрывает описание и все советы. Таймер идёт дальше,
-       нажатия здесь не ставят паузу. */
-    .tips-box { margin-top: 12px; border-radius: 16px; background: var(--bg); box-shadow: var(--raised-sm);
-                cursor: default; transition: box-shadow .15s ease; }
-    .tips-box.open { box-shadow: var(--pressed); }
-    .tips-head { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 46px;
-                 padding: 8px 14px; border-radius: 16px; text-align: left; }
-    .tips-head .tk-ico { flex: 0 0 22px; width: 22px; height: 22px; color: var(--accent); }
-    .tips-head .tk-label { flex: 1; min-width: 0; font-size: 16px; font-weight: 700;
-                           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .tips-head .tk-chev { flex: 0 0 22px; width: 22px; height: 22px; color: var(--hint); transition: transform .25s ease; }
-    .tips-box.open .tk-chev { transform: rotate(180deg); }
-    .tips-body { display: none; padding: 0 16px 14px; max-height: 36vh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
-    .tips-box.open .tips-body { display: block; animation: dropDown .25s ease-out; }
-    .tips-desc { font-size: 16px; line-height: 1.45; margin: 0; }
-    .tips-list { margin: 10px 0 0; padding-left: 20px; font-size: 15px; line-height: 1.45; color: #3f4552; }
-    .tips-list li + li { margin-top: 6px; }
+    /* «Как выполнять» — открывает шторку с анимацией, описанием и советами */
+    .how-btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; flex: none;
+               min-height: 48px; padding: 0 22px 0 16px; border-radius: 99px;
+               font-size: 16px; font-weight: 800; color: var(--text);
+               background: var(--bg); box-shadow: var(--raised-sm); transition: box-shadow .15s ease; }
+    .how-btn svg { flex: none; width: 22px; height: 22px; color: var(--phase); }
+    .how-btn:active, #workout.how .how-btn { box-shadow: var(--pressed); }
+    /* Панели зала и дистанции — по ширине колонки */
+    #workout .set-panel { width: 100%; max-width: 560px; margin-top: 0; }
+    /* Прокрутка нужна — снизу мягкое затухание: видно, что дальше есть ещё */
+    .wo-main.scroll { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+                      mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent); }
+    .wo-main.scroll::after { content: ''; flex: none; height: 14px; grid-column: 1 / -1; }
+
+    /* ---------- Тесно (зал: таблица подходов на телефоне) ----------
+       Диск поменьше и слева, название и «Как выполнять» — справа от него:
+       так таблица подходов помещается целиком. Класс compact ставит код (fitWorkout) */
+    #workout.compact .wo-main { display: grid; grid-template-columns: var(--ring) minmax(0, 1fr);
+                                align-content: start; align-items: center; column-gap: 18px; row-gap: 14px; }
+    #workout.compact .ring { grid-column: 1; grid-row: 1 / span 2; align-self: start; }
+    #workout.compact .wo-info { grid-column: 2; grid-row: 1; align-self: end; text-align: left; }
+    #workout.compact .how-btn { grid-column: 2; grid-row: 2; align-self: start; justify-self: start;
+                                min-height: 42px; padding: 0 16px 0 12px; font-size: 15px; }
+    #workout.compact .set-panel { grid-column: 1 / -1; justify-self: center; }
+    #workout.compact #ex-name { font-size: clamp(20px, 5.4vw, 28px); }
+    #workout.compact #wo-sub { font-size: 15px; }
 
     /* ---------- Зал: вес и повторы СРАЗУ ВСЕХ подходов — прямо на экране тренировки ----------
        Строка — подход. Нажатия по этой панели не ставят паузу. */
@@ -359,60 +409,131 @@
     .stepper.wide .st-btn { flex-basis: 52px; width: 52px; height: 52px; font-size: 26px; }
     .stepper.wide .field.st-input { width: 96px; height: 52px; font-size: 22px; }
 
-    /* Пауза: «пульт» с выпуклыми кнопками */
-    /* Содержимое паузы — ниже часов (верх экрана остаётся над этим слоем),
-       расстояния сжимаются на невысоких экранах */
-    #pause-layer {
-      position: absolute; inset: 0; z-index: 4;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(14px, 3.6vh, 32px);
-      padding: calc(var(--top) + 48px + clamp(50px, 15.3vw, 86px)) 16px calc(var(--bottom) + 16px);
-      background: rgba(230,233,239,.97);
+    /* ---------- Низ экрана тренировки: пульт «назад / пауза / вперёд» ----------
+       На паузе под ним выезжают «Выполнено» и «Завершить занятие» */
+    .wo-foot { position: relative; z-index: 2; flex: none; padding: 6px 12px calc(var(--bottom) + 24px); }
+    .wo-controls { display: flex; align-items: center; justify-content: center; gap: 26px; }
+    /* Круглые кнопки. Тени и у выпуклой, и у вдавленной кнопки одинакового
+       вида (внешние + внутренние) — поэтому нажатие плавное */
+    .ctl-btn {
+      flex: none; width: 68px; height: 68px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; color: var(--text); background: var(--bg);
+      box-shadow: 7px 7px 14px var(--dark), -7px -7px 14px var(--light), inset 0 0 0 var(--dark), inset 0 0 0 var(--light);
+      transition: box-shadow .2s ease;
     }
-    .pause-title { font-size: 17px; font-weight: 700; color: var(--hint); }
-    /* Сетка: [назад] [продолжить] [вперёд], под «вперёд» — кнопка «Выполнено» */
-    .pause-controls { display: grid; grid-template-columns: 72px 100px 72px; column-gap: 30px; row-gap: 18px;
-                      align-items: center; justify-items: center; }
-    .round-btn { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-                 color: var(--text); background: var(--bg); box-shadow: var(--raised-sm);
-                 transition: box-shadow .15s ease, transform .15s ease; }
-    .round-btn:active { box-shadow: var(--pressed); transform: scale(0.96); }
-    .round-btn svg { width: 40px; height: 40px; }
-    .round-btn.big { width: 100px; height: 100px; color: var(--accent); box-shadow: var(--raised); }
-    .round-btn.big:active { box-shadow: var(--pressed); }
-    .round-btn.big svg { width: 38px; height: 38px; margin-left: 4px; }
+    .ctl-btn svg { width: 22px; height: 22px; }
+    .ctl-btn:active { box-shadow: 0 0 0 var(--dark), 0 0 0 var(--light), inset 5px 5px 10px var(--dark), inset -5px -5px 10px var(--light); }
+    /* Большая кнопка: пауза / продолжить, значок оранжевый */
+    .ctl-btn.big { width: 96px; height: 96px; color: var(--play);
+                   box-shadow: 10px 10px 20px var(--dark), -10px -10px 20px var(--light), inset 0 0 0 var(--dark), inset 0 0 0 var(--light); }
+    .ctl-btn.big svg { width: 32px; height: 32px; }
+    .ctl-btn.big:active { box-shadow: 0 0 0 var(--dark), 0 0 0 var(--light), inset 8px 8px 16px var(--dark), inset -8px -8px 16px var(--light); }
+    .ctl-btn .ico-play { display: none; }
+
+    /* «Выполнено» и «Завершить занятие» — только на паузе: строка плавно выезжает.
+       Пока её не видно, высота — ноль (отступы — у внутреннего блока .pa-row) */
+    .pause-actions { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden;
+                     transition: grid-template-rows .3s ease, opacity .2s ease, visibility 0s linear .3s; }
+    .pa-in { min-height: 0; }
+    .pa-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; padding: 16px 0 8px; }
     .text-btn { font-size: 16px; font-weight: 700; padding: 14px 24px; border-radius: 18px;
                 background: var(--bg); color: var(--text); box-shadow: var(--raised-sm); }
     .text-btn:active { box-shadow: var(--pressed); }
-    .pause-hint { font-size: 14px; color: var(--hint); }
-    /* «Выполнено» — отметить упражнение сделанным и перейти дальше */
-    .mark-btn { grid-column: 3; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
-                font-size: 14px; font-weight: 700; padding: 10px 12px; border-radius: 16px;
-                background: var(--bg); color: var(--text); box-shadow: var(--raised-sm); transition: box-shadow .15s ease; }
-    .mark-btn svg { width: 16px; height: 16px; color: var(--accent); }
-    .mark-btn:active { box-shadow: var(--pressed); }
-    /* Узкий телефон: кнопки паузы чуть меньше, чтобы «Выполнено» не вылезала за край */
-    @media (max-width: 350px) {
-      .pause-controls { grid-template-columns: 64px 88px 64px; column-gap: 18px; }
-      .round-btn { width: 64px; height: 64px; }
-      .round-btn.big { width: 88px; height: 88px; }
-    }
+    #workout .text-btn { font-size: 15px; font-weight: 800; padding: 12px 16px; }
+    /* «Выполнено»: отметить упражнение сделанным и перейти дальше */
+    .mark-btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .mark-btn svg { flex: none; width: 18px; height: 18px; color: var(--rest); }
 
-    /* ---------- Медитация: только мягкий диск с обратным отсчётом ---------- */
-    #med-disc { display: none; }
-    #workout.med #figure, #workout.med #ex-video { display: none !important; }
-    #workout.med #clock, #workout.med #counter, #workout.med .progress { visibility: hidden; }
-    #workout.med #med-disc {
-      display: flex; align-items: center; justify-content: center;
-      width: min(72vw, 320px); aspect-ratio: 1; border-radius: 50%;
-      background: var(--bg); box-shadow: 14px 14px 28px var(--dark), -14px -14px 28px var(--light);
+    /* ---------- Пауза: тот же экран, только «вдавленный» ---------- */
+    #workout.paused .wo-phase { color: var(--hint); }
+    #workout.paused .wo-phase::before { display: none; }
+    #workout.paused .progress .seg i { background: #9ca3af; }
+    #workout.paused .ring {
+      box-shadow: 0 0 0 var(--dark), 0 0 0 var(--light),
+                  inset calc(var(--ring) * .045) calc(var(--ring) * .045) calc(var(--ring) * .09) var(--dark),
+                  inset calc(var(--ring) * -.045) calc(var(--ring) * -.045) calc(var(--ring) * .09) var(--light);
     }
-    #med-disc .well {
-      width: 74%; aspect-ratio: 1; border-radius: 50%;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      box-shadow: inset 8px 8px 16px var(--dark), inset -8px -8px 16px var(--light);
+    #workout.paused .ring-arc { opacity: 0; }
+    #workout.paused #clock { color: #6b7280; }
+    #workout.paused #wo-sub { color: var(--hint); font-weight: 600; }
+    #workout.paused .ctl-btn.big { box-shadow: 0 0 0 var(--dark), 0 0 0 var(--light), inset 8px 8px 16px var(--dark), inset -8px -8px 16px var(--light); }
+    #workout.paused .ctl-btn .ico-play { display: block; margin-left: 3px; }
+    #workout.paused .ctl-btn .ico-pause { display: none; }
+    #workout.paused .pause-actions { grid-template-rows: 1fr; opacity: 1; visibility: visible;
+                                     transition: grid-template-rows .3s ease, opacity .25s ease .05s, visibility 0s; }
+
+    /* ---------- Шторка «Как выполнять»: анимация, описание и советы ----------
+       Выезжает снизу и закрывает середину экрана; полоска прогресса и фаза
+       остаются видны. Таймер идёт дальше, время — в шапке шторки.
+       Нажатия в шторке не ставят паузу, нажатие мимо неё — закрывает её. */
+    .how-sheet {
+      position: absolute; z-index: 6; left: 0; right: 0; bottom: 0;
+      top: calc(var(--wo-top-h, 120px) + 10px);
+      display: flex; flex-direction: column; gap: 12px;
+      padding: 10px 20px calc(var(--bottom) + 18px);
+      background: var(--bg); border-radius: 30px 30px 0 0; cursor: default;
+      box-shadow: 0 -12px 30px rgba(163, 170, 184, .5), inset 0 2px 0 rgba(255, 255, 255, .85);
+      transform: translateY(105%); visibility: hidden;
+      transition: transform .38s cubic-bezier(.2, .8, .2, 1), visibility 0s linear .38s;
     }
-    #med-clock { font-size: clamp(52px, 16vw, 84px); font-weight: 800; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
-    #med-label { font-size: 15px; font-weight: 700; color: var(--hint); margin-top: 4px; }
+    #workout.how .how-sheet { transform: none; visibility: visible;
+                              transition: transform .38s cubic-bezier(.2, .8, .2, 1), visibility 0s; }
+    /* «Ручка» сверху: шторку можно смахнуть вниз */
+    .how-grip { flex: none; align-self: center; width: 42px; height: 5px; border-radius: 3px;
+                box-shadow: inset 1px 1px 2px var(--dark), inset -1px -1px 2px var(--light); }
+    .how-head { flex: none; display: flex; align-items: center; gap: 12px; }
+    .how-head .grow { flex: 1; min-width: 0; }
+    .how-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--hint); }
+    .how-title { font-size: 21px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-top: 2px;
+                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Время в шапке шторки — таймер не останавливается */
+    #how-time { flex: none; font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--phase-ink);
+                padding: 8px 12px; border-radius: 99px; box-shadow: var(--pressed); }
+    #workout.paused #how-time { color: var(--hint); }
+    /* Сцена — вдавленный «экран»: в нём фигурка или видео */
+    .how-stage { position: relative; flex: 1 1 auto; min-height: 150px; border-radius: 24px; overflow: hidden;
+                 box-shadow: var(--pressed); }
+    /* Объёмный манекен рисуется на холсте <canvas> (см. раздел 10 в коде) */
+    #figure { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    #ex-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    /* Текст: описание и советы, длинный — прокручивается */
+    .how-text { flex: 0 1 auto; max-height: 36%; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y;
+                padding: 2px 4px 0; }
+    .tips-desc { font-size: 16px; line-height: 1.45; margin: 0; }
+    .tips-list { margin: 10px 0 0; padding-left: 20px; font-size: 15px; line-height: 1.45; color: #3f4552; }
+    .tips-list li + li { margin-top: 6px; }
+
+    /* ---------- Медитация: только диск с обратным отсчётом ---------- */
+    #workout.med .progress, #workout.med #counter { visibility: hidden; }
+    #workout.med .ring-label { display: block; }
+    #workout.med #ex-name, #workout.med .wo-next { display: none; }
+    #workout.med .ctl-btn.side { visibility: hidden; }
+    #workout.med .how-stage, #workout.med #figure, #workout.med #ex-video { display: none !important; }
+    #workout.med .how-text { flex: 1 1 auto; max-height: none; }
+
+    /* ---------- Невысокий экран (например, iPhone SE): всё компактнее,
+       чтобы диск оставался крупным ---------- */
+    @media (max-height: 720px) and (orientation: portrait) {
+      .wo-row { margin-top: 10px; }
+      #workout .icon-btn { flex-basis: 42px; width: 42px; height: 42px; }
+      #counter { padding: 6px 12px; }
+      .wo-main { gap: 12px; padding: 12px 20px 4px; }
+      .how-btn { min-height: 44px; }
+      .wo-controls { gap: 22px; }
+      .ctl-btn { width: 60px; height: 60px; }
+      .ctl-btn.big { width: 82px; height: 82px; }
+      .ctl-btn.big svg { width: 28px; height: 28px; }
+      .wo-foot { padding-bottom: calc(var(--bottom) + 16px); }
+      .pa-row { padding: 12px 0 6px; }
+    }
+    /* Узкий телефон: кнопки чуть меньше и ближе */
+    @media (max-width: 350px) {
+      .wo-controls { gap: 18px; }
+      .ctl-btn { width: 60px; height: 60px; }
+      .ctl-btn.big { width: 84px; height: 84px; }
+      .pa-row { gap: 10px; }
+      #workout .text-btn { font-size: 14px; padding: 11px 14px; }
+    }
 
     /* ---------- Экран «Готово»: итоги и запись в дневник ---------- */
     .done-wrap { max-width: 640px; margin: 0 auto; }
@@ -523,11 +644,19 @@
       .dial-disc { width: min(40vw, 400px); }
       .list { grid-template-columns: 1fr 1fr; }
       .sport-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-      /* Фигурка — справа, текст и панели — слева внизу: так они не перекрываются */
-      #workout .stage { position: absolute; top: 0; bottom: 0; right: 0; left: 58%; }
-      #workout.med .stage { left: 0; }   /* медитация: диск по центру */
-      #figure { max-height: 70vh; }
-      .wo-bottom { margin-top: auto; max-width: 60%; }
+      /* Тренировка: диск — в левой половине, всё остальное — в правой */
+      #workout .wo-main { position: static; margin-left: 50%;
+                          overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+      /* Пустые «распорки» сверху и снизу: правая колонка — по центру по высоте */
+      #workout .wo-main::before, #workout .wo-main::after { content: ''; flex: 1 1 0; }
+      #workout .ring { position: absolute; left: 25%; top: calc(50% + var(--wo-top-h, 100px) / 2);
+                       transform: translate(-50%, -50%); }
+      #workout .wo-foot { margin-left: 50%; }
+      /* Место под «Выполнено» и «Завершить занятие» есть всегда — на паузе ничего не сдвигается */
+      #workout .pause-actions { grid-template-rows: 1fr; }
+      /* Шторка «Как выполнять» выезжает справа, диск с временем остаётся виден */
+      .how-sheet { left: 50%; border-radius: 30px 0 0 30px; transform: translateX(105%);
+                   box-shadow: -12px 0 30px rgba(163, 170, 184, .5), inset 2px 0 0 rgba(255, 255, 255, .85); }
       /* Дневник: календарь слева, занятия дня справа */
       .diary-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 24px 40px; }
       .day-box .list { grid-template-columns: 1fr; }
@@ -652,12 +781,14 @@
   </section>
 
   <!-- =============== ТРЕНИРОВКА ===============
-       Касание в любом месте экрана — пауза / продолжить. -->
+       Макет «Мягкая объёмность · Таймер». Касание в любом месте экрана —
+       пауза / продолжить, свайп влево / вправо — следующее / предыдущее упражнение. -->
   <section id="workout" class="screen hidden">
-    <div class="wo-top">
+    <!-- Верх: полоска прогресса (по «лунке» на упражнение), фаза и счётчик -->
+    <div class="wo-top" id="wo-top">
       <div class="progress" id="progress"></div>
       <div class="wo-row">
-        <div id="clock">0:30</div>
+        <div class="wo-phase" id="phase">Работа</div>
         <div class="wo-right">
           <div id="counter">1 / 10</div>
           <!-- На весь экран (нажатие не ставит паузу) -->
@@ -666,18 +797,34 @@
       </div>
     </div>
 
-    <!-- Сцена: видео (если есть ссылка) или анимированная фигурка.
-         Для медитации — мягкий диск с обратным отсчётом. -->
-    <div class="stage">
-      <div id="med-disc"><div class="well"><div id="med-clock">10:00</div><div id="med-label">осталось</div></div></div>
-      <video id="ex-video" class="hidden" muted loop playsinline webkit-playsinline></video>
-      <canvas id="figure" aria-hidden="true"></canvas>
-    </div>
+    <!-- Середина: диск с временем, упражнение, «Как выполнять», панели -->
+    <div class="wo-main" id="wo-main">
+      <!-- Диск: кольцо показывает, сколько осталось от упражнения (или отдыха) -->
+      <div class="ring" id="ring">
+        <svg class="ring-svg" viewBox="0 0 270 270" aria-hidden="true">
+          <circle class="ring-arc" id="ring-arc" cx="135" cy="135" r="118"/>
+        </svg>
+        <div id="clock">0:30</div>
+        <!-- Только в медитации: «осталось» / «приготовьтесь» -->
+        <div class="ring-label" id="ring-label">осталось</div>
+      </div>
 
-    <div class="wo-bottom">
-      <div class="phase-pill" id="phase">Работа</div>
-      <div id="ex-name"></div>
-      <div id="wo-sub"></div>
+      <div class="wo-info" id="wo-info">
+        <!-- На отдыхе и перед началом: «Далее» — показано следующее упражнение -->
+        <div class="wo-next hidden" id="wo-next">Далее</div>
+        <div id="ex-name"></div>
+        <!-- Подход и повторы; на паузе — «Нажмите, чтобы продолжить» -->
+        <div id="wo-sub"></div>
+      </div>
+
+      <!-- Открывает шторку: анимация фигурки, описание и советы.
+           Таймер при этом идёт дальше, нажатие не ставит паузу. -->
+      <button class="how-btn" id="how-btn" aria-expanded="false" aria-controls="how-sheet">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="4.6" r="2.1"/><path d="M5.5 9.2 12 8l6.5 1.2M12 8v6.2m-3.4 6.8 3.4-6.8 3.4 6.8"/></svg>
+        Как выполнять
+      </button>
+
       <!-- Зал: вес и повторы СРАЗУ ВСЕХ подходов упражнения (строка — подход).
            На работе — упражнение, которое делаете, на отдыхе — только что сделанное.
            Меняете подход — следующие, которые не трогали, подстраиваются сами.
@@ -692,55 +839,63 @@
         <div class="sp-label">Дистанция</div>
         <div class="dist-row" id="wo-dist"></div>
       </div>
-      <!-- Подсказки: выпадающее меню. Нажатие на заголовок — показать или скрыть -->
-      <div class="tips-box" id="tips-box">
-        <button class="tips-head" id="tips-head" aria-expanded="false" aria-controls="tips-body">
-          <svg class="tk-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/></svg>
-          <span class="tk-label" id="tips-label">Как выполнять</span>
-          <svg class="tk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+
+    <!-- Низ: пульт. На паузе под ним — «Выполнено» и «Завершить занятие» -->
+    <div class="wo-foot" id="wo-foot">
+      <div class="wo-controls">
+        <!-- Назад: начать упражнение заново или перейти к предыдущему -->
+        <button class="ctl-btn side" id="prev-btn" aria-label="Предыдущее упражнение">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 20 9 12l10-8v16Z"/><path d="M5 19V5"/></svg>
         </button>
-        <div class="tips-body" id="tips-body">
-          <p class="tips-desc" id="tips-desc"></p>
-          <ul class="tips-list" id="tips-list"></ul>
+        <!-- Пауза / продолжить: на паузе кнопка «вдавлена», значок — «играть» -->
+        <button class="ctl-btn big" id="play-btn" aria-label="Пауза">
+          <svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+          <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8Z"/></svg>
+        </button>
+        <!-- Вперёд: следующее упражнение -->
+        <button class="ctl-btn side" id="next-btn" aria-label="Следующее упражнение">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 4 10 8-10 8V4Z"/><path d="M19 5v14"/></svg>
+        </button>
+      </div>
+      <!-- Только на паузе. «Выполнено» — отметить упражнение (то, что названо
+           на экране) выполненным и перейти дальше: к отдыху или следующему -->
+      <div class="pause-actions" id="pause-actions">
+        <div class="pa-in">
+          <div class="pa-row" id="pa-row">
+            <button class="text-btn mark-btn" id="mark-btn" aria-label="Отметить упражнение выполненным">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+              Выполнено
+            </button>
+            <button class="text-btn" id="end-btn">Завершить занятие</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Показывается только на паузе -->
-    <div id="pause-layer" class="hidden">
-      <div style="text-align:center">
-        <div class="pause-title">Пауза</div>
-        <!-- Какое упражнение сейчас: видно, куда перешли кнопками «назад/вперёд» -->
-        <div id="pause-ex" style="font-size:26px;font-weight:700;letter-spacing:-0.03em;margin-top:6px;padding:0 24px"></div>
-      </div>
-      <div class="pause-controls">
-        <!-- Назад: круговая стрелка против часовой -->
-        <button class="round-btn" id="prev-btn" aria-label="Предыдущее упражнение">
-          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round">
-            <path d="M24 10 A15 15 0 1 1 10.6 18.2"/>
-            <path d="M17.5 10 L25.5 4.5 L25.5 15.5 Z" fill="currentColor" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <button class="round-btn big" id="play-btn" aria-label="Продолжить">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
-        </button>
-        <!-- Вперёд: та же стрелка, отражённая -->
-        <button class="round-btn" id="next-btn" aria-label="Следующее упражнение">
-          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" style="transform:scaleX(-1)">
-            <path d="M24 10 A15 15 0 1 1 10.6 18.2"/>
-            <path d="M17.5 10 L25.5 4.5 L25.5 15.5 Z" fill="currentColor" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <!-- Под кнопкой «вперёд»: отметить упражнение (то, что названо выше) выполненным
-             и перейти дальше — к отдыху или следующему упражнению -->
-        <button class="mark-btn" id="mark-btn" aria-label="Отметить упражнение выполненным">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-          Выполнено
+    <!-- Шторка «Как выполнять»: анимация (или видео), описание и советы.
+         Закрыть: стрелка, смахнуть вниз, нажать мимо шторки или «Назад» Telegram. -->
+    <div class="how-sheet" id="how-sheet" role="dialog" aria-label="Как выполнять" aria-hidden="true">
+      <div class="how-grip"></div>
+      <div class="how-head">
+        <div class="grow">
+          <div class="how-eyebrow" id="how-eyebrow">Как выполнять</div>
+          <div class="how-title" id="how-title"></div>
+        </div>
+        <div id="how-time">0:30</div>
+        <button class="icon-btn glass" id="how-close" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
         </button>
       </div>
-      <button class="text-btn" id="end-btn">Завершить занятие</button>
-      <div class="pause-hint">Коснитесь экрана, чтобы продолжить</div>
+      <!-- Видео (если у упражнения есть ссылка) или анимированная фигурка -->
+      <div class="how-stage">
+        <video id="ex-video" class="hidden" muted loop playsinline webkit-playsinline></video>
+        <canvas id="figure" aria-hidden="true"></canvas>
+      </div>
+      <div class="how-text" id="how-text">
+        <p class="tips-desc" id="tips-desc"></p>
+        <ul class="tips-list" id="tips-list"></ul>
+      </div>
     </div>
   </section>
 
@@ -1288,7 +1443,8 @@
       }
     }
     function onBack() {
-      if (current === 'workout') askExit();
+      // На тренировке: открыта шторка «Как выполнять» — сначала закрываем её
+      if (current === 'workout') { if (howOpen) setHowOpen(false); else askExit(); }
       else if (current === 'custom') closeCustom();
       else if (current === 'entry') leaveEntry();
       else if (current !== 'home') show('home');
@@ -2563,7 +2719,7 @@
     const figCanvas = $('figure'), figCtx = figCanvas.getContext('2d');
     let figW = 0, figH = 0, figDpr = 1;                // размер холста на экране и плотность пикселей
     let anim = ANIMS.idle;
-    let animStart = 0, animFrame = null, animPausedAt = 0, animLastNow = 0;
+    let animStart = 0, animFrame = null, animLastNow = 0;
     let camYaw = anim.cam, camYawGoal = anim.cam, camPitch = 10, camPitchGoal = 10;   // камера поворачивается плавно
     let fit = null, fitGoal = null;                    // масштаб и сдвиг картинки (тоже плавно)
     let lastBody = null, blendFrom = null, blendStart = 0;   // плавный переход между упражнениями
@@ -2611,8 +2767,9 @@
       if (current !== 'workout') return;
       animFrame = requestAnimationFrame(animLoop);
       const dt = Math.min(100, now - (animLastNow || now)); animLastNow = now;
-      // На паузе, без размера или если вместо фигурки видео — не рисуем
-      if (paused || !figW || !fit || !figCanvas.offsetParent || figCanvas.classList.contains('hidden')) return;
+      // Рисуем, только пока открыта шторка «Как выполнять» (и на паузе тоже —
+      // можно спокойно посмотреть движение). Без размера или если вместо фигурки видео — не рисуем
+      if (!howOpen || !figW || !fit || !figCanvas.offsetParent || figCanvas.classList.contains('hidden')) return;
       // Камера и масштаб догоняют цель плавно (примерно за полсекунды)
       const k = 1 - Math.exp(-dt / 160);
       camYaw += ((((camYawGoal - camYaw) % 360) + 540) % 360 - 180) * k;
@@ -2665,10 +2822,11 @@
       return result;
     }
 
-    // Полоски прогресса: по одной на упражнение (подход)
+    // Полоска прогресса: по «лунке» на упражнение (подход)
     function buildProgress() {
       const box = $('progress');
       box.innerHTML = '';
+      box.classList.toggle('many', state.workout.exercises.length > 14);   // много — промежутки уже
       state.workout.exercises.forEach(() => {
         const seg = document.createElement('div');
         seg.className = 'seg';
@@ -2699,7 +2857,7 @@
       panelFirst = null;
       buildSetRows(null);
       buildProgress();
-      setTipsOpen(false);
+      setHowOpen(false);      // шторка «Как выполнять» закрыта: по умолчанию — таймер
       // Бассейн и бег: панель «Дистанция» (круги или км)
       const s = sport();
       woDist = { dist: null, du: s.distance || 'lap' };
@@ -2759,43 +2917,36 @@
       renderTime();
     }
 
-    // Показать фазу, название, подпись, подсказки, анимацию
+    // Показать фазу, название, подпись, панели и шторку «Как выполнять»
     function renderStep() {
       const step = steps[stepIndex];
       const ex = step.ex; // на отдыхе и подготовке — следующее упражнение
       const wo = $('workout');
       wo.classList.remove('ph-work', 'ph-rest', 'ph-prep');
-      wo.classList.add('ph-' + step.kind);
+      wo.classList.add('ph-' + step.kind);   // цвет фазы: кольцо, полоска, подписи
 
-      const med = isSimple();
-      $('phase').textContent = step.kind === 'work' ? (med ? 'Медитация' : 'Работа')
-        : step.kind === 'rest' ? (sport().restLabel || 'Отдых') + ' · далее' : 'Приготовьтесь';
-      $('med-label').textContent = step.kind === 'work' ? 'осталось' : 'приготовьтесь';
+      // На отдыхе и перед началом над названием — «Далее»
+      $('wo-next').classList.toggle('hidden', step.kind === 'work');
       $('ex-name').textContent = ex.name;
-      $('pause-ex').textContent = (step.kind === 'work' ? '' : 'Далее: ') + ex.name;
       $('counter').textContent = (step.index + 1) + ' / ' + state.workout.exercises.length;
+      $('ring-label').textContent = step.kind === 'work' ? 'осталось' : 'приготовьтесь';   // медитация
 
-      // Подпись: подход, вес и повторы; в зале — панель для ввода
-      $('wo-sub').textContent = subLine(ex, step.index);
-      renderSetPanel();
+      renderLabels();     // фаза над диском и подпись под названием
+      renderSetPanel();   // зал: вес и повторы
+      fillHow();          // шторка «Как выполнять»: заголовок, текст, анимация
+      renderTime();       // время и кольцо (на новом шаге кольцо снова полное)
+      fitWorkout();       // панели могли появиться или пропасть — подгоняем диск
+    }
 
-      // Подсказки (выпадающее меню): как выполнять + дыхание + ощущения
-      fillTips();
-
-      // Видео, если есть ссылка; иначе — анимация фигурки
-      const hasVideo = !!ex.video_url;
-      const video = $('ex-video');
-      video.classList.toggle('hidden', !hasVideo);
-      $('figure').classList.toggle('hidden', hasVideo);
-      if (hasVideo) {
-        if (video.getAttribute('src') !== ex.video_url) video.src = ex.video_url;
-        if (!paused) video.play().catch(() => {});
-      } else {
-        video.removeAttribute('src');
-        $('figure').classList.toggle('preview', step.kind !== 'work');
-        setAnim(ex.anim);
-      }
-      renderTime();
+    // Фаза над диском («Работа», «Отдых», «Приготовьтесь») и подпись под
+    // названием («Подход 1 из 3 · 10 раз»). На паузе — «Пауза» и «Нажмите, чтобы продолжить»
+    function renderLabels() {
+      const step = steps[stepIndex];
+      if (!step) return;
+      const phase = step.kind === 'work' ? (isSimple() ? 'Медитация' : 'Работа')
+        : step.kind === 'rest' ? (sport().restLabel || 'Отдых') : 'Приготовьтесь';
+      $('phase').textContent = paused ? 'Пауза' : phase;
+      $('wo-sub').textContent = paused ? 'Нажмите, чтобы продолжить' : subLine(step.ex, step.index);
     }
 
     // «Подход 1 из 3 · 60 кг × 8» (в зале — с весом), «Отрезок 2 из 6» (бег), «10 раз».
@@ -2814,10 +2965,96 @@
       return parts.join(' · ');
     }
 
+    // Кольцо на диске: длина окружности (в рисунке 270×270 радиус 118)
+    const RING_C = 2 * Math.PI * 118;
+    $('ring-arc').setAttribute('stroke-dasharray', RING_C.toFixed(1));
+
+    // Время в диске и в шапке шторки, кольцо и полоска прогресса
     function renderTime() {
-      $('clock').textContent = formatClock(remaining);
-      $('med-clock').textContent = formatClock(remaining);
+      const step = steps[stepIndex];
+      const text = formatClock(remaining);
+      const clock = $('clock');
+      clock.textContent = text;
+      clock.classList.toggle('long', text.length === 5);   // «12:30» — шрифт чуть меньше
+      clock.classList.toggle('xlong', text.length > 5);    // «120:00» — ещё меньше
+      $('how-time').textContent = text;
+      // Кольцо — сколько осталось от шага: в начале полное, к концу исчезает
+      const left = step && step.dur > 0 ? Math.max(0, Math.min(1, remaining / step.dur)) : 0;
+      $('ring-arc').style.strokeDashoffset = (RING_C * (1 - left)).toFixed(1);
       renderProgress();
+    }
+
+    // ---------- Размер диска под экран ----------
+    // Как на макете — ¾ ширины телефона (на планшете — крупнее), но так, чтобы
+    // всё поместилось по высоте. По возможности оставляем место под строку паузы
+    // («Выполнено», «Завершить занятие») — тогда на паузе диск не сдвигается.
+    // Тесно (диск вышел бы меньше 170 точек — так бывает в зале с таблицей
+    // подходов) — диск поменьше и слева, название и «Как выполнять» справа.
+    // Не помещается и так — середину экрана можно прокрутить.
+    const RING_MIN = 170;     // меньше — диск переезжает влево (вид «тесно»)
+    const LANDSCAPE = '(min-width: 700px) and (orientation: landscape)';
+    let mainOver = { work: false, pause: false };   // не помещается середина: без паузы / на паузе
+    function fitWorkout() {
+      if (current !== 'workout') return;
+      const wo = $('workout'), main = $('wo-main'), foot = $('wo-foot'), pa = $('pause-actions');
+      // Пока открыта клавиатура (вводите вес) — ничего не двигаем
+      if (wo.contains(document.activeElement) && document.activeElement.matches('input, textarea')) return;
+      const W = wo.clientWidth, H = wo.clientHeight;
+      if (!W || !H) return;
+      wo.classList.remove('compact');                    // сначала обычный вид
+      const topH = $('wo-top').offsetHeight;
+      wo.style.setProperty('--wo-top-h', topH + 'px');   // отсюда начинается шторка
+      let size;
+      if (window.matchMedia(LANDSCAPE).matches) {
+        // Планшет в ландшафте: диск — в левой половине экрана
+        size = Math.min(W / 2 - 90, H - topH - 90, 440);
+        mainOver = { work: false, pause: false };       // правая колонка прокручивается сама
+      } else {
+        // Сколько по высоте занимает всё остальное в середине: подписи, кнопка, панели, промежутки
+        const cs = getComputedStyle(main);
+        const pads = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+        const gap = parseFloat(cs.rowGap) || 0;
+        let others = pads;
+        for (const el of main.children) {
+          if (el.id === 'ring' || el.offsetParent === null) continue;   // скрытые не считаем
+          others += el.offsetHeight + gap;
+        }
+        const footWork = foot.offsetHeight - pa.offsetHeight;   // низ без строки паузы
+        const pauseH = $('pa-row').offsetHeight;                // строка паузы целиком
+        const mainWork = H - topH - footWork;                   // высота середины (без паузы)
+        const free = mainWork - others;                         // место под диск
+        const cap = Math.min(W * 0.75, 460);
+        size = Math.min(cap, free - pauseH);                    // с запасом под строку паузы
+        if (size < Math.min(cap, 220)) size = Math.min(cap, free);   // тесно — без запаса
+        size = Math.floor(size);
+        if (size >= RING_MIN) {
+          mainOver = { work: false, pause: size > free - pauseH + 1 };
+        } else {
+          // Тесно (зал: таблица подходов): диск поменьше и слева, название справа
+          wo.classList.add('compact');
+          size = Math.round(Math.min(160, Math.max(116, W * 0.36)));
+          wo.style.setProperty('--ring', size + 'px');   // ширина колонки диска — сразу
+          const csc = getComputedStyle(main);
+          const rg = parseFloat(csc.rowGap) || 0;
+          let h = parseFloat(csc.paddingTop) + parseFloat(csc.paddingBottom)
+                + Math.max(size, $('wo-info').offsetHeight + rg + $('how-btn').offsetHeight);
+          for (const el of [$('set-panel'), $('dist-panel')]) if (el.offsetParent !== null) h += rg + el.offsetHeight;
+          mainOver = { work: h > mainWork + 1, pause: h > mainWork - pauseH + 1 };
+        }
+      }
+      wo.style.setProperty('--ring', Math.floor(size) + 'px');
+      setMainScroll();
+    }
+    // Прокрутка середины — только когда содержимое не помещается
+    // (иначе обрезались бы мягкие тени у диска)
+    let scrollOffTimer = null;
+    function setMainScroll() {
+      const main = $('wo-main');
+      const need = paused ? mainOver.pause : mainOver.work;
+      clearTimeout(scrollOffTimer);
+      if (need) main.classList.add('scroll');
+      // Убираем, когда строка паузы уже уехала (0,3 с) — иначе текст на миг налезет на кнопки
+      else if (main.classList.contains('scroll')) scrollOffTimer = setTimeout(() => main.classList.remove('scroll'), 320);
     }
 
     // ---------- Зал: вес и повторы сразу всех подходов упражнения ----------
@@ -2937,8 +3174,7 @@
     // Запомнить введённое и обновить подпись под названием
     function setOwn(i, field, value) {
       woSets[i] = { ...(woSets[i] || {}), [field]: value };
-      const step = steps[stepIndex];
-      $('wo-sub').textContent = subLine(step.ex, step.index);
+      renderLabels();   // подпись под названием («60 кг × 8»)
     }
 
     // Кнопки −/+ (одна общая «слушалка» на все строки)
@@ -2966,58 +3202,105 @@
     // Нажатия по панелям не ставят паузу
     $('set-panel').addEventListener('click', e => e.stopPropagation());
     $('dist-panel').addEventListener('click', e => e.stopPropagation());
-    // Убрали клавиатуру: показываем числа красиво (62,5), iPhone мог сдвинуть экран — возвращаем
+    // Убрали клавиатуру: показываем числа красиво (62,5), iPhone мог сдвинуть экран — возвращаем,
+    // и заново подгоняем диск (пока клавиатура была открыта, его не трогали)
     $('workout').addEventListener('focusout', () => setTimeout(() => {
       if (current !== 'workout' || $('workout').contains(document.activeElement)) return;
       updateSetRows();
       window.scrollTo(0, 0);
+      fitWorkout();
     }, 0));
 
-    // ---------- Подсказки: выпадающее меню ----------
-    // Таймер не останавливается: можно читать во время упражнения.
-    function tipsOpen() { return $('tips-box').classList.contains('open'); }
-    function setTipsOpen(open) {
-      $('tips-box').classList.toggle('open', open);
-      $('tips-head').setAttribute('aria-expanded', open ? 'true' : 'false');
+    // ---------- Шторка «Как выполнять» ----------
+    // По умолчанию на экране только таймер. Кнопка «Как выполнять» открывает
+    // шторку: анимация фигурки (или видео), описание и советы. Таймер не
+    // останавливается — время видно в шапке шторки.
+    let howOpen = false;
+    function setHowOpen(open) {
+      howOpen = open;
+      $('workout').classList.toggle('how', open);
+      $('how-btn').setAttribute('aria-expanded', open ? 'true' : 'false');
+      $('how-sheet').setAttribute('aria-hidden', open ? 'false' : 'true');
+      if (open) {
+        $('how-text').scrollTop = 0;
+        readFigColors();   // визор фигурки — цвета текущей фазы
+        figResize();       // холст под размер сцены
+      }
+      syncVideo();
     }
-    // Текст подсказок для текущего шага. На отдыхе — отдых и следующее упражнение
-    function fillTips() {
+    // Заголовок, текст и анимация для текущего шага.
+    // На отдыхе и перед началом — следующее упражнение (на отдыхе ещё и советы про отдых)
+    function fillHow() {
       const step = steps[stepIndex];
       if (!step) return;
       const ex = step.ex;
-      let label = 'Как выполнять', desc = ex.description, tips = ex.tips;
+      let eyebrow = 'Как выполнять', desc = ex.description, tips = ex.tips;
       if (step.kind === 'rest') {
-        label = 'Отдых и что дальше';
+        eyebrow = 'Далее · как выполнять';
         tips = [...(sport().restTips || DEFAULT_REST_TIPS), ...ex.tips];
       } else if (step.kind === 'prep') {
-        label = 'Приготовьтесь: как выполнять';
+        eyebrow = 'Приготовьтесь';
         desc = 'Займите исходное положение. ' + ex.description;
       }
-      $('tips-label').textContent = label;
+      $('how-eyebrow').textContent = eyebrow;
+      $('how-title').textContent = ex.name;
       $('tips-desc').textContent = desc;
       const ul = $('tips-list');
       ul.innerHTML = '';
       tips.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.append(li); });
       ul.classList.toggle('hidden', tips.length === 0);
-      $('tips-body').scrollTop = 0;
+      $('how-text').scrollTop = 0;
+
+      // Видео, если у упражнения есть ссылка; иначе — анимация фигурки
+      const hasVideo = !!ex.video_url;
+      const video = $('ex-video');
+      video.classList.toggle('hidden', !hasVideo);
+      $('figure').classList.toggle('hidden', hasVideo);
+      if (hasVideo) {
+        if (video.getAttribute('src') !== ex.video_url) video.src = ex.video_url;
+      } else {
+        video.removeAttribute('src');
+        setAnim(ex.anim);
+      }
+      syncVideo();
     }
-    $('tips-head').addEventListener('click', e => {
+    // Видео играет, только пока шторка открыта
+    function syncVideo() {
+      const video = $('ex-video');
+      if (!video.getAttribute('src')) return;
+      if (howOpen) video.play().catch(() => {}); else video.pause();
+    }
+    $('how-btn').addEventListener('click', e => {
       e.stopPropagation();          // не ставим паузу
-      setTipsOpen(!tipsOpen());
+      setHowOpen(!howOpen);
       haptic('light');
     });
-    // Нажатия внутри подсказок тоже не ставят паузу
-    $('tips-box').addEventListener('click', e => e.stopPropagation());
+    $('how-close').addEventListener('click', e => { e.stopPropagation(); setHowOpen(false); haptic('light'); });
+    // Нажатия внутри шторки не ставят паузу
+    $('how-sheet').addEventListener('click', e => e.stopPropagation());
+    // Шторку можно смахнуть вниз — за «ручку», шапку или картинку (текст прокручивается)
+    let sheetSwipe = null;
+    $('how-sheet').addEventListener('touchstart', e => {
+      sheetSwipe = null;
+      if (e.touches.length !== 1 || e.target.closest('.how-text')) return;
+      sheetSwipe = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
+    }, { passive: true });
+    $('how-sheet').addEventListener('touchend', e => {
+      if (!sheetSwipe) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - sheetSwipe.x, dy = t.clientY - sheetSwipe.y, dt = Date.now() - sheetSwipe.time;
+      sheetSwipe = null;
+      if (dy > 60 && dy > Math.abs(dx) * 1.5 && dt < 800) { setHowOpen(false); haptic('light'); }
+    });
 
-    // --- Пауза / продолжить: касание по экрану ---
+    // --- Пауза / продолжить: касание по экрану или большая кнопка ---
+    // На паузе экран тот же, только «вдавленный» (оформление — по классу paused):
+    // диск и кнопка вдавлены, время серое, под пультом — «Выполнено» и «Завершить занятие»
     function renderPause() {
-      $('pause-layer').classList.toggle('hidden', !paused);
       $('workout').classList.toggle('paused', paused);
-      const video = $('ex-video');
-      if (video.getAttribute('src')) { if (paused) video.pause(); else video.play().catch(() => {}); }
-      // Продолжаем анимацию с того же места
-      if (paused) animPausedAt = performance.now();
-      else if (animPausedAt) { animStart += performance.now() - animPausedAt; animPausedAt = 0; }
+      $('play-btn').setAttribute('aria-label', paused ? 'Продолжить' : 'Пауза');
+      renderLabels();
+      setMainScroll();   // на паузе места меньше — возможно, нужна прокрутка
     }
     function togglePause() {
       paused = !paused;
@@ -3027,10 +3310,12 @@
     }
     $('workout').addEventListener('click', () => {
       if (Date.now() - swipedAt < 500) return;   // это был свайп, а не касание
+      // Открыта шторка — нажатие мимо неё закрывает шторку, а не ставит паузу
+      if (howOpen) { setHowOpen(false); haptic('light'); return; }
       togglePause();
     });
 
-    // --- Вперёд / назад (на паузе и свайпом) ---
+    // --- Вперёд / назад (кнопки пульта и свайп) ---
     // Номер упражнения, на котором сейчас стоим
     function currentExercise() {
       const step = steps[stepIndex];
@@ -3084,7 +3369,7 @@
     $('workout').addEventListener('touchstart', e => {
       swipe = null;
       if (e.touches.length !== 1 || isSimple()) return;
-      if (e.target.closest('input, textarea, .tips-body')) return;   // в полях и тексте подсказок — не листаем
+      if (e.target.closest('input, textarea, .how-sheet')) return;   // в полях и в шторке «Как выполнять» — не листаем
       const t = e.touches[0];
       swipe = { x: t.clientX, y: t.clientY, time: Date.now() };
     }, { passive: true });
@@ -3117,12 +3402,10 @@
     }
     // Название упражнения въезжает с той стороны, куда листали
     function swipeAnim(cls) {
-      ['ex-name', 'wo-sub', 'pause-ex'].forEach(id => {
-        const el = $(id);
-        el.classList.remove('swipe-next', 'swipe-prev');
-        void el.offsetWidth;   // перезапуск анимации
-        el.classList.add(cls);
-      });
+      const el = $('wo-info');   // «Далее», название и подпись
+      el.classList.remove('swipe-next', 'swipe-prev');
+      void el.offsetWidth;       // перезапуск анимации
+      el.classList.add(cls);
     }
 
     // Выход: ставим паузу и спрашиваем. Если позанимались хотя бы минуту —
@@ -3752,14 +4035,15 @@
     // =====================================================================
     $('start-btn').addEventListener('click', () => { haptic('medium'); startWorkout(); });
 
-    // Пересчитываем круг, когда меняется размер экрана: поворот, полный экран,
-    // Telegram развернул окно, догрузился шрифт
-    window.addEventListener('resize', fitHome);
+    // Пересчитываем круги (регулятор на главном, диск на тренировке), когда меняется
+    // размер экрана: поворот, полный экран, Telegram развернул окно, догрузился шрифт
+    function fitAll() { fitHome(); fitWorkout(); }
+    window.addEventListener('resize', fitAll);
     if (inTelegram) {
-      tg.onEvent('viewportChanged', e => { if (!e || e.isStateStable) fitHome(); });
-      tg.onEvent('fullscreenChanged', () => setTimeout(fitHome, 300));
+      tg.onEvent('viewportChanged', e => { if (!e || e.isStateStable) fitAll(); });
+      tg.onEvent('fullscreenChanged', () => setTimeout(fitAll, 300));
     }
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitHome);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
 
     updatePlan();
     show('home');
