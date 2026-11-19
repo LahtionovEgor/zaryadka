@@ -641,13 +641,29 @@
 
     /* ---------- Экран «Готово»: итоги и запись в дневник ---------- */
     .done-wrap { max-width: 640px; margin: 0 auto; }
-    .done-top { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
-    #done .stats { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin: 8px 0 4px; }
-    #done .stat { border-radius: 20px; padding: 14px 18px; min-width: 110px; }
+    .done-top { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding-top: 8px; }
+    /* Главная цифра — время занятия. Это «табло», как число на круге главного
+       экрана, поэтому размер вне шкалы шрифтов (раздел 7 spec.md) */
+    .done-hero { margin: 18px 0 2px; }
+    .done-hero b { display: block; font-size: 64px; font-weight: var(--fw-bold); letter-spacing: -0.05em;
+                   line-height: 1; font-variant-numeric: tabular-nums; }
+    .done-hero span { display: block; margin-top: 6px; font-size: var(--fs-s); font-weight: var(--fw-medium); color: var(--hint); }
+    /* Остальные итоги — всегда в одну строку, плитки равной ширины
+       (число колонок ставит код: --n = сколько плиток) */
+    #done .stats { display: grid; grid-template-columns: repeat(var(--n, 1), minmax(0, 190px)); gap: 12px;
+                   justify-content: center; width: 100%; margin: 14px 0 4px; }
+    #done .stats:empty { display: none; }          /* медитация: только время */
+    #done .stat { border-radius: 20px; padding: 14px 6px; min-width: 0; }
     #done .stat b { display: block; font-size: var(--fs-l); font-weight: var(--fw-bold); letter-spacing: -0.03em; }
-    #done .stat span { font-size: var(--fs-s); color: var(--hint); }
-    .done-saved { font-size: var(--fs-s); font-weight: var(--fw-medium); color: var(--hint); min-height: 1.4em; }
-    .done-links { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+    #done .stat span { display: block; font-size: var(--fs-s); color: var(--hint);
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .done-saved { font-size: var(--fs-s); font-weight: var(--fw-medium); color: var(--hint); min-height: 1.4em; margin-top: 4px; }
+    .done-links { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 18px; }
+    /* «Удалить запись» — тихая кнопка: без выпуклости, тёмно-красный текст,
+       высота 44 точки под палец. Стоит ниже всех, отдельно от «Открыть дневник» */
+    .quiet-danger { min-height: 44px; padding: 10px 20px; margin-top: 6px; background: none; box-shadow: none;
+                    font-size: var(--fs-s); font-weight: var(--fw-medium); color: #b42318; }
+    .quiet-danger:active { opacity: .55; }
 
     /* ---------- Дневник: календарь месяца и занятия дня ---------- */
     .diary-body { display: grid; gap: 22px; }
@@ -1036,6 +1052,9 @@
       <div class="done-top">
         <div class="h1" id="done-title">Готово!</div>
         <div class="hint" id="done-sub" style="font-size:var(--fs-s)"></div>
+        <!-- Главная цифра: сколько позанимались -->
+        <div class="done-hero"><b id="done-time">0:00</b><span>время занятия</span></div>
+        <!-- Остальные итоги одной строкой: упражнения, подходы, дистанция -->
         <div class="stats" id="done-stats"></div>
         <div class="done-saved" id="done-saved"></div>
       </div>
@@ -1054,7 +1073,7 @@
       <button class="big-btn" id="home-btn" style="margin-top:22px">На главную</button>
       <div class="done-links">
         <button class="text-btn" id="done-diary">Открыть дневник</button>
-        <button class="text-btn" id="done-delete">Удалить запись</button>
+        <button class="quiet-danger" id="done-delete">Удалить запись</button>
       </div>
     </div>
   </section>
@@ -3898,15 +3917,18 @@
       updatePlan();
     }
 
-    // Плашки итогов: время, упражнения, подходы, дистанция
+    // Итоги: время — крупно отдельно, остальное (упражнения, подходы,
+    // дистанция) — плитками в одну строку
     function renderDoneStats() {
       const e = doneEntry;
-      const stats = [[formatClock(doneSeconds), 'время']];
+      $('done-time').textContent = formatClock(doneSeconds);
+      const stats = [];
       if (!isSimple()) stats.push([String(e.n), plural(e.n, 'упражнение', 'упражнения', 'упражнений')]);
       const k = e.gym.reduce((t, b) => t + b.sets.length, 0);
       if (k) stats.push([String(k), plural(k, 'подход', 'подхода', 'подходов')]);
       if (e.dist) stats.push(e.du === 'km' ? [fmtNum(e.dist), 'км'] : [String(e.dist), plural(e.dist, 'круг', 'круга', 'кругов')]);
       $('done-stats').innerHTML = '';
+      $('done-stats').style.setProperty('--n', stats.length);   // столько колонок — все в одну строку
       stats.forEach(([value, label]) => {
         const d = document.createElement('div');
         d.className = 'stat glass';
