@@ -7,6 +7,8 @@
 //  Версия 9 — бег, скакалка, баскетбол, заминка для глаз;
 //  повторяющиеся отрезки (интервалы) в беге и скакалке;
 //  дистанция (круги или км) в бассейне и беге.
+//  Версия 10 — зал: после каждой тренировки часть упражнений меняется
+//  на похожие, а следующая тренировка — следующий день цикла программ.
 // =====================================================================
 
 /*
@@ -245,6 +247,19 @@ const EXERCISES = [
     ['Подбородок к груди, рёбра вниз', 'Вверху — пауза и сжатие ягодиц', 'Голени вертикальны в верхней точке'], 10),
   ex('calf_machine', 'calves', 'Подъём на носки в тренажёре', 'Полная амплитуда: опуститесь пятками вниз, поднимитесь максимально вверх.', 35, 60, 'calf',
     ['Пауза вверху и внизу', 'Колени прямые', 'Жжение в икрах — нормально'], 15),
+  // Замены (после тренировки часть упражнений меняется на похожие — см. программы зала)
+  ex('hack_squat', 'legs', 'Гакк-приседания', 'Спина и плечи прижаты к упорам тренажёра. Опускайтесь до параллели и выжимайте платформу ногами.', 45, 90, 'squat',
+    ['Колени смотрят по носкам', 'Пятки не отрываются от платформы', 'Вниз — вдох, вверх — выдох'], 10),
+  ex('db_step_up', 'legs', 'Зашагивания на скамью', 'Гантели в руках. Поставьте ногу на скамью и поднимитесь, толкаясь пяткой. Смена ноги — следующий подход.', 45, 90, 'step',
+    ['Толкайтесь передней ногой, а не задней', 'Корпус прямо', 'Вниз — медленно, под контролем'], 10),
+  ex('sl_rdl', 'hamstrings', 'Румынская тяга на одной ноге', 'Гантель в руке, стоя на одной ноге. Наклоняйтесь с прямой спиной, свободная нога уходит назад. Смена ноги — следующий подход.', 45, 90, 'hinge',
+    ['Таз ровный, не раскрывается в сторону', 'Опорное колено чуть согнуто', 'Для равновесия можно держаться за опору'], 10),
+  ex('seated_leg_curl', 'hamstrings', 'Сгибание ног сидя', 'Сидя в тренажёре, валик над пятками. Сгибайте ноги под сиденье и медленно возвращайте.', 40, 60, 'sit_kick',
+    ['Бёдра прижаты валиком', 'Внизу — короткая пауза', 'Назад — 2–3 секунды'], 12),
+  ex('cable_kickback', 'glutes', 'Отведение ноги назад в кроссовере', 'Манжета на щиколотке, руками держитесь за стойку. Отводите прямую ногу назад-вверх. Смена ноги — следующий подход.', 40, 60, 'balance',
+    ['Поясница не прогибается', 'Вверху — пауза и сжатие ягодицы', 'Движение медленное, без маха'], 12),
+  ex('seated_calf', 'calves', 'Подъём на носки сидя', 'Сидя, валик на коленях, носки на платформе. Поднимайтесь на носки и опускайте пятки ниже платформы.', 35, 60, 'calf',
+    ['Полная амплитуда', 'Пауза вверху', 'Работает камбаловидная мышца икры'], 15),
 
   // --- Грудь ---
   ex('bench', 'chest', 'Жим штанги лёжа', 'Лопатки сведены, стопы в пол. Опускайте штангу к груди и выжимайте.', 45, 120, 'bench',
@@ -253,6 +268,17 @@ const EXERCISES = [
     ['Локти под углом около 45° к корпусу', 'Внизу — лёгкое растяжение груди', 'Выдох — на подъёме'], 10),
   ex('chest_fly', 'chest', 'Сведение рук в кроссовере', 'Шаг вперёд от блоков, локти слегка согнуты. Сводите руки перед грудью по дуге.', 40, 60, 'hug',
     ['Угол в локтях не меняется', 'Вперёд — выдох, сожмите грудь', 'Назад — медленно, без рывка'], 12),
+  // Замены
+  ex('incline_bench', 'chest', 'Жим штанги на наклонной скамье', 'Скамья под углом 30°. Опускайте штангу к верху груди и выжимайте вверх.', 45, 120, 'bench',
+    ['Лопатки сведены и прижаты к скамье', 'Вниз — вдох, вверх — выдох', 'Работайте со страхующим'], 8),
+  ex('db_bench', 'chest', 'Жим гантелей лёжа', 'Лёжа на горизонтальной скамье, гантели над грудью. Опускайте их по бокам груди и выжимайте вверх.', 45, 90, 'bench',
+    ['Внизу — лёгкое растяжение груди', 'Вверху гантели не стукаются', 'Выдох — на подъёме'], 10),
+  ex('machine_press', 'chest', 'Жим от груди в тренажёре', 'Сидя, рукояти на уровне середины груди. Выжимайте вперёд до почти прямых рук и медленно возвращайте.', 45, 90, 'bench',
+    ['Лопатки прижаты к спинке', 'Локти не выпрямляйте до щелчка', 'Выдох — на жиме'], 10),
+  ex('pec_deck', 'chest', 'Сведение рук в тренажёре «бабочка»', 'Сидя, руки на рукоятях по бокам. Сводите руки перед грудью и медленно разводите.', 40, 60, 'hug',
+    ['Спина прижата к спинке', 'Вперёд — выдох, сожмите грудь', 'Назад — медленно, без рывка'], 12),
+  ex('db_fly', 'chest', 'Разводка гантелей лёжа', 'Лёжа на скамье, гантели над грудью, локти чуть согнуты. Разводите руки по дуге в стороны и сводите обратно.', 40, 60, 'hug',
+    ['Угол в локтях не меняется', 'Опускайте до лёгкого растяжения груди', 'Вес умеренный'], 12),
 
   // --- Спина ---
   ex('pullups', 'back', 'Подтягивания', 'Хват чуть шире плеч. Подтянитесь подбородком к перекладине.', 40, 120, 'pull',
@@ -267,6 +293,15 @@ const EXERCISES = [
     ['Спина прямая', 'Локоть идёт вдоль корпуса', 'Выдох — на подъёме'], 10),
   ex('hyperext', 'back', 'Гиперэкстензия', 'В тренажёре, валик под тазом. Опуститесь с прямой спиной и поднимитесь до прямой линии.', 40, 60, 'hinge',
     ['Не прогибайтесь выше прямой линии', 'Движение плавное', 'Работают разгибатели спины и ягодицы'], 12),
+  // Замены
+  ex('tbar_row', 'back', 'Тяга Т-грифа', 'Наклон корпуса около 45°, спина прямая. Тяните гриф к низу груди, сводя лопатки.', 45, 120, 'row',
+    ['Спина не округляется', 'Локти идут назад вдоль корпуса', 'Выдох — на подъёме'], 8),
+  ex('close_pulldown', 'back', 'Тяга верхнего блока узким хватом', 'Узкая рукоять, ладони друг к другу. Тяните к верху груди, локти идут вниз вдоль корпуса.', 40, 90, 'pull',
+    ['Грудь навстречу рукояти', 'Не раскачивайтесь', 'Вверх — медленно'], 10),
+  ex('pullover', 'back', 'Пуловер на верхнем блоке', 'Стоя лицом к блоку, почти прямые руки на прямой рукояти. Опускайте рукоять дугой к бёдрам.', 40, 60, 'pull',
+    ['Руки почти прямые', 'Корпус чуть наклонён вперёд', 'Работают широчайшие'], 12),
+  ex('machine_row', 'back', 'Тяга в рычажном тренажёре', 'Грудь на упоре. Тяните рукояти к поясу, сводя лопатки, и медленно возвращайте.', 40, 75, 'row',
+    ['Грудь не отрывается от упора', 'Плечи вниз, от ушей', 'Выдох — на тяге'], 10),
 
   // --- Плечи ---
   ex('ohp', 'shoulders', 'Жим штанги стоя', 'Штанга на груди. Выжмите вверх над головой, корпус напряжён.', 45, 120, 'press',
@@ -279,6 +314,15 @@ const EXERCISES = [
     ['Спина прямая', 'Сводите лопатки в конце', 'Работают задние дельты'], 12),
   ex('face_pull', 'shoulders', 'Тяга каната к лицу', 'Блок на уровне лица. Тяните канат к лицу, разводя концы в стороны и локти вверх.', 40, 60, 'row',
     ['Локти выше кистей', 'В конце — пауза, лопатки сведены', 'Полезно для осанки и здоровья плеч'], 15),
+  // Замены
+  ex('arnold_press', 'shoulders', 'Жим Арнольда', 'Сидя, гантели у груди ладонями к себе. Выжимайте вверх, по пути разворачивая ладони вперёд.', 45, 90, 'press',
+    ['Разворот плавный, вместе с жимом', 'Спина прижата к спинке', 'Выдох — вверх'], 10),
+  ex('cable_lateral', 'shoulders', 'Отведение руки на нижнем блоке', 'Боком к блоку, рукоять в дальней руке. Отводите руку в сторону до уровня плеча. Смена руки — следующий подход.', 40, 60, 'lateral',
+    ['Локоть чуть согнут', 'Плечо не поднимается к уху', 'Вниз — медленно'], 12),
+  ex('front_raise', 'shoulders', 'Подъём гантелей перед собой', 'Гантели у бёдер. Поднимайте почти прямые руки перед собой до уровня плеч.', 40, 60, 'reach',
+    ['Корпус не раскачивается', 'Вверх — выдох', 'Работает передний пучок дельт'], 12),
+  ex('reverse_fly', 'shoulders', 'Обратная «бабочка»', 'Сидя лицом к спинке тренажёра «бабочка». Разводите руки назад, сводя лопатки.', 40, 60, 'row',
+    ['Локти чуть согнуты', 'В конце — пауза', 'Работают задние дельты'], 15),
 
   // --- Бицепс ---
   ex('barbell_curl', 'biceps', 'Подъём штанги на бицепс', 'Локти прижаты к корпусу. Поднимайте штангу, не раскачиваясь.', 40, 60, 'curl',
@@ -289,6 +333,13 @@ const EXERCISES = [
     ['Локти смотрят в пол', 'Внизу — полное выпрямление', 'Вес меньше, чем стоя'], 10),
   ex('conc_curl', 'biceps', 'Концентрированный подъём', 'Сидя, локоть упирается во внутреннюю часть бедра. Поднимайте гантель к плечу.', 40, 45, 'curl',
     ['Сожмите бицепс вверху', 'Медленно вниз', 'Смените руку на половине'], 10),
+  // Замены
+  ex('db_curl', 'biceps', 'Подъём гантелей на бицепс', 'Стоя, гантели в опущенных руках. Сгибайте руки, разворачивая ладони вверх.', 40, 60, 'curl',
+    ['Локти прижаты к корпусу', 'Вверх — выдох', 'Опускайте медленно'], 10),
+  ex('cable_curl', 'biceps', 'Сгибания рук на нижнем блоке', 'Лицом к блоку, прямая рукоять. Сгибайте руки, не отводя локти от корпуса.', 40, 60, 'curl',
+    ['Натяжение есть всё время', 'Без раскачки', 'Вверху — сожмите бицепс'], 12),
+  ex('preacher_curl', 'biceps', 'Сгибания на скамье Скотта', 'Плечи лежат на наклонной подушке. Сгибайте руки со штангой или гантелями, внизу почти выпрямляйте.', 40, 60, 'curl',
+    ['Локти не отрываются от подушки', 'Внизу — без рывка', 'Вверх — выдох'], 10),
 
   // --- Трицепс ---
   ex('close_bench', 'triceps', 'Жим узким хватом', 'Хват на ширине плеч, локти вдоль корпуса. Опускайте штангу к низу груди.', 45, 120, 'bench',
@@ -301,12 +352,22 @@ const EXERCISES = [
     ['Двигаются только предплечья', 'Внизу — пауза и сжатие', 'Выдох на разгибании'], 12),
   ex('oh_ext', 'triceps', 'Разгибание из-за головы', 'Гантель или канат блока за головой, локти смотрят вверх. Разгибайте руки над головой.', 40, 60, 'oh_ext',
     ['Локти близко к голове', 'Внизу — растяжение трицепса', 'Поясница не прогибается'], 12),
+  // Замены
+  ex('rope_pushdown', 'triceps', 'Разгибания с канатом на блоке', 'Канат на верхнем блоке, локти прижаты. Разгибайте руки вниз, внизу разводя концы каната.', 40, 60, 'press_down',
+    ['Двигаются только предплечья', 'Внизу — пауза', 'Выдох на разгибании'], 12),
+  ex('db_kickback', 'triceps', 'Разгибание руки с гантелью в наклоне', 'Опора рукой и коленом о скамью, плечо вдоль корпуса. Разгибайте руку назад. Смена руки — следующий подход.', 40, 45, 'row',
+    ['Плечо неподвижно', 'Вверху — пауза и сжатие', 'Вес лёгкий'], 12),
 
   // --- Пресс ---
   ex('hanging_leg_raise', 'core', 'Подъём ног в висе', 'Вис на перекладине. Поднимайте согнутые или прямые ноги, подкручивая таз.', 40, 60, 'pull',
     ['Без раскачки', 'Опускайте медленно', 'Тяжело — делайте в упоре на локтях'], 12),
   ex('cable_crunch', 'core', 'Скручивания на блоке', 'Стоя на коленях спиной к блоку, канат у головы. Скручивайтесь вниз, сокращая пресс.', 40, 60, 'pump',
     ['Таз неподвижен', 'Округляйте спину, а не наклоняйтесь бёдрами', 'Выдох — вниз'], 15),
+  // Замены
+  ex('ab_wheel', 'core', 'Ролик для пресса', 'Стоя на коленях, руки на ролике. Выкатывайте ролик вперёд с прямой спиной и возвращайтесь за счёт пресса.', 40, 60, 'plank',
+    ['Поясница не прогибается', 'Начинайте с небольшой амплитуды', 'Выдох — на возврате'], 10),
+  ex('decline_crunch', 'core', 'Скручивания на наклонной скамье', 'Ноги закреплены, спина на скамье. Скручивайтесь, поднимая лопатки к тазу, и медленно опускайтесь.', 40, 60, 'lying',
+    ['Подбородок не прижимайте к груди', 'Скругляйте спину, а не тяните шею', 'Выдох — вверх'], 15),
 
   // =================== ЙОГА ===================
   ex('yoga_breath', 'breath', 'Пранаяма: дыхание квадратом', 'Вдох 4 счёта — пауза 4 — выдох 4 — пауза 4.', 60, 5, 'breathe',
@@ -648,6 +709,9 @@ const EXERCISES = [
     restTips    — (необязательно) подсказки на отдыхе вместо обычных
     warmupShare, coolShare — (необязательно) доля разминки и заминки
                   (по умолчанию 20% и 15%)
+    cycles      — (необязательно, зал) циклы программ: [['a', 'b', 'c'], …].
+                  После тренировки по умолчанию выбирается следующая программа
+                  цикла, после последней — снова первая
     directions  — программы этого вида
 
   ПРОГРАММА (направление) — поля:
@@ -657,6 +721,9 @@ const EXERCISES = [
                   Одно упражнение — один раз во всей программе (без повторов).
                   Порядок в main важен: сначала базовые (тяжёлые),
                   потом изолирующие (лёгкие).
+                  В main вместо упражнения может стоять список замен
+                  ['a', 'b', 'c'] (зал): после каждой тренировки по программе
+                  часть таких мест переходит к следующей замене — см. mainIds().
     fixed       — true: упражнения не выкидываются, при нехватке времени
                   каждое делается короче (традиционные комплексы).
     sets        — (необязательно) сколько раз повторить каждое упражнение main
@@ -715,61 +782,87 @@ const SPORTS = [
   {
     id: 'gym', name: 'Тренажёрный зал', sets: 3,
     min: 20, max: 90, def: 60, step: 5,
+    // Циклы программ: после тренировки по умолчанию выбирается следующий
+    // день цикла (другие группы мышц), после последнего — снова первый.
+    // «Ноги» есть в нескольких циклах — приложение помнит, по какому вы идёте.
+    cycles: [
+      ['chest_triceps', 'back_biceps', 'legs', 'shoulders_abs'],   // сплит на 4 дня
+      ['push', 'pull', 'legs'],                                    // Жим — Тяга — Ноги
+      ['upper', 'legs'],                                           // Верх — Низ
+      ['legs_biceps', 'arms_triceps', 'legs_shoulders'],
+      ['full_body'],                                               // каждый раз всё тело
+    ],
+    // В main: строка — упражнение не меняется (главное упражнение дня),
+    // список [а, б, в] — место с заменами: сначала «а», после тренировок по
+    // очереди «б», «в» и снова «а». Замены — на ту же группу мышц.
     directions: [
       { id: 'chest_triceps', name: 'Грудь + трицепс', short: 'Грудь + трицепс', sets: 3,
         description: 'Жимы на грудь, затем трицепс — он уже разогрет жимами.',
         warmup: ['gym_cardio', 'gym_joints'],
-        main:   ['bench', 'incline_db', 'dips', 'chest_fly', 'french_press', 'pushdown'],
+        main:   ['bench', ['incline_db', 'incline_bench', 'machine_press'], ['dips', 'close_bench'],
+                 ['chest_fly', 'pec_deck', 'db_fly'], ['french_press', 'oh_ext'], ['pushdown', 'rope_pushdown', 'db_kickback']],
         cool:   ['gym_stretch'] },
       { id: 'back_biceps', name: 'Спина + бицепс', short: 'Спина + бицепс', sets: 3,
         description: 'Вертикальные и горизонтальные тяги, затем бицепс.',
         warmup: ['gym_cardio', 'gym_joints'],
-        main:   ['pullups', 'barbell_row', 'lat_pulldown', 'seated_row', 'hyperext', 'barbell_curl', 'hammer_curl', 'incline_curl'],
+        main:   ['pullups', ['barbell_row', 'tbar_row', 'db_row'], ['lat_pulldown', 'close_pulldown', 'pullover'],
+                 ['seated_row', 'machine_row'], 'hyperext', ['barbell_curl', 'db_curl'], ['hammer_curl', 'cable_curl'],
+                 ['incline_curl', 'preacher_curl', 'conc_curl']],
         cool:   ['gym_stretch'] },
       { id: 'legs', name: 'Ноги', short: 'Ноги', sets: 3,
         description: 'Полноценный день ног: квадрицепс, задняя поверхность бедра, ягодицы, икры.',
         warmup: ['gym_cardio', 'gym_joints'],
-        main:   ['back_squat', 'rdl', 'leg_press', 'hip_thrust', 'bulgarian', 'leg_curl', 'leg_ext', 'calf_machine'],
+        main:   ['back_squat', ['rdl', 'sl_rdl'], ['leg_press', 'hack_squat'], ['hip_thrust', 'cable_kickback'],
+                 ['bulgarian', 'db_lunges', 'db_step_up'], ['leg_curl', 'seated_leg_curl'], 'leg_ext', ['calf_machine', 'seated_calf']],
         cool:   ['gym_stretch'] },
       { id: 'shoulders_abs', name: 'Плечи + пресс', short: 'Плечи + пресс', sets: 3,
         description: 'Жим и махи на все три пучка дельт, в конце — пресс.',
         warmup: ['gym_cardio', 'gym_joints'],
-        main:   ['ohp', 'lateral_raise', 'face_pull', 'rear_delt', 'hanging_leg_raise', 'cable_crunch', 'plank'],
+        main:   ['ohp', ['lateral_raise', 'cable_lateral'], ['face_pull', 'front_raise'], ['rear_delt', 'reverse_fly'],
+                 ['hanging_leg_raise', 'ab_wheel'], ['cable_crunch', 'decline_crunch'], ['plank', 'side_plank']],
         cool:   ['gym_stretch'] },
       { id: 'push', name: 'Жим: грудь, плечи, трицепс', short: 'Жим (Push)', sets: 3,
         description: 'День «толкающих» мышц из схемы «Жим — Тяга — Ноги».',
         warmup: ['gym_cardio', 'gym_joints'],
-        main:   ['bench', 'ohp', 'incline_db', 'lateral_raise', 'chest_fly', 'pushdown', 'oh_ext'],
+        main:   ['bench', ['ohp', 'db_press', 'arnold_press'], ['incline_db', 'incline_bench', 'machine_press'],
+                 ['lateral_raise', 'cable_lateral'], ['chest_fly', 'pec_deck', 'db_fly'], ['pushdown', 'rope_pushdown'],
+                 ['oh_ext', 'french_press', 'db_kickback']],
         cool:   ['gym_stretch'] },
       { id: 'pull', name: 'Тяга: спина, задние дельты, бицепс', short: 'Тяга (Pull)', sets: 3,
         description: 'День «тянущих» мышц из схемы «Жим — Тяга — Ноги».',
         warmup: ['gym_cardio', 'gym_joints'],
-        main:   ['pullups', 'barbell_row', 'lat_pulldown', 'face_pull', 'barbell_curl', 'hammer_curl'],
+        main:   ['pullups', ['barbell_row', 'tbar_row', 'db_row'], ['lat_pulldown', 'close_pulldown', 'pullover'],
+                 ['face_pull', 'reverse_fly', 'rear_delt'], ['barbell_curl', 'db_curl', 'preacher_curl'], ['hammer_curl', 'cable_curl']],
         cool:   ['gym_stretch'] },
       { id: 'full_body', name: 'Всё тело (для начинающих)', short: 'Всё тело', sets: 3,
         description: 'Одно базовое упражнение на каждую крупную группу. Хорошо 2–3 раза в неделю.',
         warmup: ['gym_cardio', 'gym_joints'],
-        main:   ['back_squat', 'bench', 'lat_pulldown', 'rdl', 'db_press', 'seated_row', 'plank'],
+        main:   ['back_squat', ['bench', 'db_bench', 'machine_press'], ['lat_pulldown', 'close_pulldown'], ['rdl', 'sl_rdl'],
+                 ['db_press', 'arnold_press'], ['seated_row', 'db_row', 'machine_row'], ['plank', 'side_plank']],
         cool:   ['gym_stretch'] },
       { id: 'upper', name: 'Верх тела: грудь, спина, плечи, руки', short: 'Верх тела', sets: 3,
         description: 'Жим, подтягивания, тяги, плечи и руки — для схемы «Верх — Низ».',
         warmup: ['gym_cardio', 'gym_joints'],
-        main:   ['bench', 'pullups', 'db_press', 'db_row', 'lateral_raise', 'barbell_curl', 'pushdown'],
+        main:   ['bench', ['pullups', 'lat_pulldown'], ['db_press', 'ohp', 'arnold_press'], ['db_row', 'barbell_row', 'seated_row'],
+                 ['lateral_raise', 'cable_lateral'], ['barbell_curl', 'hammer_curl', 'db_curl'], ['pushdown', 'french_press', 'oh_ext']],
         cool:   ['gym_stretch'] },
       { id: 'legs_biceps', name: 'Ноги + бицепс', short: 'Ноги + бицепс', sets: 3,
         description: 'Базовые упражнения на ноги и бицепс в конце.',
         warmup: ['gym_cardio', 'gym_joints'],
-        main:   ['back_squat', 'rdl', 'leg_press', 'leg_curl', 'barbell_curl', 'hammer_curl', 'conc_curl'],
+        main:   ['back_squat', ['rdl', 'sl_rdl'], ['leg_press', 'hack_squat', 'bulgarian'], ['leg_curl', 'seated_leg_curl'],
+                 ['barbell_curl', 'db_curl'], ['hammer_curl', 'cable_curl'], ['conc_curl', 'preacher_curl', 'incline_curl']],
         cool:   ['gym_stretch'] },
       { id: 'arms_triceps', name: 'Руки: трицепс + бицепс', short: 'Руки', sets: 3,
         description: 'Акцент на трицепс, плюс бицепс для баланса.',
         warmup: ['gym_cardio', 'gym_joints'],
-        main:   ['close_bench', 'dips', 'barbell_curl', 'french_press', 'hammer_curl', 'pushdown', 'conc_curl'],
+        main:   ['close_bench', ['dips', 'oh_ext'], ['barbell_curl', 'db_curl', 'preacher_curl'], ['french_press', 'db_kickback'],
+                 ['hammer_curl', 'cable_curl'], ['pushdown', 'rope_pushdown'], ['conc_curl', 'incline_curl']],
         cool:   ['gym_stretch'] },
       { id: 'legs_shoulders', name: 'Ноги + плечи', short: 'Ноги + плечи', sets: 3,
         description: 'Присед и выпады, затем жим и махи на плечи.',
         warmup: ['gym_cardio', 'gym_joints'],
-        main:   ['back_squat', 'ohp', 'db_lunges', 'lateral_raise', 'leg_ext', 'rear_delt'],
+        main:   ['back_squat', ['ohp', 'db_press', 'arnold_press'], ['db_lunges', 'bulgarian', 'db_step_up'],
+                 ['lateral_raise', 'cable_lateral'], 'leg_ext', ['rear_delt', 'face_pull', 'reverse_fly']],
         cool:   ['gym_stretch'] },
     ],
   },
@@ -1036,12 +1129,59 @@ function getDirection(sportId, dirId) {
   return sport.directions.find(item => item.id === dirId) || sport.directions[0];
 }
 
-// Все упражнения, которые встречаются в программах вида занятия (без повторов)
+// Все упражнения, которые встречаются в программах вида занятия
+// (вместе с заменами, без повторов)
 function sportExerciseIds(sportId) {
   const ids = [];
   getSport(sportId).directions.forEach(d =>
-    [...d.warmup, ...d.main, ...d.cool].forEach(id => { if (!ids.includes(id)) ids.push(id); }));
+    [...d.warmup, ...d.main.flat(), ...d.cool].forEach(id => { if (!ids.includes(id)) ids.push(id); }));
   return ids;
+}
+
+/*
+  ЗАМЕНЫ УПРАЖНЕНИЙ (зал). Какие упражнения основной части будут
+  в тренировке номер round по этой программе (0 — первая, 1 — вторая…).
+  Место-строка не меняется никогда (главное упражнение дня).
+  Места-списки меняются по очереди: после каждой тренировки — примерно
+  треть из них (1–3 места), каждое переходит к следующей замене в своём
+  списке. Через несколько тренировок поменяются все, и круг пойдёт снова.
+  Пример: 6 мест с заменами → после 1-й тренировки меняются 1-е и 2-е,
+  после 2-й — 3-е и 4-е, после 3-й — 5-е и 6-е, после 4-й — снова 1-е и 2-е.
+*/
+function mainIds(dir, round = 0) {
+  const vars = [];                                   // номера мест с заменами
+  dir.main.forEach((slot, j) => { if (Array.isArray(slot) && slot.length > 1) vars.push(j); });
+  const perRound = Math.max(1, Math.round(vars.length / 3));   // сколько мест меняется за раз
+  const swaps = Math.max(0, round) * perRound;                  // сколько всего было замен
+  return dir.main.map((slot, j) => {
+    if (!Array.isArray(slot)) return slot;
+    const q = vars.indexOf(j);
+    if (q < 0) return slot[0];
+    // Сколько раз менялось это место (замены идут по кругу мест)
+    const times = Math.floor(swaps / vars.length) + (q < swaps % vars.length ? 1 : 0);
+    return slot[times % slot.length];
+  });
+}
+
+/*
+  ЦИКЛ ПРОГРАММ (зал). Какая программа следующая после dirId.
+  cycleNo — номер цикла, по которому идёте сейчас (программа может быть
+  в нескольких циклах, как «Ноги»). Возвращает { dir, cycle } или null,
+  если программа не входит ни в один цикл.
+*/
+function nextInCycle(sport, dirId, cycleNo = 0) {
+  const cycles = sport.cycles || [];
+  const c = cycles[cycleNo] && cycles[cycleNo].includes(dirId)
+    ? cycleNo : cycles.findIndex(cy => cy.includes(dirId));
+  if (c < 0) return null;
+  const cy = cycles[c];
+  return { dir: cy[(cy.indexOf(dirId) + 1) % cy.length], cycle: c };
+}
+// Цикл, в котором сейчас программа dirId (для подсказки на экране «Направление»)
+function cycleOf(sport, dirId, cycleNo = 0) {
+  const cycles = sport.cycles || [];
+  if (cycles[cycleNo] && cycles[cycleNo].includes(dirId)) return cycles[cycleNo];
+  return cycles.find(cy => cy.includes(dirId)) || null;
 }
 
 // Как называются подходы у вида занятия: setWord(sport, 3) → «подхода»,
@@ -1054,7 +1194,7 @@ function setWord(sport, n) {
 // Названия групп основной части программы: «Грудь · Трицепс»
 function directionGroups(dir) {
   const names = [];
-  dir.main.forEach(id => {
+  mainIds(dir).forEach(id => {
     const g = GROUP_NAMES[getExercise(id).group];
     if (g && !names.includes(g)) names.push(g);
   });
@@ -1205,13 +1345,14 @@ function partMaxSeconds(ids, sets = 1, maxScale = MAX_SCALE, maxSets = MAX_SETS)
   max — сколько программа может заполнить без повторов,
   но не больше, чем допускает вид занятия.
 */
-function planLimits(sportId, dirId) {
+function planLimits(sportId, dirId, round = 0) {
   const s = getSport(sportId);
   if (s.simple || dirId === CUSTOM_ID) return { min: s.min, max: s.max, step: s.step };
   const dir = getDirection(sportId, dirId);
+  const main = mainIds(dir, round);   // зал: упражнения этой тренировки (с заменами)
   const sets = dir.sets || 1;
   const k = s.maxScale || MAX_SCALE;
-  const maxSec = partMaxSeconds(dir.warmup, 1, k) + partMaxSeconds(dir.main, sets, k, dir.maxSets) + partMaxSeconds(dir.cool, 1, k);
+  const maxSec = partMaxSeconds(dir.warmup, 1, k) + partMaxSeconds(main, sets, k, dir.maxSets) + partMaxSeconds(dir.cool, 1, k);
   let max = Math.floor(maxSec / 60 / s.step) * s.step;
   max = Math.max(s.min, Math.min(s.max, max));
   let min = s.min;
@@ -1219,10 +1360,10 @@ function planLimits(sportId, dirId) {
   let needMain = 0;
   if (dir.fixed) {
     // Традиционный комплекс должен поместиться целиком хотя бы на половине длительности
-    needMain = dir.main.map(getExercise).reduce((t, item) => t + item.duration * FIXED_MIN_SCALE + item.rest, 0);
+    needMain = main.map(getExercise).reduce((t, item) => t + item.duration * FIXED_MIN_SCALE + item.rest, 0);
   } else if (dir.minSets) {
     // Отрезки (бег, скакалка): самое важное упражнение — хотя бы minSets раз
-    const items = dir.main.map(getExercise).filter(Boolean);
+    const items = main.map(getExercise).filter(Boolean);
     if (items.length) needMain = itemCost(items[rankByGroups(items)[0]], dir.minSets);
   }
   if (needMain) {
@@ -1254,8 +1395,10 @@ function expandSets(list) {
     dirId     — программа, или CUSTOM_ID для своей тренировки
     minutes   — желаемая длительность (для своей тренировки не важна)
     customIds — список упражнений своей тренировки
+    round     — (зал) номер тренировки по этой программе: от него зависят
+                замены упражнений (см. mainIds)
 */
-function buildWorkout(sportId, dirId, minutes, customIds = []) {
+function buildWorkout(sportId, dirId, minutes, customIds = [], round = 0) {
   const s = getSport(sportId);
   const total = minutes * 60;
 
@@ -1277,6 +1420,7 @@ function buildWorkout(sportId, dirId, minutes, customIds = []) {
   }
 
   const dir = getDirection(sportId, dirId);
+  const main = mainIds(dir, round);   // основная часть этой тренировки (с заменами)
   const sets = dir.sets || 1;
 
   // Делим время: разминка ~20%, заминка ~15% (у вида занятия могут быть свои доли),
@@ -1284,7 +1428,7 @@ function buildWorkout(sportId, dirId, minutes, customIds = []) {
   // Если основная часть «упёрлась» в свой максимум — остаток отдаём разминке и заминке.
   const k = s.maxScale || MAX_SCALE;
   const maxW = partMaxSeconds(dir.warmup, 1, k), maxC = partMaxSeconds(dir.cool, 1, k);
-  const maxM = partMaxSeconds(dir.main, sets, k, dir.maxSets);
+  const maxM = partMaxSeconds(main, sets, k, dir.maxSets);
   const ws = s.warmupShare || WARMUP_SHARE, cs = s.coolShare || COOL_SHARE;
   let w = dir.warmup.length ? Math.min(total * ws, maxW) : 0;
   let c = dir.cool.length ? Math.min(total * cs, maxC) : 0;
@@ -1298,7 +1442,7 @@ function buildWorkout(sportId, dirId, minutes, customIds = []) {
 
   const exercises = expandSets([
     ...planPart(dir.warmup, w, 1, false, k),
-    ...planPart(dir.main, m, sets, !!dir.fixed, k, dir.minSets || sets, dir.maxSets || MAX_SETS),
+    ...planPart(main, m, sets, !!dir.fixed, k, dir.minSets || sets, dir.maxSets || MAX_SETS),
     ...planPart(dir.cool, c, 1, false, k),
   ]);
   return { id: 'auto_' + sportId + '_' + dir.id + '_' + minutes, name: dir.name, exercises, rounds: 1 };
