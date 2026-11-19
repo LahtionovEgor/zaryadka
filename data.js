@@ -9,6 +9,8 @@
 //  дистанция (круги или км) в бассейне и беге.
 //  Версия 10 — зал: после каждой тренировки часть упражнений меняется
 //  на похожие, а следующая тренировка — следующий день цикла программ.
+//  Версия 11 — зарядка: в автоподборе нет прыжков и упражнений лёжа на спине
+//  (они остались для своей тренировки), упражнения чередуются от раза к разу.
 // =====================================================================
 
 /*
@@ -213,6 +215,34 @@ const EXERCISES = [
     ['Плечи не поднимаются к ушам', 'Грудь раскрыта', 'Выдох — при сведении'], 12),
   ex('chest_open', 'stretch', 'Раскрытие груди', 'Предплечье на дверном косяке, сделайте маленький шаг вперёд. Смена руки на половине времени.', 40, 5, 'reach',
     ['Плечо опущено', 'Тянет грудная мышца — без боли в плече', 'Дышите спокойно']),
+
+  // --- Зарядка: замены прыжкам и упражнениям лёжа на спине (версия 11) ---
+  // Всё стоя и без прыжков. Прыжки и упражнения на спине остались в библиотеке —
+  // их можно выбрать в «Своей тренировке».
+  ex('step_jack', 'cardio', '«Звёздочка» шагом', 'Шаг в сторону — руки через стороны вверх, приставьте ногу — руки вниз. Чередуйте стороны. Без прыжка.', 30, 15, 'step_jack',
+    ['Двигайтесь бодро, в ритме', 'Руки поднимайте прямыми', 'Колени мягкие, спина ровная']),
+  ex('knee_lift', 'cardio', 'Высокий шаг на месте', 'Шагайте на месте, поднимая колени до пояса. Руки работают, как при ходьбе. Без подскоков.', 30, 15, 'knee_up',
+    ['Корпус прямой, не заваливайтесь назад', 'Опускайте стопу мягко', 'Темп — бодрый, но без прыжков']),
+  ex('shadow_box', 'cardio', 'Бой с тенью', 'Лёгкая стойка, кулаки у подбородка. Быстрые прямые удары руками вперёд, переступая на месте.', 30, 15, 'jerks',
+    ['Руку не выпрямляйте до щелчка в локте', 'После удара кулак возвращается к лицу', 'Дышите на каждый удар']),
+  ex('sumo_squat', 'legs', 'Приседания «плие»', 'Ноги шире плеч, носки развёрнуты наружу. Опускайтесь вниз, колени смотрят за носками.', 40, 15, 'squat',
+    ['Спина прямая', 'Пятки на полу', 'Внизу сожмите ягодицы и поднимайтесь'], 15),
+  ex('side_lunge', 'legs', 'Выпады в сторону', 'Широкий шаг в сторону, присядьте на эту ногу, другая прямая. Вернитесь и смените сторону.', 40, 15, 'lunge',
+    ['Таз уводите назад, как будто садитесь', 'Колено над стопой', 'Опорная стопа целиком на полу'], 10),
+  ex('incline_pushup', 'chest', 'Отжимания от стола', 'Ладони на краю стола или подоконника, тело прямое. Опускайте грудь к краю и выпрямляйте руки.', 40, 15, 'pushup',
+    ['Стол должен стоять устойчиво', 'Локти под углом 45° к корпусу', 'Чем ниже опора — тем тяжелее'], 12),
+  ex('bent_fly', 'back', 'Разведение рук в наклоне', 'Наклон вперёд с прямой спиной, руки вниз. Разводите руки в стороны, сводя лопатки, и опускайте.', 30, 10, 'row',
+    ['Спина прямая, колени чуть согнуты', 'Вверху задержитесь на секунду', 'Шея продолжает линию спины'], 12),
+  ex('good_morning', 'glutes', 'Наклоны с прямой спиной', 'Руки на поясе, колени чуть согнуты. Отведите таз назад и наклонитесь с прямой спиной, выпрямитесь, сжав ягодицы.', 40, 15, 'hinge',
+    ['Спина прямая всё время', 'Наклон — за счёт таза, а не поясницы', 'Тянется задняя поверхность бедра'], 12),
+  ex('standing_kickback', 'glutes', 'Отведение ноги назад стоя', 'Руки на спинке стула. Отводите прямую ногу назад, напрягая ягодицу, и возвращайте. Смена ноги на половине.', 40, 15, 'kickback',
+    ['Поясница не прогибается', 'Двигается только нога, корпус неподвижен', 'Вверху задержитесь на секунду']),
+  ex('standing_cross', 'core', 'Колено к локтю стоя', 'Руки за головой. Поднимайте колено и тянитесь к нему противоположным локтем. Чередуйте стороны.', 40, 15, 'cross_knee',
+    ['Поворачивается корпус, а не только локоть', 'Выдох — когда колено идёт вверх', 'Спина прямая, не горбитесь'], 16),
+  ex('standing_side_crunch', 'core', 'Боковые скручивания стоя', 'Руки за головой. Поднимайте колено в сторону и тянитесь к нему локтем той же стороны. Смена стороны на половине.', 40, 15, 'sidebend',
+    ['Сжимайте бок, а не тяните шею', 'Опорная нога слегка согнута', 'Можно держаться одной рукой за опору']),
+  ex('standing_knee_raise', 'core', 'Колено к груди стоя', 'Стоя прямо, напрягите пресс и медленно подтяните колено к груди, слегка округлив спину. Чередуйте ноги.', 40, 15, 'knee_chest',
+    ['Работает пресс — колено поднимайте медленно', 'Выдох — колено вверх', 'Для равновесия можно держаться за опору'], 12),
   ex('cat_cow', 'mobility', '«Кошка-корова»', 'На четвереньках: прогните спину вниз, затем выгните вверх. Медленно.', 30, 10, 'catcow',
     ['Прогиб — вдох, выгиб — выдох', 'Двигайтесь позвонок за позвонком', 'Почувствуйте мягкость в спине']),
   ex('forward_fold', 'stretch', 'Наклон вперёд', 'Ноги прямые или чуть согнуты, тянитесь руками к полу. Дышите спокойно.', 30, 10, 'fold',
@@ -736,16 +766,26 @@ const SPORTS = [
   {
     id: 'morning', name: 'Зарядка',
     min: 3, max: 30, def: 10, step: 1, maxScale: 2.5,
+    // В автоподборе зарядки нет прыжков и упражнений лёжа на спине —
+    // вместо них похожие упражнения стоя. Сами прыжки и упражнения на спине
+    // остаются в библиотеке: их можно выбрать в «Своей тренировке» (список extra).
+    extra: ['jumping_jacks', 'high_knees', 'glute_bridge', 'dead_bug', 'crunch', 'leg_raise'],
+    // Ротация: в main место-список [а, б] — после каждой зарядки по программе
+    // часть таких мест переходит к следующему варианту (как замены в зале,
+    // см. mainIds). Традиционные комплексы (Цигун, Стрельникова) не меняются.
     directions: [
       { id: 'full', name: 'Общий комплекс на всё тело', short: 'Общий комплекс',
         description: 'По умолчанию. Суставы, ноги, грудь, спина, кор, кардио и растяжка — понемногу всего.',
         warmup: ['neck', 'shoulders', 'arms', 'torso_twist', 'hips', 'knees', 'ankles'],
-        main:   ['march', 'squats', 'pushups', 'superman', 'glute_bridge', 'jumping_jacks', 'reverse_lunge', 'bird_dog', 'calf_raises', 'high_knees', 'plank', 'windmill'],
+        main:   ['march', ['squats', 'sumo_squat'], ['pushups', 'incline_pushup'], ['superman', 'bent_fly'],
+                 ['good_morning', 'standing_kickback'], ['step_jack', 'shadow_box'], ['reverse_lunge', 'side_lunge'],
+                 ['bird_dog', 'standing_cross'], 'calf_raises', 'knee_lift', ['plank', 'side_plank'], 'windmill'],
         cool:   ['cat_cow', 'forward_fold', 'full_breath'] },
       { id: 'soviet', name: 'Советская утренняя гимнастика', short: 'Советская',
         description: 'Классика «под радио»: разогреться, размять суставы и проснуться.',
         warmup: ['march', 'stretch_up', 'neck'],
-        main:   ['arm_jerks', 'torso_twist', 'windmill', 'side_bends', 'squats', 'leg_swings', 'pushups', 'jumping_jacks'],
+        main:   ['arm_jerks', 'torso_twist', 'windmill', 'side_bends', ['squats', 'sumo_squat'], 'leg_swings',
+                 ['pushups', 'incline_pushup'], ['step_jack', 'knee_lift']],
         cool:   ['walk_calm'] },
       { id: 'qigong', name: 'Китайская гимнастика (Ба Дуань Цзинь)', short: 'Цигун', fixed: true,
         description: 'Восемь плавных форм цигун в традиционном порядке. Мягко разбудить тело и успокоить дыхание.',
@@ -760,22 +800,24 @@ const SPORTS = [
       { id: 'flow', name: 'Разгон крови и лимфы', short: 'Разгон крови',
         description: 'Встряхивания, работа икр и лёгкое кардио, в конце — глубокое дыхание.',
         warmup: ['shaking', 'tapping', 'arms'],
-        main:   ['march', 'calf_pump', 'high_knees', 'jumping_jacks', 'mountain'],
+        main:   ['march', ['calf_pump', 'calf_raises'], ['knee_lift', 'shadow_box'], 'step_jack', 'mountain'],
         cool:   ['full_breath'] },
       { id: 'knees', name: 'Крепкие колени', short: 'Колени',
         description: 'Укрепляем мышцы вокруг коленей: бедро, ягодицы, икры, баланс. Работайте без боли.',
         warmup: ['knees', 'ankles'],
-        main:   ['glute_bridge', 'leg_extension', 'clamshell', 'step_up', 'side_leg_raise', 'calf_raises', 'wall_sit', 'balance'],
+        main:   [['standing_kickback', 'good_morning'], 'leg_extension', 'clamshell', 'step_up', 'side_leg_raise',
+                 ['calf_raises', 'calf_pump'], 'wall_sit', 'balance'],
         cool:   ['quad_stretch', 'forward_fold'] },
       { id: 'core', name: 'Пресс и кор', short: 'Пресс и кор',
         description: 'Мышцы живота, боков и спины — опора для поясницы.',
         warmup: ['torso_twist', 'hips'],
-        main:   ['dead_bug', 'superman', 'crunch', 'side_plank', 'bird_dog', 'leg_raise', 'glute_bridge', 'plank'],
+        main:   [['standing_cross', 'standing_knee_raise'], ['superman', 'bent_fly'], ['standing_side_crunch', 'side_bends'],
+                 'side_plank', 'bird_dog', ['good_morning', 'standing_kickback'], 'plank'],
         cool:   ['cat_cow', 'yoga_child'] },
       { id: 'posture', name: 'Шея, плечи, осанка', short: 'Осанка',
         description: 'Для тех, кто много сидит: шея, лопатки, грудной отдел.',
         warmup: ['neck', 'shoulders'],
-        main:   ['chin_tuck', 'wall_angel', 'scap_squeeze', 'superman', 'bird_dog', 'arm_jerks'],
+        main:   ['chin_tuck', 'wall_angel', ['scap_squeeze', 'bent_fly'], 'superman', 'bird_dog', 'arm_jerks'],
         cool:   ['chest_open', 'cat_cow'] },
     ],
   },
@@ -1130,16 +1172,24 @@ function getDirection(sportId, dirId) {
 }
 
 // Все упражнения, которые встречаются в программах вида занятия
-// (вместе с заменами, без повторов)
+// (вместе с заменами, без повторов), плюс extra — упражнения только
+// для своей тренировки (в зарядке: прыжки и упражнения лёжа на спине)
 function sportExerciseIds(sportId) {
   const ids = [];
-  getSport(sportId).directions.forEach(d =>
+  const s = getSport(sportId);
+  s.directions.forEach(d =>
     [...d.warmup, ...d.main.flat(), ...d.cool].forEach(id => { if (!ids.includes(id)) ids.push(id); }));
+  (s.extra || []).forEach(id => { if (!ids.includes(id)) ids.push(id); });
   return ids;
 }
 
+// Есть ли в программе места с заменами (тогда упражнения чередуются от раза к разу)
+function hasRotation(dir) {
+  return !!dir && dir.main.some(slot => Array.isArray(slot) && slot.length > 1);
+}
+
 /*
-  ЗАМЕНЫ УПРАЖНЕНИЙ (зал). Какие упражнения основной части будут
+  ЗАМЕНЫ УПРАЖНЕНИЙ (зал и зарядка). Какие упражнения основной части будут
   в тренировке номер round по этой программе (0 — первая, 1 — вторая…).
   Место-строка не меняется никогда (главное упражнение дня).
   Места-списки меняются по очереди: после каждой тренировки — примерно
@@ -1440,10 +1490,13 @@ function buildWorkout(sportId, dirId, minutes, customIds = [], round = 0) {
     c += Math.min(extra, maxC - c);
   }
 
+  // part — часть занятия: по ней видно, что основная часть начата
+  // (тогда в следующий раз упражнения сменятся, см. advanceProgram в index.html)
+  const tag = (list, part) => list.map(item => ({ ...item, part }));
   const exercises = expandSets([
-    ...planPart(dir.warmup, w, 1, false, k),
-    ...planPart(main, m, sets, !!dir.fixed, k, dir.minSets || sets, dir.maxSets || MAX_SETS),
-    ...planPart(dir.cool, c, 1, false, k),
+    ...tag(planPart(dir.warmup, w, 1, false, k), 'warmup'),
+    ...tag(planPart(main, m, sets, !!dir.fixed, k, dir.minSets || sets, dir.maxSets || MAX_SETS), 'main'),
+    ...tag(planPart(dir.cool, c, 1, false, k), 'cool'),
   ]);
   return { id: 'auto_' + sportId + '_' + dir.id + '_' + minutes, name: dir.name, exercises, rounds: 1 };
 }

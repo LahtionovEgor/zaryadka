@@ -17,7 +17,7 @@
 
   <!-- Наши данные. ?v=10 — номер версии: меняйте его при каждом
        изменении data.js, иначе телефон может показать старую копию. -->
-  <script src="data.js?v=10"></script>
+  <script src="data.js?v=11"></script>
 
   <style>
     /* ================================================================
@@ -347,6 +347,8 @@
     @keyframes swipeFromLeft  { from { opacity: .15; transform: translateX(-40px); } to { opacity: 1; transform: none; } }
     .swipe-next { animation: swipeFromRight .28s ease-out; }
     .swipe-prev { animation: swipeFromLeft .28s ease-out; }
+    /* «Своя тренировка»: экран уезжает влево при свайпе назад */
+    #custom.swipe-out { transition: transform .16s ease-in, opacity .16s ease-in; transform: translateX(-60px); opacity: 0; }
 
     /* «Советы» (в верхней строке) — открывает шторку с анимацией, описанием и советами.
        Пока шторка открыта, кнопка вдавлена; нажать ещё раз — шторка закроется */
@@ -759,7 +761,7 @@
       <button class="icon-btn glass back-btn" aria-label="Назад"></button>
       <div class="head-text"><div class="eyebrow" id="dir-eyebrow">Зарядка</div><div class="h1">Направление</div></div>
     </div>
-    <!-- Только в зале: как устроен цикл программ и замены упражнений -->
+    <!-- Зал: как устроен цикл программ и замены упражнений. Зарядка: упражнения чередуются -->
     <p class="hint screen-note hidden" id="dir-hint"></p>
     <div class="list" id="dir-list"></div>
   </section>
@@ -1395,7 +1397,7 @@
       dirBySport: {},     // какая программа выбрана в каждом виде (или 'custom')
       minBySport: {},     // сколько минут в каждом виде
       customBySport: {},  // своя тренировка: список id упражнений по видам
-      roundBySport: {},   // зал: сколько тренировок сделано по каждой программе
+      roundBySport: {},   // зал и зарядка: сколько занятий сделано по каждой программе
                           // ({ gym: { legs: 3 } }) — от этого зависят замены упражнений
       cycleBySport: {},   // зал: по какому циклу программ идёте (номер в cycles, data.js)
       workout: null,      // собранная тренировка
@@ -1657,7 +1659,11 @@
       $('dir-eyebrow').textContent = s.name;
       // Зал: программы идут по циклу, упражнения понемногу меняются
       const hint = $('dir-hint');
-      hint.classList.toggle('hidden', !s.cycles);
+      const rotates = !s.cycles && s.directions.some(hasRotation);
+      hint.classList.toggle('hidden', !s.cycles && !rotates);
+      // Зарядка: упражнения чередуются от раза к разу
+      if (rotates) hint.textContent = 'После каждого занятия 2–3 упражнения меняются на похожие — ' +
+        'в карточке программы показан состав следующего раза. Традиционные комплексы не меняются.';
       if (s.cycles) {
         const cy = cycleOf(s, dirId(), state.cycleBySport[s.id] || 0);
         hint.textContent = 'После тренировки по умолчанию выбирается следующая программа цикла, ' +
@@ -1716,9 +1722,24 @@
     // =====================================================================
     let customDraft = [];        // выбор, пока экран открыт
     let customFilter = 'mine';   // 'mine' — упражнения текущего вида, 'all' — все
+    let customPrefill = null;    // подставленная рекомендация (пока её не меняли)
+
+    // Упражнения текущей рекомендации («Что войдёт в занятие») — по одному разу, по порядку
+    function recommendedIds() {
+      const ids = [];
+      (state.workout ? state.workout.exercises : []).forEach(item => { if (!ids.includes(item.id)) ids.push(item.id); });
+      return ids;
+    }
 
     function openCustom() {
-      customDraft = [...customIds()];
+      // Своя тренировка уже включена — показываем её. Иначе сразу отмечены
+      // упражнения из рекомендации: можно убрать лишнее и добавить своё.
+      customPrefill = null;
+      if (isCustom()) customDraft = [...customIds()];
+      else {
+        customDraft = recommendedIds();
+        customPrefill = [...customDraft];
+      }
       customFilter = 'mine';
       $('custom-eyebrow').textContent = sport().name;
       renderCustom();
@@ -1773,7 +1794,12 @@
       $('custom-done').textContent = n ? 'Готово · ' + n : 'Готово';
     }
 
-    function closeCustom() {
+    // fromDone — нажали «Готово». Назад (кнопка, свайп) без изменений в подставленной
+    // рекомендации — просто возвращаемся: своя тренировка не включается.
+    function closeCustom(fromDone = false) {
+      const untouched = customPrefill && customPrefill.join() === customDraft.join();
+      customPrefill = null;
+      if (untouched && !fromDone) { show('home'); return; }
       // Сохраняем выбор. Если что-то выбрано — включаем свою тренировку.
       state.customBySport[state.sport] = [...customDraft];
       if (customDraft.length) state.dirBySport[state.sport] = CUSTOM_ID;
@@ -1782,8 +1808,36 @@
       show('home');
     }
     $('open-custom').addEventListener('click', () => { haptic('light'); openCustom(); });
-    $('custom-done').addEventListener('click', () => { haptic('medium'); closeCustom(); });
+    $('custom-done').addEventListener('click', () => { haptic('medium'); closeCustom(true); });
     $('custom-clear').addEventListener('click', () => { customDraft = []; haptic('light'); renderCustom(); });
+
+    // Свайп влево по экрану «Своя тренировка» — назад, на главный экран
+    // (то же, что кнопка «Назад»: выбор сохраняется)
+    let customSwipe = null;
+    $('custom').addEventListener('touchstart', e => {
+      customSwipe = null;
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      customSwipe = { x: t.clientX, y: t.clientY, time: Date.now() };
+    }, { passive: true });
+    // Ведём пальцем в сторону — страница не листается вбок
+    $('custom').addEventListener('touchmove', e => {
+      if (!customSwipe || e.touches.length !== 1) return;
+      const t = e.touches[0];
+      const dx = Math.abs(t.clientX - customSwipe.x), dy = Math.abs(t.clientY - customSwipe.y);
+      if (dx > 10 && dx > dy * 1.5 && e.cancelable) e.preventDefault();
+    }, { passive: false });
+    $('custom').addEventListener('touchend', e => {
+      if (!customSwipe) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - customSwipe.x, dy = t.clientY - customSwipe.y, dt = Date.now() - customSwipe.time;
+      customSwipe = null;
+      // Свайп — быстрое заметное движение влево, а не прокрутка вверх-вниз
+      if (dx > -60 || Math.abs(dx) < Math.abs(dy) * 1.5 || dt > 800) return;
+      haptic('light');
+      $('custom').classList.add('swipe-out');
+      setTimeout(() => { $('custom').classList.remove('swipe-out'); if (current === 'custom') closeCustom(); }, 160);
+    });
 
     // =====================================================================
     //  10. Анимация фигурки — объёмный 3D-манекен
@@ -2363,6 +2417,29 @@
                        { t: 0.92, e: 'i', y: 92 }, { t: 1 }] },
       march:     { ...STAND, alt: true, dur: 620, cam: -40, base: SYM({ shLa: 0, shLe: 6, elL: 20 }),
                    k: [{ t: 0 }, { t: 0.5, fLl: 24, fLz: 9, fLh: -4, y: 96.4, shRe: 30, elR: 34, shLe: -22, elL: 16 }, { t: 1 }] },
+      // «Звёздочка» шагом: нога в сторону и руки вверх — без прыжка (смена сторон)
+      step_jack: { ...STAND, alt: true, dur: 1800, cam: -14, base: { y: 95.5, ...SYM({ fLx: 8, fLyaw: 6, shLe: 8, elL: 12 }) },
+                   k: [{ t: 0 },
+                       { t: 0.2, fLx: 19, fLl: 8, fLh: 6, ...SYM({ shLe: 92, elL: 8 }) },
+                       { t: 0.4, e: 'i', y: 93.5, fLx: 30, ...SYM({ shLe: 166, elL: 14 }) },
+                       { t: 0.6, y: 93.5, fLx: 30, ...SYM({ shLe: 170, elL: 10 }) },
+                       { t: 0.8, fLx: 19, fLl: 8, fLh: 6, ...SYM({ shLe: 92, elL: 8 }) },
+                       { t: 1 }] },
+      // Высокий шаг на месте: колено до пояса, без подскока
+      knee_up:   { ...STAND, alt: true, dur: 1100, cam: -40, base: SYM({ shLa: 0, shLe: 6, elL: 30 }),
+                   k: [{ t: 0 }, { t: 0.45, fLl: 40, fLz: 17, fLh: -8, y: 97, shRe: 48, elR: 82, shLe: -18, elL: 34 },
+                       { t: 0.55, fLl: 40, fLz: 17, fLh: -8, y: 97, shRe: 48, elR: 82, shLe: -18, elL: 34 }, { t: 1 }] },
+      // Колено к противоположному локтю стоя: колено вверх, корпус поворачивается к нему
+      cross_knee:{ ...STAND, alt: true, dur: 1800, cam: -24, base: { y: 95, ...SYM({ fLx: 12, shLe: 120, shLa: 70, shLt: 40, elL: 140 }) },
+                   k: [{ t: 0 }, { t: 0.45, fLl: 38, fLz: 14, fLh: -8, y: 97, s1f: 10, s2f: 14, s1t: 16, s2t: 22, nkf: 8, shRe: 96, shRa: 40 },
+                       { t: 0.55, fLl: 38, fLz: 14, fLh: -8, y: 97, s1f: 10, s2f: 14, s1t: 16, s2t: 22, nkf: 8, shRe: 96, shRa: 40 }, { t: 1 }] },
+      // Колено к груди стоя: подтянуть колено, слегка округлить спину
+      knee_chest:{ ...STAND, alt: true, dur: 2600, cam: -55, base: SYM({ shLa: 0, shLe: 10, elL: 20 }),
+                   k: [{ t: 0 }, { t: 0.42, fLl: 48, fLz: 20, fLh: -10, y: 97, s1f: 10, s2f: 16, nkf: 10, ...SYM({ shLe: 52, elL: 96 }) },
+                       { t: 0.58, fLl: 48, fLz: 20, fLh: -10, y: 97, s1f: 10, s2f: 16, nkf: 10, ...SYM({ shLe: 52, elL: 96 }) }, { t: 1 }] },
+      // Отведение ноги назад стоя: руки на опоре впереди, прямая нога уходит назад
+      kickback:  { ...STAND, alt: true, dur: 2400, cam: -75, base: { pitch: 12, z: -2, ...SYM({ shLa: 0, shLe: 62, elL: 14 }) },
+                   k: [{ t: 0 }, { t: 0.45, fLz: -30, fLl: 16, fLh: 22, pitch: 18 }, { t: 0.55, fLz: -30, fLl: 16, fLh: 22, pitch: 18 }, { t: 1 }] },
       run:       { ...STAND, alt: true, dur: 380, cam: -40, base: { y: 97, ...SYM({ shLa: 0, shLe: 10, elL: 88, fLh: 12 }) },
                    k: [{ t: 0 }, { t: 0.5, e: 'o', y: 100, fLl: 38, fLz: 16, fLh: -2, shRe: 50, elR: 95, shLe: -38, elL: 80 }, { t: 1 }] },
       step:      { ...STAND, alt: true, dur: 700, cam: -12,
@@ -3520,23 +3597,25 @@
       saveDone();
     }
 
-    // ---------- Зал: после тренировки — замены и следующий день цикла ----------
-    // Тренировка по программе засчитана (сделан хотя бы один подход основной
-    // части): у этой программы в следующий раз 1–2 упражнения сменятся на похожие
-    // (счётчик тренировок +1, см. mainIds в data.js), а по умолчанию будет выбрана
-    // следующая программа цикла — другие группы мышц. Если запись тут же удалили
+    // ---------- После занятия: замены упражнений и следующий день цикла ----------
+    // Зал и зарядка. Занятие по программе засчитано (сделано хотя бы одно
+    // упражнение или подход основной части): у этой программы в следующий раз
+    // часть упражнений сменится на похожие (счётчик занятий +1, см. mainIds
+    // в data.js). В зале, кроме того, по умолчанию будет выбрана следующая
+    // программа цикла — другие группы мышц. Если запись тут же удалили
     // на экране «Готово» — всё возвращается как было.
     let programUndo = null;
     function advanceProgram() {
       programUndo = null;
       const s = sport(), dir = dirId();
-      if (!s.cycles || isSimple() || dir === CUSTOM_ID) return;
-      const trained = state.workout.exercises.some((item, i) => doneSet[i] && item.set);
+      if (isSimple() || dir === CUSTOM_ID) return;
+      if (!s.cycles && !hasRotation(getDirection(s.id, dir))) return;   // в программе нечего менять
+      const trained = state.workout.exercises.some((item, i) => doneSet[i] && item.part === 'main');
       if (!trained) return;   // ушли с разминки — программа остаётся та же
       programUndo = { sport: s.id, dir, round: roundOf(s.id, dir),
                       cycle: state.cycleBySport[s.id], chosen: state.dirBySport[s.id] };
       state.roundBySport[s.id] = { ...(state.roundBySport[s.id] || {}), [dir]: roundOf(s.id, dir) + 1 };
-      const next = nextInCycle(s, dir, state.cycleBySport[s.id] || 0);
+      const next = s.cycles ? nextInCycle(s, dir, state.cycleBySport[s.id] || 0) : null;
       if (next) { state.dirBySport[s.id] = next.dir; state.cycleBySport[s.id] = next.cycle; }
       saveSettings();
       updatePlan();       // главный экран — уже со следующей программой
