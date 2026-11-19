@@ -200,8 +200,8 @@
     }
     .pick-card:active { box-shadow: var(--pressed); }
     /* ЕДИНОЕ ПРАВИЛО ВЫБРАННОГО ЭЛЕМЕНТА (карточки, чипсы, день календаря):
-       вдавлен + синяя рамка 2 px + синий текст. Переменная --selected — тень с рамкой */
-    :root { --selected: var(--pressed), inset 0 0 0 2px var(--accent); }
+       вдавлен + синий текст, без рамки. Переменная --selected — тень «вдавлен» */
+    :root { --selected: var(--pressed); }
     .pick-card.selected { box-shadow: var(--selected); }
     .pick-card.selected .title { color: var(--accent); }
     .pick-card .title { font-size: var(--fs-m); font-weight: var(--fw-bold); letter-spacing: -0.03em; display: flex; gap: 10px; align-items: center; }
@@ -1674,12 +1674,13 @@
         let text = blocks + ' ' + plural(blocks, 'упражнение', 'упражнения', 'упражнений') +
           (s.sets ? ' · ' + list.length + ' ' + plural(list.length, 'подход', 'подхода', 'подходов')
                   : repeats ? ' · ' + repeats + ' ' + setWord(s, repeats) : '') +
-          ' · ≈ ' + formatDuration(total);
+          ' · ' + formatDuration(total);   // точное время занятия (серым под кругом)
         if (custom) text += ' · время = сумма упражнений';
         else if (minutes() === limits().max && limits().max < s.max) text += ' · максимум без повторов';
         $('summary').textContent = text;
       }
-      $('start-btn').textContent = 'Начать · ' + (total < 60 ? total + ' с' : Math.round(total / 60) + ' мин');
+      // На кнопке времени нет: выбранные минуты — на круге, точное время — под кругом
+      $('start-btn').textContent = 'Начать занятие';
       $('start-btn').disabled = list.length === 0;
 
       // Список «Что войдёт в занятие»: подходы одного упражнения — одной строкой
@@ -3331,9 +3332,15 @@
         const gap = parseFloat(cs.rowGap) || 0;
         // Высота середины: между верхней строкой и пультом (со строкой паузы)
         const room = H - topH - $('wo-foot').offsetHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-        const below = gap + infoHeight(W) + (panels ? gap + panels : 0);   // всё, что под диском
+        const base = gap + infoHeight(W);                    // под диском: «Далее», название, подпись
+        const below = base + (panels ? gap + panels : 0);    // и панели (зал, дистанция)
         size = Math.max(RING_MIN, Math.min(W * 0.75, 460, Math.floor(room - below)));
-        shift = Math.max(0, Math.floor((room - size - below) / 2));        // диск с названием — по центру
+        // Диск с названием — по центру, как в видах без панелей. Панель (карточка
+        // подхода, «Дистанция») встаёт ниже, в свободное место. Если ей там тесно
+        // (iPhone SE) — диск поднимается ровно настолько, чтобы она поместилась.
+        // Положение одно на всё занятие: на разминке, подходах и заминке не меняется
+        const center = Math.floor((room - size - base) / 2);
+        shift = Math.max(0, Math.min(center, Math.floor(room - size - below)));
       }
       wo.style.setProperty('--ring', Math.floor(size) + 'px');
       wo.style.setProperty('--main-shift', shift + 'px');
