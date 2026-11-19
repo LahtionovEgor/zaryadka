@@ -665,6 +665,42 @@
                     font-size: var(--fs-s); font-weight: var(--fw-medium); color: #b42318; }
     .quiet-danger:active { opacity: .55; }
 
+    /* ---------- «Готово»: серия дней подряд ----------
+       «3 дня подряд · Рекорд — 5» и неделя (Пн–Вс) кружками:
+       on — был день с занятием (синий, галочка), miss — прошедший день
+       без занятий (вдавленный), fut — день ещё не наступил (контур) */
+    .streak { width: 100%; max-width: 400px; margin-top: 14px; padding: 16px 16px 14px;
+              border-radius: 22px; text-align: left; }
+    .sk-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .sk-num { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+    .sk-num b { font-size: var(--fs-xl); font-weight: var(--fw-bold); letter-spacing: -0.04em; line-height: 1;
+                color: var(--accent); font-variant-numeric: tabular-nums; }
+    .sk-num span { font-size: var(--fs-m); font-weight: var(--fw-bold); }
+    .sk-rec { flex: none; font-size: var(--fs-s); font-weight: var(--fw-medium); color: var(--hint); }
+    .sk-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
+    .sk-day { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .sk-day i { font-style: normal; font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--hint); }
+    .sk-day.today i { color: var(--accent); font-weight: var(--fw-bold); }
+    .sk-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .sk-dot svg { width: 16px; height: 16px; }
+    .sk-day.on .sk-dot   { background: var(--accent); color: #fff; box-shadow: var(--raised-sm); }
+    .sk-day.miss .sk-dot { background: var(--bg); box-shadow: var(--pressed); }
+    .sk-day.fut .sk-dot  { border: 2px solid var(--dark); }
+
+    /* ---------- «Готово»: короткая анимация появления (≈1 с) ----------
+       Класс anim ставит код при открытии экрана. Элементы с классом a-in
+       по очереди «всплывают» (задержка — переменная --d), время набегает
+       от 0:00 (код), кружок сегодняшнего дня в серии «встаёт».
+       Касание экрана — анимация сразу заканчивается (код убирает anim).
+       Если в телефоне включено «Уменьшение движения» — анимации нет. */
+    @keyframes doneIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes dotPop { 0% { transform: scale(.55); } 70% { transform: scale(1.12); } 100% { transform: scale(1); } }
+    #done.anim .a-in { animation: doneIn .32s ease-out both; animation-delay: var(--d, 0s); }
+    #done.anim .sk-day.today .sk-dot { animation: dotPop .36s ease-out both; animation-delay: calc(var(--d, 0s) + .3s); }
+    @media (prefers-reduced-motion: reduce) {
+      #done.anim .a-in, #done.anim .sk-day.today .sk-dot { animation: none; }
+    }
+
     /* ---------- Дневник: календарь месяца и занятия дня ---------- */
     .diary-body { display: grid; gap: 22px; }
     .cal { border-radius: 26px; padding: 12px 12px 16px; }
@@ -1050,13 +1086,22 @@
   <section id="done" class="screen hidden">
     <div class="done-wrap">
       <div class="done-top">
-        <div class="h1" id="done-title">Готово!</div>
-        <div class="hint" id="done-sub" style="font-size:var(--fs-s)"></div>
+        <div class="h1 a-in" id="done-title" style="--d:0s">Готово!</div>
+        <div class="hint a-in" id="done-sub" style="font-size:var(--fs-s);--d:.08s"></div>
         <!-- Главная цифра: сколько позанимались -->
         <div class="done-hero"><b id="done-time">0:00</b><span>время занятия</span></div>
         <!-- Остальные итоги одной строкой: упражнения, подходы, дистанция -->
-        <div class="stats" id="done-stats"></div>
-        <div class="done-saved" id="done-saved"></div>
+        <div class="stats a-in" id="done-stats" style="--d:.62s"></div>
+        <!-- Серия: сколько дней подряд были занятия (показываем с 2 дней).
+             Неделя кружками: был день с занятием — синий кружок с галочкой -->
+        <div class="streak glass a-in hidden" id="done-streak">
+          <div class="sk-head">
+            <div class="sk-num"><b id="sk-n">2</b><span id="sk-word">дня подряд</span></div>
+            <div class="sk-rec" id="sk-rec"></div>
+          </div>
+          <div class="sk-week" id="sk-week" aria-hidden="true"></div>
+        </div>
+        <div class="done-saved a-in" id="done-saved" style="--d:.9s"></div>
       </div>
       <!-- Зал: что сделали на каждом подходе — можно поправить -->
       <div id="done-gym" class="hidden">
@@ -3878,9 +3923,114 @@
       if (s.distance) renderDistEditor($('done-dist'), doneEntry, () => { renderDoneStats(); onDoneEdit(); }, true);
       $('done-note').value = '';
       advanceProgram();   // зал: замены упражнений и следующий день цикла
+      $('done-streak').classList.add('hidden');   // серия появится, когда прочитаем дневник
       show('done');
       $('done-saved').textContent = 'Записываю в дневник…';
       saveDone();
+      startDoneAnim();
+      showStreak(doneEntry);
+    }
+
+    // ---------- «Готово»: анимация появления ----------
+    // Заголовок и подпись всплывают, время набегает от 0:00 до итога
+    // за 0,7 с, потом плитки, серия и «Записано в дневник». Всего ≈1 с.
+    let doneAnimStart = 0;     // когда началась анимация (0 — её нет)
+    let doneAnimFrame = 0;     // номер кадра набегающего времени
+    let doneHapticTimer = null;
+    const STREAK_DELAY = 0.74; // через сколько секунд после начала появляется серия
+    const reduceMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function startDoneAnim() {
+      stopDoneAnim();
+      if (reduceMotion()) return;          // «Уменьшение движения» в телефоне — сразу итог
+      const box = $('done');
+      void box.offsetWidth;                // чтобы анимация началась заново
+      box.classList.add('anim');
+      doneAnimStart = performance.now();
+      const total = doneSeconds;
+      const step = now => {
+        const p = Math.min(1, Math.max(0, (now - doneAnimStart - 150) / 700));
+        const eased = 1 - Math.pow(1 - p, 3);   // быстро в начале, плавно к концу
+        $('done-time').textContent = formatClock(Math.round(total * eased));
+        doneAnimFrame = p < 1 ? requestAnimationFrame(step) : 0;
+      };
+      $('done-time').textContent = formatClock(0);
+      doneAnimFrame = requestAnimationFrame(step);
+    }
+    // Закончить анимацию сразу (касание экрана, уход с экрана)
+    function stopDoneAnim() {
+      cancelAnimationFrame(doneAnimFrame);
+      doneAnimFrame = 0;
+      clearTimeout(doneHapticTimer);
+      doneHapticTimer = null;
+      if (doneAnimStart) $('done-time').textContent = formatClock(doneSeconds);
+      doneAnimStart = 0;
+      $('done').classList.remove('anim');
+    }
+    // Касание в любом месте экрана — сразу итог (само нажатие работает как обычно)
+    $('done').addEventListener('pointerdown', () => { if (doneAnimStart) stopDoneAnim(); });
+
+    // ---------- «Готово»: серия дней подряд ----------
+    // День засчитан, если в дневнике за него есть хоть одна запись
+    // (любой вид занятия, в том числе внесённая вручную). Серия — сколько
+    // дней подряд до сегодняшнего включительно. Рекорд — самая длинная
+    // серия во всём дневнике. Отдельно ничего не храним: всё считаем
+    // по дневнику, поэтому после удаления записи серия сама будет верной.
+    async function streakInfo(entry) {
+      const dates = new Set([entry.date]);
+      const keys = (await store.keys()).filter(k => k.startsWith(LOG_PREFIX));
+      // Читаем все части дневника пачками по 20 ключей (одновременно)
+      const packs = [];
+      for (let i = 0; i < keys.length; i += 20) packs.push(store.getMany(keys.slice(i, i + 20)));
+      (await Promise.all(packs)).forEach(values => Object.values(values).forEach(text => {
+        (parseJSON(text) || []).forEach(e => { if (e && e.date) dates.add(e.date); });
+      }));
+      const prevDay = key => { const d = parseDay(key); d.setDate(d.getDate() - 1); return dayKey(d); };
+      // Текущая серия: от сегодняшнего дня назад, пока нет пропуска
+      let cur = 0;
+      for (let k = entry.date; dates.has(k); k = prevDay(k)) cur++;
+      // Рекорд: самая длинная цепочка дней подряд
+      let best = 0, run = 0, last = null;
+      [...dates].sort().forEach(k => {
+        run = last && prevDay(k) === last ? run + 1 : 1;
+        best = Math.max(best, run);
+        last = k;
+      });
+      return { cur, best, dates };
+    }
+
+    const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    const WEEK_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+    async function showStreak(entry) {
+      let info;
+      try { info = await streakInfo(entry); } catch (e) { return; }   // не прочитали — просто без серии
+      if (current !== 'done' || doneEntry !== entry) return;          // уже ушли с экрана
+      if (info.cur < 2) return;                                       // серия — с 2 дней
+      $('sk-n').textContent = info.cur;
+      $('sk-word').textContent = plural(info.cur, 'день', 'дня', 'дней') + ' подряд';
+      $('sk-rec').textContent = info.best > info.cur ? 'Рекорд — ' + info.best : 'Лучшая серия';
+      $('done-streak').setAttribute('aria-label', info.cur + ' ' + $('sk-word').textContent);
+      // Неделя: понедельник — воскресенье той недели, где сегодняшний день
+      const week = $('sk-week');
+      week.innerHTML = '';
+      const day = parseDay(entry.date);
+      day.setDate(day.getDate() - (day.getDay() + 6) % 7);           // назад к понедельнику
+      for (let i = 0; i < 7; i++, day.setDate(day.getDate() + 1)) {
+        const key = dayKey(day);
+        const kind = key > entry.date ? 'fut' : info.dates.has(key) ? 'on' : 'miss';
+        const cell = document.createElement('div');
+        cell.className = 'sk-day ' + kind + (key === entry.date ? ' today' : '');
+        cell.innerHTML = '<i>' + WEEK_SHORT[i] + '</i><div class="sk-dot">' + (kind === 'on' ? CHECK_SVG : '') + '</div>';
+        week.append(cell);
+      }
+      // Появление: по сценарию анимации, а если дневник читался долго — сразу
+      let delay = 0;
+      if (doneAnimStart) delay = Math.max(0, STREAK_DELAY - (performance.now() - doneAnimStart) / 1000);
+      $('done-streak').style.setProperty('--d', delay.toFixed(2) + 's');
+      $('done-streak').classList.remove('hidden');
+      // Кружок сегодняшнего дня «встаёт» — лёгкая вибрация в этот момент
+      if (doneAnimStart) doneHapticTimer = setTimeout(() => { doneHapticTimer = null; haptic('light'); }, (delay + 0.3) * 1000);
     }
 
     // ---------- После занятия: замены упражнений и следующий день цикла ----------
