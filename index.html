@@ -13,7 +13,7 @@
        Если шрифт не загрузится — будет системный, всё продолжит работать. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
 
   <!-- Наши данные. ?v=10 — номер версии: меняйте его при каждом
        изменении data.js, иначе телефон может показать старую копию. -->
@@ -46,6 +46,19 @@
       --prep: #2563eb;  --prep-ink: #1d4ed8;
       --play: #ea580c;   /* значок на большой кнопке «пауза / продолжить» */
       --font: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      /* ---- ШКАЛА ШРИФТОВ: во всём приложении только эти 5 размеров ----
+         Мельче 13 px текста нет. Исключения — крупные «табло»: число минут
+         на круге главного экрана (SVG, растёт вместе с кругом) и на экране
+         тренировки диск, время и название (их размер считает код fitWorkout). */
+      --fs-xs: 13px;   /* подписи капсом, бейджи, дни недели, подпись карточки на главном */
+      --fs-s:  15px;   /* обычный текст, пояснения, серые подписи, кнопки второго плана */
+      --fs-m:  17px;   /* названия карточек, значения, поля ввода, главная кнопка */
+      --fs-l:  21px;   /* заголовки разделов, цифры итогов, значки › − + × */
+      --fs-xl: 30px;   /* заголовок экрана, крупные − + */
+      /* ---- НАЧЕРТАНИЯ: только 3 ---- */
+      --fw-regular: 500;   /* обычный текст */
+      --fw-medium:  700;   /* подписи, кнопки */
+      --fw-bold:    800;   /* заголовки, значения, цифры */
       /* Отступы от краёв экрана. Telegram сам задаёт переменные --tg-…,
          в полноэкранном режиме они не нулевые: сверху вырез камеры
          и кнопки Telegram «Закрыть» / «⋮», снизу — полоска жестов. */
@@ -59,6 +72,7 @@
       background: var(--bg);
       color: var(--text);
       font-family: var(--font);
+      font-size: var(--fs-s); font-weight: var(--fw-regular);   /* текст по умолчанию */
       letter-spacing: -0.01em;
       user-select: none; -webkit-user-select: none;
       -webkit-font-smoothing: antialiased;
@@ -85,20 +99,20 @@
     }
     /* Нажатие: карточка «вдавливается» */
     .row-card:active { box-shadow: var(--pressed); transform: scale(0.99); }
-    .row-card .label { font-size: 14px; color: var(--hint); font-weight: 600; }
-    .row-card .value { font-size: 20px; font-weight: 800; letter-spacing: -0.03em; margin-top: 2px;
+    .row-card .label { font-size: var(--fs-s); color: var(--hint); font-weight: var(--fw-medium); }
+    .row-card .value { font-size: var(--fs-l); font-weight: var(--fw-bold); letter-spacing: -0.03em; margin-top: 2px;
                        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .row-card .grow  { flex: 1; min-width: 0; }
-    .row-card .chev  { font-size: 26px; color: var(--hint); line-height: 1; }
-    .row-card .ico   { font-size: 28px; width: 40px; text-align: center; flex: 0 0 40px; }
+    .row-card .chev  { font-size: var(--fs-l); color: var(--hint); line-height: 1; }
+    .row-card .ico   { font-size: var(--fs-l); width: 40px; text-align: center; flex: 0 0 40px; }
     .row-card.dim .value { color: var(--hint); }
-    .badge-on { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 99px;
+    .badge-on { display: inline-block; font-size: var(--fs-xs); font-weight: var(--fw-medium); padding: 3px 8px; border-radius: 99px;
                 background: var(--accent); color: #fff; margin-left: 6px; vertical-align: 3px; letter-spacing: 0; }
 
     /* Большая кнопка «Начать» — цвет вида занятия, тоже выпуклая */
     .big-btn {
       width: 100%; min-height: 64px; border-radius: 26px;
-      font-size: 19px; font-weight: 800; letter-spacing: -0.02em;
+      font-size: var(--fs-m); font-weight: var(--fw-bold); letter-spacing: -0.02em;
       color: #ffffff; background: var(--accent);
       box-shadow: var(--raised), inset 0 2px 0 rgba(255,255,255,.25);
       transition: box-shadow .15s ease, transform .15s ease;
@@ -107,8 +121,8 @@
     .big-btn:disabled { opacity: .45; }
 
     /* Заголовки экранов */
-    .eyebrow { font-size: 15px; color: var(--hint); font-weight: 600; }
-    .h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; margin: 2px 0 0; }
+    .eyebrow { font-size: var(--fs-s); color: var(--hint); font-weight: var(--fw-medium); }
+    .h1 { font-size: var(--fs-xl); font-weight: var(--fw-bold); letter-spacing: -0.04em; line-height: 1.05; margin: 2px 0 0; }
     /* Шапка экрана: [назад] заголовок [на весь экран] */
     .screen-head { display: flex; align-items: center; gap: 12px; margin: 4px 2px 20px; }
     .head-text { flex: 1; min-width: 0; }
@@ -150,27 +164,28 @@
     #dial .knob-ring { fill: var(--bg); }
     #dial .knob-dot  { fill: var(--accent); }
     #dial-knob { filter: drop-shadow(3px 3px 4px rgba(120,128,145,.55)) drop-shadow(-2px -2px 3px #ffffff); }
-    #dial .num   { fill: var(--text); font-size: 96px; font-weight: 800; letter-spacing: -0.06em; font-family: var(--font); }
+    #dial .num   { fill: var(--text); font-size: 96px; font-weight: var(--fw-bold); letter-spacing: -0.06em; font-family: var(--font); }
+    /* Число минут и «мин.» — «табло»: размеры в единицах SVG, растут вместе с кругом */
     #dial .num.small { font-size: 66px; letter-spacing: -0.04em; }
     /* Своя тренировка: время считается само, круг не крутится */
     #dial.locked { cursor: default; }
     #dial.locked #dial-knob { display: none; }
-    #dial .unit  { fill: var(--hint); font-size: 24px; font-weight: 700; font-family: var(--font); }
+    #dial .unit  { fill: var(--hint); font-size: 24px; font-weight: var(--fw-medium); font-family: var(--font); }
 
-    #summary { text-align: center; font-size: 15px; font-weight: 600; }
+    #summary { text-align: center; font-size: var(--fs-s); font-weight: var(--fw-medium); }
     /* «Что войдёт в занятие» — выпадающий список. Заголовок — кнопка со стрелкой.
        По нажатию список «выпадает», а экран плавно прокручивается вниз (код — раздел 6) */
     details.preview { border-radius: 18px; padding: 0; box-shadow: var(--raised-sm); transition: box-shadow .15s ease; }
     details.preview[open] { box-shadow: var(--pressed); }
     details.preview summary {
       display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px;
-      list-style: none; cursor: pointer; font-size: 16px; font-weight: 700; color: var(--text);
+      list-style: none; cursor: pointer; font-size: var(--fs-m); font-weight: var(--fw-medium); color: var(--text);
     }
     details.preview summary::-webkit-details-marker { display: none; }
     .pv-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pv-chev { flex: 0 0 22px; width: 22px; height: 22px; color: var(--hint); transition: transform .25s ease; }
     details.preview[open] .pv-chev { transform: rotate(180deg); }
-    details.preview ol { margin: 0; padding: 0 18px 16px 40px; font-size: 15px; line-height: 1.55; }
+    details.preview ol { margin: 0; padding: 0 18px 16px 40px; font-size: var(--fs-s); line-height: 1.55; }
     details.preview[open] ol { animation: dropDown .3s ease-out; }
     details.preview .reps { color: var(--hint); }
     /* Плавное появление выпадающих списков */
@@ -186,24 +201,24 @@
     .pick-card:active { box-shadow: var(--pressed); }
     /* Выбранная карточка — вдавлена и с цветной рамкой */
     .pick-card.selected { box-shadow: var(--pressed), inset 0 0 0 2px var(--accent); }
-    .pick-card .title { font-size: 19px; font-weight: 800; letter-spacing: -0.03em; display: flex; gap: 10px; align-items: center; }
+    .pick-card .title { font-size: var(--fs-m); font-weight: var(--fw-bold); letter-spacing: -0.03em; display: flex; gap: 10px; align-items: center; }
     .pick-card .title .tick { margin-left: auto; color: var(--accent); }
-    .pick-card .about { font-size: 15px; margin-top: 6px; }
-    .pick-card .meta  { font-size: 13px; color: var(--hint); margin-top: 6px; line-height: 1.4; }
+    .pick-card .about { font-size: var(--fs-s); margin-top: 6px; }
+    .pick-card .meta  { font-size: var(--fs-s); color: var(--hint); margin-top: 6px; line-height: 1.4; }
     /* Пояснение под заголовком экрана (зал: цикл программ) */
-    .screen-note { font-size: 15px; line-height: 1.4; margin: -6px 2px 16px; }
+    .screen-note { font-size: var(--fs-s); line-height: 1.4; margin: -6px 2px 16px; }
     /* Кнопки видов занятий — все одного размера: одинаковая ширина колонок
        и одинаковая высота рядов (по самой высокой кнопке) */
     .sport-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 14px; }
     .sport-tile { min-height: 96px; padding: 14px 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px;
                   position: relative; overflow: hidden; }
-    .sport-tile .title { font-size: 17px; line-height: 1.2; }
+    .sport-tile .title { font-size: var(--fs-m); line-height: 1.2; }
     .sport-tile .meta { margin-top: 0; }
 
     /* ---------- Своя тренировка ---------- */
     .chips { display: flex; gap: 10px; overflow-x: auto; padding: 6px 6px 16px; margin: 0 -6px; scrollbar-width: none; }
     .chips::-webkit-scrollbar { display: none; }
-    .chip { flex: 0 0 auto; padding: 9px 16px; border-radius: 99px; font-size: 15px; font-weight: 700;
+    .chip { flex: 0 0 auto; padding: 9px 16px; border-radius: 99px; font-size: var(--fs-s); font-weight: var(--fw-medium);
             box-shadow: var(--raised-sm) !important; }
     .chip.on { box-shadow: var(--pressed) !important; color: var(--accent); }
     /* Чипсы в несколько строк (форма дневника) */
@@ -211,8 +226,8 @@
     /* Виды занятий в форме дневника — кнопки одного размера, сеткой */
     .chips.sports-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
     .chips.sports-grid .chip { text-align: center; padding: 10px 8px; border-radius: 16px; line-height: 1.2; }
-    .group-title { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--hint);
-                   margin: 18px 4px 10px; font-weight: 700; }
+    .group-title { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; color: var(--hint);
+                   margin: 18px 4px 10px; font-weight: var(--fw-medium); }
     .ex-row {
       display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
       padding: 12px 14px; border-radius: 18px; margin-bottom: 12px;
@@ -225,17 +240,17 @@
       flex: 0 0 30px; height: 30px; border-radius: 50%;
       box-shadow: inset 3px 3px 6px var(--dark), inset -3px -3px 6px var(--light);
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 800; color: #fff;
+      font-size: var(--fs-xs); font-weight: var(--fw-bold); color: #fff;
     }
     .ex-row.on .check { background: var(--accent); box-shadow: 2px 2px 5px var(--dark), -2px -2px 5px var(--light); }
-    .ex-row .nm { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
-    .ex-row .ds { font-size: 13px; color: var(--hint); margin-top: 2px; }
+    .ex-row .nm { font-size: var(--fs-m); font-weight: var(--fw-medium); letter-spacing: -0.02em; }
+    .ex-row .ds { font-size: var(--fs-s); color: var(--hint); margin-top: 2px; }
     .sticky-bar {
       position: sticky; bottom: 0; z-index: 3;
       display: flex; gap: 14px; padding: 14px 0 calc(var(--bottom) + 8px);
       margin-top: 8px; background: var(--bg);
     }
-    .sticky-bar .ghost { flex: 0 0 auto; padding: 0 20px; border-radius: 26px; font-weight: 700; min-height: 64px; }
+    .sticky-bar .ghost { flex: 0 0 auto; padding: 0 20px; border-radius: 26px; font-size: var(--fs-m); font-weight: var(--fw-medium); min-height: 64px; }
     .sticky-bar .ghost:active { box-shadow: var(--pressed); }
 
     /* ================================================================
@@ -287,12 +302,12 @@
     /* Фаза: цветная точка и слово — «● Работа», «● Отдых», на паузе — серое «Пауза».
        Длинное слово («Восстановление» на узком телефоне) обрезается многоточием */
     .wo-phase { flex: 1 1 auto; display: flex; align-items: center; gap: 8px; min-width: 0;
-                font-size: 15px; font-weight: 800; color: var(--phase-ink); white-space: nowrap; }
+                font-size: var(--fs-s); font-weight: var(--fw-bold); color: var(--phase-ink); white-space: nowrap; }
     .wo-phase::before { content: ''; flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--phase); }
     #phase { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     /* Справа: счётчик «3 / 13» и кнопка «Советы» — одной высоты */
     .wo-right { display: flex; align-items: center; gap: 10px; flex: none; }
-    #counter { font-size: 15px; line-height: 20px; font-weight: 800; color: var(--hint); font-variant-numeric: tabular-nums;
+    #counter { font-size: var(--fs-s); line-height: 20px; font-weight: var(--fw-bold); color: var(--hint); font-variant-numeric: tabular-nums;
                padding: 10px 14px; border-radius: 99px; background: var(--bg); box-shadow: var(--raised-sm); }
 
     /* ---------- Середина: диск, упражнение, панели ----------
@@ -323,23 +338,23 @@
     .ring-arc { fill: none; stroke: var(--phase); stroke-width: 8; stroke-linecap: round;
                 transition: stroke-dashoffset .25s linear, stroke .3s ease, opacity .3s ease; }
     /* Время: размер шрифта — от размера диска */
-    #clock { font-size: calc(var(--ring) * .31); font-weight: 800; letter-spacing: -0.05em; line-height: 1;
+    #clock { font-size: calc(var(--ring) * .31); font-weight: var(--fw-bold); letter-spacing: -0.05em; line-height: 1;
              font-variant-numeric: tabular-nums; color: var(--text); transition: color .3s ease, font-size .3s ease; }
     #clock.long  { font-size: calc(var(--ring) * .26); }   /* «12:30» */
     #clock.xlong { font-size: calc(var(--ring) * .22); }   /* «120:00» */
     /* Подпись в диске — только в медитации («осталось») */
-    .ring-label { display: none; font-size: calc(var(--ring) * .055); font-weight: 700; color: var(--hint); margin-top: 4px; }
+    .ring-label { display: none; font-size: calc(var(--ring) * .055); font-weight: var(--fw-medium); color: var(--hint); margin-top: 4px; }
 
     /* Название и подпись под диском. На отдыхе сверху — «Далее» */
     .wo-info { position: relative; flex: none; width: 100%; max-width: 560px; text-align: center; }
     /* «Далее»: на работе не видна, но место под неё остаётся — название не прыгает */
-    .wo-next { font-size: 12px; line-height: 16px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    .wo-next { font-size: var(--fs-xs); line-height: 16px; font-weight: var(--fw-bold); letter-spacing: .08em; text-transform: uppercase;
                color: var(--hint); margin-bottom: 4px; }   /* ровно 20 точек — столько и учитывает код (NEXT_H) */
     .wo-next.off { visibility: hidden; }
     /* .name-probe — невидимая «примерка» названий (код: infoHeight) */
-    #ex-name, .name-probe { font-size: clamp(24px, 6.6vw, 36px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.12;
+    #ex-name, .name-probe { font-size: clamp(24px, 6.6vw, 36px); font-weight: var(--fw-bold); letter-spacing: -0.035em; line-height: 1.12;
                             overflow-wrap: anywhere; }
-    #wo-sub { font-size: clamp(15px, 4.2vw, 19px); line-height: 1.35; font-weight: 700; color: var(--phase-ink);
+    #wo-sub { font-size: clamp(15px, 4.2vw, 19px); line-height: 1.35; font-weight: var(--fw-medium); color: var(--phase-ink);
               margin-top: 5px; min-height: 1.35em; }   /* пустая и заполненная подпись — одной высоты */
 
     /* Свайп влево / вправо — название упражнения въезжает с той стороны */
@@ -354,7 +369,7 @@
        Пока шторка открыта, кнопка вдавлена; нажать ещё раз — шторка закроется */
     .how-btn { flex: none; display: inline-flex; align-items: center; justify-content: center;
                min-height: 40px; padding: 0 16px; border-radius: 99px;
-               font-size: 15px; font-weight: 800; color: var(--text);
+               font-size: var(--fs-s); font-weight: var(--fw-bold); color: var(--text);
                background: var(--bg); box-shadow: var(--raised-sm); transition: box-shadow .15s ease; }
     .how-btn:active, #workout.how .how-btn { box-shadow: var(--pressed); }
     /* Панели зала и дистанции — под названием, по ширине колонки. Занимают
@@ -378,8 +393,8 @@
        Строка — подход. Нажатия по этой панели не ставят паузу. */
     .set-panel { margin-top: 12px; padding: 10px 12px 12px; border-radius: 18px; background: var(--bg);
                  box-shadow: var(--pressed); cursor: default; }
-    .sp-title { font-size: 14px; font-weight: 700; color: var(--hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .sp-label { font-size: 12px; font-weight: 700; color: var(--hint); margin: 0 0 4px 2px; text-transform: uppercase; letter-spacing: .05em; }
+    .sp-title { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sp-label { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--hint); margin: 0 0 4px 2px; text-transform: uppercase; letter-spacing: .05em; }
     /* Колонки: номер подхода | вес | × | повторы */
     .sp-head, .sp-set { display: grid; grid-template-columns: 24px minmax(0, 1.2fr) 10px minmax(0, 1fr); align-items: center; gap: 6px; }
     .sp-head { margin-top: 8px; padding: 0 4px; }
@@ -387,31 +402,31 @@
     .sp-sets { display: grid; gap: 4px; margin-top: 2px; }
     .sp-set { padding: 3px 4px; border-radius: 14px; }
     .sp-set.cur { box-shadow: inset 0 0 0 2px var(--accent); }   /* текущий (или следующий) подход */
-    .sp-no { font-size: 15px; font-weight: 800; color: var(--hint); text-align: center; }
+    .sp-no { font-size: var(--fs-s); font-weight: var(--fw-bold); color: var(--hint); text-align: center; }
     .sp-set.done .sp-no { color: var(--accent); }                /* сделанный подход — галочка */
-    .sp-x { font-size: 15px; font-weight: 700; color: var(--hint); text-align: center; }
+    .sp-x { font-size: var(--fs-s); font-weight: var(--fw-medium); color: var(--hint); text-align: center; }
     .stepper.sm { gap: 4px; min-width: 0; }
-    .stepper.sm .st-btn { flex: 0 0 32px; width: 32px; height: 32px; font-size: 20px; }
-    .stepper.sm .field.st-input { flex: 1 1 auto; width: auto; min-width: 0; height: 34px; font-size: 17px; }
+    .stepper.sm .st-btn { flex: 0 0 32px; width: 32px; height: 32px; font-size: var(--fs-l); }
+    .stepper.sm .field.st-input { flex: 1 1 auto; width: auto; min-width: 0; height: 34px; font-size: var(--fs-m); }
 
     /* ---------- Бассейн и бег: дистанция (круги или километры) ---------- */
     .dist-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .dist-row .stepper.wide .field.st-input { width: 76px; }   /* чтобы «Круги | Км» влезали в ту же строку */
     /* Переключатель «Круги | Км»: вдавленная дорожка, выбранная часть — выпуклая */
     .seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 14px; box-shadow: var(--pressed); }
-    .seg button { padding: 8px 14px; border-radius: 11px; font-size: 15px; font-weight: 700; color: var(--hint); }
+    .seg button { padding: 8px 14px; border-radius: 11px; font-size: var(--fs-s); font-weight: var(--fw-medium); color: var(--hint); }
     .seg button.on { color: var(--accent); background: var(--bg); box-shadow: var(--raised-sm); }
     /* Кнопки −/+ вокруг числа (панель зала, длительность в дневнике) */
     .stepper { display: flex; align-items: center; gap: 4px; }
     .st-btn { flex: 0 0 38px; width: 38px; height: 38px; border-radius: 50%;
-              font-size: 22px; font-weight: 800; line-height: 1; color: var(--text);
+              font-size: var(--fs-l); font-weight: var(--fw-bold); line-height: 1; color: var(--text);
               background: var(--bg); box-shadow: var(--raised-sm); transition: box-shadow .15s ease; }
     .st-btn:active { box-shadow: var(--pressed); }
     .field.st-input { width: 54px; height: 38px; min-height: 0; padding: 0 2px; border-radius: 12px;
-                      text-align: center; font-size: 18px; font-weight: 800; }
+                      text-align: center; font-size: var(--fs-m); font-weight: var(--fw-bold); }
     .stepper.wide { gap: 10px; }
-    .stepper.wide .st-btn { flex-basis: 52px; width: 52px; height: 52px; font-size: 26px; }
-    .stepper.wide .field.st-input { width: 96px; height: 52px; font-size: 22px; }
+    .stepper.wide .st-btn { flex-basis: 52px; width: 52px; height: 52px; font-size: var(--fs-xl); }
+    .stepper.wide .field.st-input { width: 96px; height: 52px; font-size: var(--fs-l); }
 
     /* ---------- Низ экрана тренировки: пульт «назад / пауза / вперёд» ----------
        Пульт всегда на одном месте. На паузе под ним появляются «Выполнено»
@@ -441,10 +456,10 @@
     .pause-actions { opacity: 0; visibility: hidden; transform: translateY(8px);
                      transition: opacity .2s ease, transform .25s ease, visibility 0s linear .25s; }
     .pa-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; padding: 12px 0 0; }
-    .text-btn { font-size: 16px; font-weight: 700; padding: 14px 24px; border-radius: 18px;
+    .text-btn { font-size: var(--fs-s); font-weight: var(--fw-medium); padding: 14px 24px; border-radius: 18px;
                 background: var(--bg); color: var(--text); box-shadow: var(--raised-sm); }
     .text-btn:active { box-shadow: var(--pressed); }
-    #workout .text-btn { font-size: 15px; font-weight: 800; padding: 12px 16px; }
+    #workout .text-btn { font-size: var(--fs-s); font-weight: var(--fw-bold); padding: 12px 16px; }
     /* «Выполнено»: отметить упражнение сделанным и перейти дальше */
     .mark-btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
     .mark-btn svg { flex: none; width: 18px; height: 18px; color: var(--rest); }
@@ -460,7 +475,7 @@
     }
     #workout.paused .ring-arc { opacity: 0; }
     #workout.paused #clock { color: #6b7280; }
-    #workout.paused #wo-sub { color: var(--hint); font-weight: 600; }
+    #workout.paused #wo-sub { color: var(--hint); font-weight: var(--fw-medium); }   /* размер подписи не меняется */
     #workout.paused .ctl-btn.big { box-shadow: 0 0 0 var(--dark), 0 0 0 var(--light), inset 8px 8px 16px var(--dark), inset -8px -8px 16px var(--light); }
     #workout.paused .ctl-btn .ico-play { display: block; margin-left: 3px; }
     #workout.paused .ctl-btn .ico-pause { display: none; }
@@ -488,11 +503,11 @@
                 box-shadow: inset 1px 1px 2px var(--dark), inset -1px -1px 2px var(--light); }
     .how-head { flex: none; display: flex; align-items: center; gap: 12px; }
     .how-head .grow { flex: 1; min-width: 0; }
-    .how-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--hint); }
-    .how-title { font-size: 21px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-top: 2px;
+    .how-eyebrow { font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: .08em; text-transform: uppercase; color: var(--hint); }
+    .how-title { font-size: var(--fs-l); font-weight: var(--fw-bold); letter-spacing: -0.03em; line-height: 1.15; margin-top: 2px;
                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* Время в шапке шторки — таймер не останавливается */
-    #how-time { flex: none; font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--phase-ink);
+    #how-time { flex: none; font-size: var(--fs-m); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; color: var(--phase-ink);
                 padding: 8px 12px; border-radius: 99px; box-shadow: var(--pressed); }
     #workout.paused #how-time { color: var(--hint); }
     /* Сцена — вдавленный «экран»: в нём фигурка или видео */
@@ -504,8 +519,8 @@
     /* Текст: описание и советы, длинный — прокручивается */
     .how-text { flex: 0 1 auto; max-height: 36%; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y;
                 padding: 2px 4px 0; }
-    .tips-desc { font-size: 16px; line-height: 1.45; margin: 0; }
-    .tips-list { margin: 10px 0 0; padding-left: 20px; font-size: 15px; line-height: 1.45; color: #3f4552; }
+    .tips-desc { font-size: var(--fs-s); line-height: 1.45; margin: 0; }
+    .tips-list { margin: 10px 0 0; padding-left: 20px; font-size: var(--fs-s); line-height: 1.45; color: #3f4552; }
     .tips-list li + li { margin-top: 6px; }
 
     /* ---------- Медитация: только диск с обратным отсчётом ---------- */
@@ -537,7 +552,7 @@
       .ctl-btn { width: 60px; height: 60px; }
       .ctl-btn.big { width: 84px; height: 84px; }
       .pa-row { gap: 10px; }
-      #workout .text-btn { font-size: 14px; padding: 11px 14px; }
+      #workout .text-btn { font-size: var(--fs-xs); padding: 11px 14px; }
     }
 
     /* ---------- Экран «Готово»: итоги и запись в дневник ---------- */
@@ -545,9 +560,9 @@
     .done-top { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
     #done .stats { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin: 8px 0 4px; }
     #done .stat { border-radius: 20px; padding: 14px 18px; min-width: 110px; }
-    #done .stat b { display: block; font-size: 24px; font-weight: 800; letter-spacing: -0.03em; }
-    #done .stat span { font-size: 13px; color: var(--hint); }
-    .done-saved { font-size: 15px; font-weight: 700; color: var(--hint); min-height: 1.4em; }
+    #done .stat b { display: block; font-size: var(--fs-l); font-weight: var(--fw-bold); letter-spacing: -0.03em; }
+    #done .stat span { font-size: var(--fs-s); color: var(--hint); }
+    .done-saved { font-size: var(--fs-s); font-weight: var(--fw-medium); color: var(--hint); min-height: 1.4em; }
     .done-links { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
 
     /* ---------- Дневник: календарь месяца и занятия дня ---------- */
@@ -556,22 +571,22 @@
     .cal-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
     .cal-nav .icon-btn { flex-basis: 44px; width: 44px; height: 44px; box-shadow: var(--raised-sm); }
     .cal-nav .icon-btn:active { box-shadow: var(--pressed); }
-    .cal-sum { flex: 1; min-width: 0; text-align: center; font-size: 14px; font-weight: 700; color: var(--hint); }
+    .cal-sum { flex: 1; min-width: 0; text-align: center; font-size: var(--fs-s); font-weight: var(--fw-medium); color: var(--hint); }
     .cal-week, .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
-    .cal-week div { text-align: center; font-size: 12px; font-weight: 700; color: var(--hint); padding: 4px 0 6px; }
-    .cal-day { position: relative; aspect-ratio: 1; border-radius: 14px; font-size: 16px; font-weight: 700;
+    .cal-week div { text-align: center; font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--hint); padding: 4px 0 6px; }
+    .cal-day { position: relative; aspect-ratio: 1; border-radius: 14px; font-size: var(--fs-s); font-weight: var(--fw-medium);
                display: flex; align-items: center; justify-content: center; transition: box-shadow .15s ease; }
     .cal-day:active { box-shadow: var(--pressed); }
-    .cal-day.today { color: var(--accent); font-weight: 800; }
+    .cal-day.today { color: var(--accent); font-weight: var(--fw-bold); }
     .cal-day.sel { box-shadow: var(--pressed), inset 0 0 0 2px var(--accent); }
     .cal-day.future { color: #9aa0ad; }
     /* Точки под числом: сколько было занятий (не больше трёх) */
     .cal-day .dots { position: absolute; left: 0; right: 0; bottom: 12%; display: flex; justify-content: center; gap: 3px; }
     .cal-day .dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
     .day-box { display: grid; gap: 16px; align-content: start; }
-    .day-title { font-size: 21px; font-weight: 800; letter-spacing: -0.03em; margin: 2px 2px 0; }
-    .empty { font-size: 15px; padding: 2px 4px; }
-    .entry-card .title .chev { margin-left: auto; color: var(--hint); font-size: 24px; line-height: 1; }
+    .day-title { font-size: var(--fs-l); font-weight: var(--fw-bold); letter-spacing: -0.03em; margin: 2px 2px 0; }
+    .empty { font-size: var(--fs-s); padding: 2px 4px; }
+    .entry-card .title .chev { margin-left: auto; color: var(--hint); font-size: var(--fs-l); line-height: 1; }
     .entry-card .note { font-style: italic; }
     /* Длинное слово или ссылка в заметке не растягивают экран — переносятся */
     .diary-body > *, .day-box > *, .entry-card { min-width: 0; }
@@ -582,7 +597,7 @@
     .field {
       display: block; width: 100%; min-height: 52px; margin: 0;
       border: 0; border-radius: 16px; padding: 12px 16px; outline: none;
-      font: inherit; font-size: 17px; font-weight: 600; letter-spacing: inherit; color: var(--text);
+      font: inherit; font-size: var(--fs-m); font-weight: var(--fw-medium); letter-spacing: inherit; color: var(--text);
       background-color: var(--bg); box-shadow: var(--pressed);
       -webkit-appearance: none; appearance: none;
     }
@@ -599,23 +614,23 @@
     #entry { max-width: 760px; }
     .form { display: grid; gap: 18px; }
     .field-box { display: grid; gap: 8px; min-width: 0; }
-    .field-label { font-size: 14px; font-weight: 700; color: var(--hint); margin: 0 4px; }
+    .field-label { font-size: var(--fs-s); font-weight: var(--fw-medium); color: var(--hint); margin: 0 4px; }
     .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
 
     /* ---------- Таблица «вес × повторы» (экран «Готово» и дневник) ---------- */
     .sets-card { border-radius: 20px; padding: 14px 14px 16px; margin-bottom: 16px; }
     .sets-head { display: flex; align-items: center; gap: 10px; }
-    .sets-head .nm { flex: 1; min-width: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
-    .x-btn { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%; font-size: 22px; line-height: 1;
+    .sets-head .nm { flex: 1; min-width: 0; font-size: var(--fs-m); font-weight: var(--fw-bold); letter-spacing: -0.02em; }
+    .x-btn { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%; font-size: var(--fs-l); line-height: 1;
              color: var(--hint); box-shadow: var(--raised-sm); }
     .x-btn:active { box-shadow: var(--pressed); }
     .set-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto minmax(0, 1fr) auto;
                align-items: center; gap: 8px; margin-top: 10px; }
-    .set-no { font-size: 15px; font-weight: 800; color: var(--hint); text-align: center; }
-    .field.set-in { min-height: 44px; padding: 8px 6px; border-radius: 12px; text-align: center; font-size: 18px; font-weight: 800; }
-    .set-unit { font-size: 14px; font-weight: 700; color: var(--hint); }
+    .set-no { font-size: var(--fs-s); font-weight: var(--fw-bold); color: var(--hint); text-align: center; }
+    .field.set-in { min-height: 44px; padding: 8px 6px; border-radius: 12px; text-align: center; font-size: var(--fs-m); font-weight: var(--fw-bold); }
+    .set-unit { font-size: var(--fs-s); font-weight: var(--fw-medium); color: var(--hint); }
     .sets-actions { display: flex; gap: 12px; margin-top: 14px; }
-    .mini-btn { padding: 10px 16px; border-radius: 14px; font-size: 15px; font-weight: 700; box-shadow: var(--raised-sm); }
+    .mini-btn { padding: 10px 16px; border-radius: 14px; font-size: var(--fs-s); font-weight: var(--fw-medium); box-shadow: var(--raised-sm); }
     .mini-btn:active { box-shadow: var(--pressed); }
     .mini-btn:disabled { opacity: .4; }
 
@@ -624,10 +639,10 @@
        чтобы кнопка «Начать» была видна без прокрутки. */
     #home .home-body { gap: 12px; }
     #home .row-card { min-height: 56px; padding: 8px 16px; border-radius: 18px; gap: 12px; }
-    #home .row-card .label { font-size: 13px; }
-    #home .row-card .value { font-size: 17px; margin-top: 0; }
-    #home .row-card .ico { flex: 0 0 24px; width: 24px; font-size: 20px; }
-    #home .row-card .chev { font-size: 22px; }
+    #home .row-card .label { font-size: var(--fs-xs); }
+    #home .row-card .value { font-size: var(--fs-m); margin-top: 0; }
+    #home .row-card .ico { flex: 0 0 24px; width: 24px; font-size: var(--fs-l); }
+    #home .row-card .chev { font-size: var(--fs-l); }
     #home .big-btn { min-height: 58px; }
     /* Круг: размер ставит код (fitHome) — и ширину, и высоту, чтобы он
        всегда оставался кругом */
@@ -772,7 +787,7 @@
       <button class="icon-btn glass back-btn" aria-label="Назад"></button>
       <div class="head-text"><div class="eyebrow" id="custom-eyebrow">Зарядка</div><div class="h1">Своя тренировка</div></div>
     </div>
-    <p class="hint" style="font-size:15px;margin:-6px 2px 12px">Отметьте упражнения — пойдут в том порядке, в каком выбрали. Время занятия — сумма выбранных упражнений.</p>
+    <p class="hint" style="font-size:var(--fs-s);margin:-6px 2px 12px">Отметьте упражнения — пойдут в том порядке, в каком выбрали. Время занятия — сумма выбранных упражнений.</p>
     <div class="chips" id="custom-chips"></div>
     <div id="custom-list"></div>
     <div class="sticky-bar">
@@ -906,7 +921,7 @@
     <div class="done-wrap">
       <div class="done-top">
         <div class="h1" id="done-title">Готово!</div>
-        <div class="hint" id="done-sub" style="font-size:16px"></div>
+        <div class="hint" id="done-sub" style="font-size:var(--fs-s)"></div>
         <div class="stats" id="done-stats"></div>
         <div class="done-saved" id="done-saved"></div>
       </div>
