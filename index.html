@@ -344,6 +344,15 @@
     #clock.xlong { font-size: calc(var(--ring) * .22); }   /* «120:00» */
     /* Подпись в диске — только в медитации («осталось») */
     .ring-label { display: none; font-size: calc(var(--ring) * .055); font-weight: var(--fw-medium); color: var(--hint); margin-top: 4px; }
+    /* Упражнение на повторы (на работе): в диске крупно повторы — «8 раз»,
+       время — мелко под ними (класс reps ставит код). Кольцо убывает как обычно */
+    .ring-reps { display: none; flex-direction: column; align-items: center; }
+    #workout.reps .ring-reps { display: flex; }
+    #rr-num { font-size: calc(var(--ring) * .34); font-weight: var(--fw-bold); letter-spacing: -0.05em; line-height: 1;
+              font-variant-numeric: tabular-nums; color: var(--text); transition: color .3s ease; }
+    #rr-word { font-size: max(var(--fs-s), calc(var(--ring) * .075)); font-weight: var(--fw-medium); color: var(--hint); margin-top: 2px; }
+    #workout.reps #clock { font-size: max(var(--fs-s), calc(var(--ring) * .1)); font-weight: var(--fw-medium); color: var(--hint);
+                           letter-spacing: -0.02em; margin-top: calc(var(--ring) * .04); }
 
     /* Название и подпись под диском. На отдыхе сверху — «Далее» */
     .wo-info { position: relative; flex: none; width: 100%; max-width: 560px; text-align: center; }
@@ -389,11 +398,27 @@
                                        mask-image: linear-gradient(to bottom, transparent, #000 18px, #000 calc(100% - 26px), transparent); }
     #workout .set-panel { flex: none; width: 100%; margin-top: 0; }
 
+    /* ---------- Зал: карточка подхода под названием ----------
+       «60 кг × 8» и кнопка «Изменить» — открывает шторку «Подходы».
+       Высота всегда одна (работа, отдых, пауза) — ничего не сдвигается */
+    .set-card { flex: none; width: 100%; display: flex; align-items: center; gap: 12px;
+                padding: 10px 10px 10px 18px; border-radius: 20px; background: var(--bg);
+                box-shadow: var(--pressed); cursor: pointer; text-align: left; }
+    .set-card.off { visibility: hidden; }
+    .sc-text { flex: 1 1 auto; min-width: 0; }
+    .sc-label { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--hint);
+                text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sc-value { font-size: var(--fs-l); font-weight: var(--fw-bold); letter-spacing: -0.02em; line-height: 1.2;
+                font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sc-btn { flex: none; min-height: 48px; padding: 0 18px; border-radius: 99px;
+              font-size: var(--fs-s); font-weight: var(--fw-bold); color: var(--accent);
+              background: var(--bg); box-shadow: var(--raised-sm); transition: box-shadow .15s ease; }
+    .sc-btn:active, #workout.sets .sc-btn { box-shadow: var(--pressed); }
+
     /* ---------- Зал: вес и повторы СРАЗУ ВСЕХ подходов — прямо на экране тренировки ----------
        Строка — подход. Нажатия по этой панели не ставят паузу. */
     .set-panel { margin-top: 12px; padding: 10px 12px 12px; border-radius: 18px; background: var(--bg);
                  box-shadow: var(--pressed); cursor: default; }
-    .sp-title { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sp-label { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--hint); margin: 0 0 4px 2px; text-transform: uppercase; letter-spacing: .05em; }
     /* Колонки: номер подхода | вес | × | повторы */
     .sp-head, .sp-set { display: grid; grid-template-columns: 24px minmax(0, 1.2fr) 10px minmax(0, 1fr); align-items: center; gap: 6px; }
@@ -474,7 +499,7 @@
                   inset calc(var(--ring) * -.045) calc(var(--ring) * -.045) calc(var(--ring) * .09) var(--light);
     }
     #workout.paused .ring-arc { opacity: 0; }
-    #workout.paused #clock { color: #6b7280; }
+    #workout.paused #clock, #workout.paused #rr-num { color: #6b7280; }
     #workout.paused #wo-sub { color: var(--hint); font-weight: var(--fw-medium); }   /* размер подписи не меняется */
     #workout.paused .ctl-btn.big { box-shadow: 0 0 0 var(--dark), 0 0 0 var(--light), inset 8px 8px 16px var(--dark), inset -8px -8px 16px var(--light); }
     #workout.paused .ctl-btn .ico-play { display: block; margin-left: 3px; }
@@ -496,8 +521,26 @@
       transform: translateY(105%); visibility: hidden;
       transition: transform .38s cubic-bezier(.2, .8, .2, 1), visibility 0s linear .38s;
     }
-    #workout.how .how-sheet { transform: none; visibility: visible;
+    #workout.how #how-sheet, #workout.sets #sets-sheet { transform: none; visibility: visible;
                               transition: transform .38s cubic-bezier(.2, .8, .2, 1), visibility 0s; }
+
+    /* ---------- Шторка «Подходы» (зал): вес и повторы всех подходов ----------
+       Оформлена как «Советы», но по высоте — по содержимому (выезжает снизу).
+       Кнопки −/+ крупные — 48 точек, под палец */
+    #sets-sheet { top: auto; max-height: calc(100% - var(--wo-top-h, 120px) - 10px); padding-left: 16px; padding-right: 16px; }
+    .sets-scroll { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+    #sets-sheet .set-panel { margin: 0; padding: 0; background: none; box-shadow: none; }
+    #sets-sheet .sp-head, #sets-sheet .sp-set { grid-template-columns: 20px minmax(0, 1.25fr) 8px minmax(0, 1fr); gap: 6px; }
+    #sets-sheet .sp-head { margin-top: 0; }
+    #sets-sheet .sp-sets { gap: 6px; margin-top: 4px; }
+    #sets-sheet .sp-set { padding: 3px; border-radius: 18px; }
+    #sets-sheet .stepper.sm { gap: 3px; }
+    #sets-sheet .stepper.sm .st-btn { flex: 0 0 48px; width: 48px; height: 48px; }
+    #sets-sheet .stepper.sm .field.st-input { height: 48px; padding: 0; }
+    @media (max-width: 359px) {   /* очень узкий экран — кнопки 44 точки */
+      #sets-sheet .stepper.sm .st-btn { flex-basis: 44px; width: 44px; height: 44px; }
+      #sets-sheet .stepper.sm .field.st-input { height: 44px; }
+    }
     /* «Ручка» сверху: шторку можно смахнуть вниз */
     .how-grip { flex: none; align-self: center; width: 42px; height: 5px; border-radius: 3px;
                 box-shadow: inset 1px 1px 2px var(--dark), inset -1px -1px 2px var(--light); }
@@ -507,9 +550,9 @@
     .how-title { font-size: var(--fs-l); font-weight: var(--fw-bold); letter-spacing: -0.03em; line-height: 1.15; margin-top: 2px;
                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* Время в шапке шторки — таймер не останавливается */
-    #how-time { flex: none; font-size: var(--fs-m); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; color: var(--phase-ink);
+    #how-time, .sheet-time { flex: none; font-size: var(--fs-m); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; color: var(--phase-ink);
                 padding: 8px 12px; border-radius: 99px; box-shadow: var(--pressed); }
-    #workout.paused #how-time { color: var(--hint); }
+    #workout.paused #how-time, #workout.paused .sheet-time { color: var(--hint); }
     /* Сцена — вдавленный «экран»: в нём фигурка или видео */
     .how-stage { position: relative; flex: 1 1 auto; min-height: 150px; border-radius: 24px; overflow: hidden;
                  box-shadow: var(--pressed); }
@@ -677,6 +720,8 @@
       /* Шторка «Советы» выезжает справа, диск с временем остаётся виден */
       .how-sheet { left: 50%; border-radius: 30px 0 0 30px; transform: translateX(105%);
                    box-shadow: -12px 0 30px rgba(163, 170, 184, .5), inset 2px 0 0 rgba(255, 255, 255, .85); }
+      /* «Подходы» на планшете — на всю высоту справа, как «Советы» */
+      #sets-sheet { top: calc(var(--wo-top-h, 120px) + 10px); max-height: none; }
       /* Дневник: календарь слева, занятия дня справа */
       .diary-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 24px 40px; }
       .day-box .list { grid-template-columns: 1fr; }
@@ -823,6 +868,8 @@
         <svg class="ring-svg" viewBox="0 0 270 270" aria-hidden="true">
           <circle class="ring-arc" id="ring-arc" cx="135" cy="135" r="118"/>
         </svg>
+        <!-- Упражнение на повторы (на работе): крупно «8 раз», время — мелко под ними -->
+        <div class="ring-reps" aria-live="polite"><div id="rr-num">8</div><div id="rr-word">раз</div></div>
         <div id="clock">0:30</div>
         <!-- Только в медитации: «осталось» / «приготовьтесь» -->
         <div class="ring-label" id="ring-label">осталось</div>
@@ -840,14 +887,15 @@
 
       <!-- Панели: занимают оставшееся место, не помещаются — прокручиваются -->
       <div class="wo-panels" id="wo-panels">
-        <!-- Зал: вес и повторы СРАЗУ ВСЕХ подходов упражнения (строка — подход).
-             На работе — упражнение, которое делаете, на отдыхе — только что сделанное.
-             Меняете подход — следующие, которые не трогали, подстраиваются сами.
-             Нажатия здесь не ставят паузу. -->
-        <div id="set-panel" class="set-panel hidden">
-          <div class="sp-title" id="sp-title"></div>
-          <div class="sp-head"><span></span><span class="sp-label">Вес, кг</span><span></span><span class="sp-label">Повторы</span></div>
-          <div class="sp-sets" id="sp-sets"></div>
+        <!-- Зал: карточка текущего подхода «60 кг × 8» и «Изменить».
+             На работе — подход, который делаете, на отдыхе — только что сделанный.
+             Нажатие открывает шторку «Подходы» и не ставит паузу. -->
+        <div id="set-card" class="set-card hidden" role="button" aria-controls="sets-sheet">
+          <div class="sc-text">
+            <div class="sc-label" id="sc-label">Вес и повторы</div>
+            <div class="sc-value" id="sc-value">— кг × 8</div>
+          </div>
+          <button class="sc-btn" id="sc-btn" aria-expanded="false" aria-controls="sets-sheet">Изменить</button>
         </div>
         <!-- Бассейн и бег: дистанция — круги или километры -->
         <div id="dist-panel" class="set-panel hidden">
@@ -912,6 +960,30 @@
       <div class="how-text" id="how-text">
         <p class="tips-desc" id="tips-desc"></p>
         <ul class="tips-list" id="tips-list"></ul>
+      </div>
+    </div>
+
+    <!-- Шторка «Подходы» (зал): вес и повторы СРАЗУ ВСЕХ подходов упражнения
+         (строка — подход). Меняете подход — следующие, которые не трогали,
+         подстраиваются сами. Таймер идёт дальше, время — в шапке.
+         Закрыть: стрелка, смахнуть вниз, нажать мимо шторки или «Назад» Telegram. -->
+    <div class="how-sheet" id="sets-sheet" role="dialog" aria-label="Подходы" aria-hidden="true">
+      <div class="how-grip"></div>
+      <div class="how-head">
+        <div class="grow">
+          <div class="how-eyebrow" id="sets-eyebrow">Подходы</div>
+          <div class="how-title" id="sets-title"></div>
+        </div>
+        <div id="sets-time" class="sheet-time">0:30</div>
+        <button class="icon-btn glass" id="sets-close" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </div>
+      <div class="sets-scroll" id="sets-scroll">
+        <div id="set-panel" class="set-panel">
+          <div class="sp-head"><span></span><span class="sp-label">Вес, кг</span><span></span><span class="sp-label">Повторы</span></div>
+          <div class="sp-sets" id="sp-sets"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -1397,7 +1469,7 @@
     }
     function onBack() {
       // На тренировке: открыта шторка «Советы» — сначала закрываем её
-      if (current === 'workout') { if (howOpen) setHowOpen(false); else askExit(); }
+      if (current === 'workout') { if (howOpen) setHowOpen(false); else if (setsOpen) setSetsOpen(false); else askExit(); }
       else if (current === 'custom') closeCustom();
       else if (current === 'entry') leaveEntry();
       else if (current !== 'home') show('home');
@@ -2903,6 +2975,7 @@
       buildSetRows(null);
       buildProgress();
       setHowOpen(false);      // шторка «Советы» закрыта: по умолчанию — таймер
+      setSetsOpen(false);     // и шторка «Подходы» тоже
       // Бассейн и бег: панель «Дистанция» (круги или км)
       const s = sport();
       woDist = { dist: null, du: s.distance || 'lap' };
@@ -2995,22 +3068,50 @@
       const phase = step.kind === 'work' ? (isSimple() ? 'Медитация' : 'Работа')
         : step.kind === 'rest' ? (sport().restLabel || 'Отдых') : 'Приготовьтесь';
       $('phase').textContent = paused ? 'Пауза' : phase;
-      $('wo-sub').textContent = paused ? 'Нажмите, чтобы продолжить' : subLine(step.ex, step.index);
+      const onDisk = repsOnDisk(step);   // повторы показаны в диске — в подписи их не повторяем
+      $('wo-sub').textContent = paused ? 'Нажмите, чтобы продолжить' : subLine(step.ex, step.index, onDisk);
+      renderDiskReps();
+    }
+
+    // Упражнение на повторы, идёт работа: в диске крупно повторы, время мелко
+    const repsOnDisk = step => !!step && step.kind === 'work' && step.ex.type === 'reps' && !isSimple();
+
+    // «1 раз», «2 раза», «5 раз», «22 раза»
+    function repsWord(n) {
+      const a = Math.abs(n) % 100, b = a % 10;
+      return (b >= 2 && b <= 4 && (a < 12 || a > 14)) ? 'раза' : 'раз';
+    }
+
+    // Диск: на повторах — число повторов (в зале — что вы ввели в этом подходе)
+    function renderDiskReps() {
+      const step = steps[stepIndex];
+      const on = repsOnDisk(step);
+      $('workout').classList.toggle('reps', on);
+      if (!on) return;
+      let r = step.ex.reps;
+      if (loggable(step.ex) && state.workout.exercises[step.index] === step.ex) {
+        const v = setValue(step.index).r;
+        if (v != null) r = v;
+      }
+      $('rr-num').textContent = r == null ? '—' : r;
+      $('rr-word').textContent = r == null ? 'раз' : repsWord(r);
     }
 
     // «Подход 1 из 3 · 60 кг × 8» (в зале — с весом), «Отрезок 2 из 6» (бег), «10 раз».
     // i — номер упражнения в списке тренировки (по нему ищем введённый вес)
-    function subLine(ex, i) {
+    // short — повторы уже в диске: только «Подход 2 из 4»
+    function subLine(ex, i, short = false) {
       const parts = [];
       if (ex.sets) {
         const word = setWord(sport(), 1);   // «подход», «отрезок», «раунд»
         parts.push(word[0].toUpperCase() + word.slice(1) + ' ' + ex.set + ' из ' + ex.sets);
       }
-      if (loggable(ex) && i != null && state.workout.exercises[i] === ex) {
+      if (short) { /* повторы и вес — в диске и в карточке подхода */ }
+      else if (loggable(ex) && i != null && state.workout.exercises[i] === ex) {
         const v = setValue(i);
         const reps = v.r == null ? '—' : v.r;
         parts.push(v.w ? fmtNum(v.w) + ' кг × ' + reps : reps + ' раз');
-      } else if (ex.type === 'reps') parts.push(ex.reps + ' раз');
+      } else if (ex.type === 'reps') parts.push(ex.reps + ' ' + repsWord(ex.reps));
       return parts.join(' · ');
     }
 
@@ -3027,6 +3128,7 @@
       clock.classList.toggle('long', text.length === 5);   // «12:30» — шрифт чуть меньше
       clock.classList.toggle('xlong', text.length > 5);    // «120:00» — ещё меньше
       $('how-time').textContent = text;
+      $('sets-time').textContent = text;
       // Кольцо — сколько осталось от шага: в начале полное, к концу исчезает
       const left = step && step.dur > 0 ? Math.max(0, Math.min(1, remaining / step.dur)) : 0;
       $('ring-arc').style.strokeDashoffset = (RING_C * (1 - left)).toFixed(1);
@@ -3038,14 +3140,13 @@
     // отдыхе и паузе он не сдвигается и не меняет размер. Поэтому размер
     // считается не по текущему шагу, а по всему занятию сразу:
     //   обычное занятие — около ¾ ширины телефона, под ним название и подпись;
-    //   зал — такой, чтобы под названием целиком помещались три подхода
-    //         таблицы «вес × повторы» (четвёртый и дальше — прокруткой таблицы);
+    //   зал — такой, чтобы под названием помещалась карточка подхода
+    //         «60 кг × 8 · Изменить» (вся таблица подходов — в шторке «Подходы»);
     //   бассейн и бег — такой, чтобы под названием помещалась «Дистанция».
     // Диск по центру экрана по ширине, а вместе с названием (и панелью) — по центру
     // между верхней строкой и пультом. Место под строку паузы («Выполнено»,
     // «Завершить занятие») под пультом есть всегда — на паузе ничего не двигается.
     const RING_MIN = 120;
-    const FIT_SETS = 3;   // сколько подходов таблицы в зале должно быть видно целиком
     const NEXT_H = 20;    // строка «Далее» над названием (как в CSS: 16 + отступ 4)
     const NAME_LH = 1.12; // высота строки названия и подписи — как в CSS (line-height)
     const SUB_LH = 1.35;
@@ -3091,8 +3192,8 @@
       return infoMemo.h;
     }
 
-    // Сколько места под названием нужно панелям: таблица зала на FIT_SETS
-    // подходов («примеряем» невидимую таблицу) и/или «Дистанция». 0 — панелей нет
+    // Сколько места под названием нужно панелям: карточка подхода в зале
+    // («примеряем» невидимую копию) и/или «Дистанция». 0 — панелей нет
     let panelMemo = { workout: null, w: 0, fonts: '', h: 0 };
     function panelsHeight(W) {
       const fonts = document.fonts ? document.fonts.status : '';
@@ -3102,15 +3203,11 @@
       const parts = [];
       const logged = state.workout.exercises.filter(loggable);
       if (logged.length) {
-        const rows = Math.min(FIT_SETS, Math.max(...logged.map(item => item.sets || 1)));
-        const probe = document.createElement('div');
-        probe.className = 'set-panel';
+        const probe = $('set-card').cloneNode(true);
+        probe.removeAttribute('id');
+        probe.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+        probe.classList.remove('hidden');
         probe.style.cssText = 'position:absolute;left:0;right:0;top:0;visibility:hidden;pointer-events:none';
-        let html = '<div class="sp-title">Все подходы</div>' + $('set-panel').querySelector('.sp-head').outerHTML + '<div class="sp-sets">';
-        for (let j = 1; j <= rows; j++) {
-          html += '<div class="sp-set"><span class="sp-no">' + j + '</span>' + stepperHtml('w') + '<span class="sp-x">×</span>' + stepperHtml('r') + '</div>';
-        }
-        probe.innerHTML = html + '</div>';
         box.append(probe);
         parts.push(probe.offsetHeight);
         probe.remove();
@@ -3161,15 +3258,15 @@
     }
     $('wo-panels').addEventListener('scroll', updatePanelsFade, { passive: true });
 
-    // Таблица подходов не помещается целиком — прокручиваем её так, чтобы
-    // текущий подход был виден (диск при этом стоит на месте)
+    // Таблица в шторке «Подходы» не помещается целиком (много подходов,
+    // маленький экран) — прокручиваем её так, чтобы текущий подход был виден
     function showCurrentSet() {
-      const box = $('wo-panels');
+      const box = $('sets-scroll');
       box.scrollTop = 0;
       const row = $('sp-sets').querySelector('.sp-set.cur');
       if (row && box.scrollHeight > box.clientHeight + 1) {
         const b = box.getBoundingClientRect(), r = row.getBoundingClientRect();
-        if (r.bottom > b.bottom - 22) box.scrollTop = Math.ceil(r.bottom - (b.bottom - 22));
+        if (r.bottom > b.bottom - 8) box.scrollTop = Math.ceil(r.bottom - (b.bottom - 8));
       }
       updatePanelsFade();
     }
@@ -3266,11 +3363,27 @@
           input.value = input.dataset.field === 'w' ? fmtNum(x) : x == null ? '' : String(x);
         });
       });
+      renderSetCard();
+    }
+
+    // Карточка под названием: «60 кг × 8» подхода, который в панели
+    // (на работе — текущий, на отдыхе — только что сделанный)
+    function renderSetCard() {
+      const i = panelTarget();
+      // В зале на разминке и заминке карточка невидима, но место занимает —
+      // на планшете правая колонка не прыгает. В других видах занятий её нет
+      const card = $('set-card');
+      card.classList.toggle('hidden', !state.workout.exercises.some(loggable));
+      card.classList.toggle('off', i == null);
+      if (i == null) return;
+      const v = setValue(i);
+      $('sc-label').textContent = steps[stepIndex].kind === 'rest' ? 'Сделано' : 'Вес и повторы';
+      $('sc-value').textContent = (v.w ? fmtNum(v.w) + ' кг' : '— кг') + ' × ' + (v.r == null ? '—' : v.r);
     }
 
     function renderSetPanel() {
       const i = panelTarget();
-      const panel = $('set-panel');
+      const panel = $('sets-sheet');
       const blk = i == null ? null : blockOf(i);
       const first = blk ? blk.first : null;
       if (first !== panelFirst) {
@@ -3279,12 +3392,15 @@
         panelFirst = first;
         buildSetRows(blk);
       }
-      panel.classList.toggle('hidden', i == null);
-      if (i == null) return;
+      if (i == null) {
+        renderSetCard();                    // карточка прячется (место под неё остаётся)
+        if (setsOpen) setSetsOpen(false);   // упражнение без подходов — шторку закрываем
+        return;
+      }
       const item = state.workout.exercises[i];
-      $('sp-title').textContent = steps[stepIndex].kind === 'rest'
-        ? 'Сделано: ' + item.name
-        : 'Все подходы: вес и повторы';
+      // Шапка шторки: на отдыхе — только что сделанное упражнение
+      $('sets-eyebrow').textContent = steps[stepIndex].kind === 'rest' ? 'Сделано · подходы' : 'Подходы';
+      $('sets-title').textContent = item.name;
       updateSetRows();
     }
 
@@ -3334,6 +3450,7 @@
     // останавливается — время видно в шапке шторки.
     let howOpen = false;
     function setHowOpen(open) {
+      if (open && setsOpen) setSetsOpen(false);   // открыта одна шторка за раз
       howOpen = open;
       $('workout').classList.toggle('how', open);
       $('how-btn').setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -3410,6 +3527,42 @@
       if (dy > 60 && dy > Math.abs(dx) * 1.5 && dt < 800) { setHowOpen(false); haptic('light'); }
     });
 
+    // ---------- Шторка «Подходы» (зал) ----------
+    // Открывается карточкой «60 кг × 8 · Изменить». В шторке — все подходы
+    // упражнения с крупными кнопками −/+. Таймер идёт дальше, время — в шапке.
+    let setsOpen = false;
+    function setSetsOpen(open) {
+      if (open && howOpen) setHowOpen(false);
+      setsOpen = open;
+      $('workout').classList.toggle('sets', open);
+      $('sc-btn').setAttribute('aria-expanded', open ? 'true' : 'false');
+      $('sets-sheet').setAttribute('aria-hidden', open ? 'false' : 'true');
+      if (open) showCurrentSet();                       // текущий подход — на виду
+      else if ($('sets-sheet').contains(document.activeElement)) document.activeElement.blur();   // убрать клавиатуру
+    }
+    $('set-card').addEventListener('click', e => {
+      e.stopPropagation();          // не ставим паузу
+      setSetsOpen(!setsOpen);
+      haptic('light');
+    });
+    $('sets-close').addEventListener('click', e => { e.stopPropagation(); setSetsOpen(false); haptic('light'); });
+    // Нажатия внутри шторки не ставят паузу
+    $('sets-sheet').addEventListener('click', e => e.stopPropagation());
+    // Смахнуть вниз — за «ручку» или шапку (таблица прокручивается сама)
+    let setsSwipe = null;
+    $('sets-sheet').addEventListener('touchstart', e => {
+      setsSwipe = null;
+      if (e.touches.length !== 1 || e.target.closest('.sets-scroll')) return;
+      setsSwipe = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
+    }, { passive: true });
+    $('sets-sheet').addEventListener('touchend', e => {
+      if (!setsSwipe) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - setsSwipe.x, dy = t.clientY - setsSwipe.y, dt = Date.now() - setsSwipe.time;
+      setsSwipe = null;
+      if (dy > 60 && dy > Math.abs(dx) * 1.5 && dt < 800) { setSetsOpen(false); haptic('light'); }
+    });
+
     // --- Пауза / продолжить: касание по экрану или большая кнопка ---
     // На паузе экран тот же, только «вдавленный» (оформление — по классу paused):
     // диск и кнопка вдавлены, время серое, под пультом — «Выполнено» и «Завершить занятие»
@@ -3428,6 +3581,7 @@
       if (Date.now() - swipedAt < 500) return;   // это был свайп, а не касание
       // Открыта шторка — нажатие мимо неё закрывает шторку, а не ставит паузу
       if (howOpen) { setHowOpen(false); haptic('light'); return; }
+      if (setsOpen) { setSetsOpen(false); haptic('light'); return; }
       togglePause();
     });
 
