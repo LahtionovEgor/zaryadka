@@ -199,8 +199,11 @@
       transition: box-shadow .15s ease, transform .15s ease;
     }
     .pick-card:active { box-shadow: var(--pressed); }
-    /* Выбранная карточка — вдавлена и с цветной рамкой */
-    .pick-card.selected { box-shadow: var(--pressed), inset 0 0 0 2px var(--accent); }
+    /* ЕДИНОЕ ПРАВИЛО ВЫБРАННОГО ЭЛЕМЕНТА (карточки, чипсы, день календаря):
+       вдавлен + синяя рамка 2 px + синий текст. Переменная --selected — тень с рамкой */
+    :root { --selected: var(--pressed), inset 0 0 0 2px var(--accent); }
+    .pick-card.selected { box-shadow: var(--selected); }
+    .pick-card.selected .title { color: var(--accent); }
     .pick-card .title { font-size: var(--fs-m); font-weight: var(--fw-bold); letter-spacing: -0.03em; display: flex; gap: 10px; align-items: center; }
     .pick-card .title .tick { margin-left: auto; color: var(--accent); }
     .pick-card .about { font-size: var(--fs-s); margin-top: 6px; }
@@ -212,7 +215,7 @@
     .dir-card { min-width: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
     /* Нажатие на «Состав» не должно «вдавливать» всю карточку */
     .dir-card:active:has(.dir-more:active) { box-shadow: var(--raised); }
-    .dir-card.selected:active:has(.dir-more:active) { box-shadow: var(--pressed), inset 0 0 0 2px var(--accent); }
+    .dir-card.selected:active:has(.dir-more:active) { box-shadow: var(--selected); }
     .dir-card .about { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .dir-card.open .about { white-space: normal; }   /* состав открыт — описание целиком */
     .dir-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
@@ -247,7 +250,7 @@
     .chips::-webkit-scrollbar { display: none; }
     .chip { flex: 0 0 auto; padding: 9px 16px; border-radius: 99px; font-size: var(--fs-s); font-weight: var(--fw-medium);
             box-shadow: var(--raised-sm) !important; }
-    .chip.on { box-shadow: var(--pressed) !important; color: var(--accent); }
+    .chip.on { box-shadow: var(--selected) !important; color: var(--accent); }   /* единое правило выбранного */
     /* Чипсы в несколько строк (форма дневника) */
     .chips.wrap { flex-wrap: wrap; overflow: visible; padding: 4px 2px 6px; margin: 0; }
     /* Виды занятий в форме дневника — кнопки одного размера, сеткой */
@@ -277,6 +280,15 @@
       display: flex; gap: 14px; padding: 14px 0 calc(var(--bottom) + 8px);
       margin-top: 8px; background: var(--bg);
     }
+    /* Мягкое затухание над панелью: содержимое плавно «уходит» под неё,
+       а не обрезается жёстким краем. Высота затухания — 28 px */
+    .sticky-bar::before {
+      content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 28px; pointer-events: none;
+      background: linear-gradient(to bottom, rgba(230, 233, 239, 0), var(--bg));
+    }
+    /* Форма дневника: снизу запас под затухание — последнее поле
+       в конце прокрутки не прячется под панелью «Сохранить» */
+    #entry .form { padding-bottom: 28px; }
     .sticky-bar .ghost { flex: 0 0 auto; padding: 0 20px; border-radius: 26px; font-size: var(--fs-m); font-weight: var(--fw-medium); min-height: 64px; }
     .sticky-bar .ghost:active { box-shadow: var(--pressed); }
 
@@ -332,10 +344,12 @@
                 font-size: var(--fs-s); font-weight: var(--fw-bold); color: var(--phase-ink); white-space: nowrap; }
     .wo-phase::before { content: ''; flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--phase); }
     #phase { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-    /* Справа: счётчик «3 / 13» и кнопка «Советы» — одной высоты */
+    /* Справа: счётчик «3 / 13» и кнопка «Советы».
+       Счётчик — плоский текст (не нажимается, поэтому не выпуклый, как кнопка).
+       Вертикальные отступы те же, что были, — строка не меняет высоту */
     .wo-right { display: flex; align-items: center; gap: 10px; flex: none; }
     #counter { font-size: var(--fs-s); line-height: 20px; font-weight: var(--fw-bold); color: var(--hint); font-variant-numeric: tabular-nums;
-               padding: 10px 14px; border-radius: 99px; background: var(--bg); box-shadow: var(--raised-sm); }
+               padding: 10px 4px; }
 
     /* ---------- Середина: диск, упражнение, панели ----------
        Сверху вниз: диск → «Далее», название и подпись → панели зала и дистанции.
@@ -606,7 +620,7 @@
     @media (max-height: 720px) and (orientation: portrait) {
       .wo-row { margin-top: 10px; }
       #workout .icon-btn { flex-basis: 42px; width: 42px; height: 42px; }
-      #counter { padding: 8px 12px; }
+      #counter { padding: 8px 4px; }
       .wo-main { gap: 12px; padding: 12px 20px 4px; }
       .how-btn { min-height: 36px; padding: 0 14px; }
       .wo-controls { gap: 22px; }
@@ -648,7 +662,7 @@
                display: flex; align-items: center; justify-content: center; transition: box-shadow .15s ease; }
     .cal-day:active { box-shadow: var(--pressed); }
     .cal-day.today { color: var(--accent); font-weight: var(--fw-bold); }
-    .cal-day.sel { box-shadow: var(--pressed), inset 0 0 0 2px var(--accent); }
+    .cal-day.sel { box-shadow: var(--selected); color: var(--accent); font-weight: var(--fw-bold); }   /* единое правило выбранного */
     .cal-day.future { color: #9aa0ad; }
     /* Точки под числом: сколько было занятий (не больше трёх) */
     .cal-day .dots { position: absolute; left: 0; right: 0; bottom: 12%; display: flex; justify-content: center; gap: 3px; }
@@ -793,7 +807,6 @@
 
       <!-- 1. Вид занятия -->
       <button class="row-card glass" id="open-sports">
-        <span class="ico"><span id="sport-dot" style="display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--accent)"></span></span>
         <div class="grow">
           <div class="label">Вид занятия</div>
           <div class="value" id="sport-name">Зарядка</div>
