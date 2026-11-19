@@ -205,6 +205,33 @@
     .pick-card .title .tick { margin-left: auto; color: var(--accent); }
     .pick-card .about { font-size: var(--fs-s); margin-top: 6px; }
     .pick-card .meta  { font-size: var(--fs-s); color: var(--hint); margin-top: 6px; line-height: 1.4; }
+    /* Карточка программы на экране «Направление» — компактная:
+       название, описание в одну строку, строка «N упражнений · мин» и кнопка «Состав» */
+    /* Колонка не шире экрана: иначе однострочное описание раздвигает карточку */
+    #dir-list { grid-template-columns: minmax(0, 1fr); }
+    .dir-card { min-width: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    /* Нажатие на «Состав» не должно «вдавливать» всю карточку */
+    .dir-card:active:has(.dir-more:active) { box-shadow: var(--raised); }
+    .dir-card.selected:active:has(.dir-more:active) { box-shadow: var(--pressed), inset 0 0 0 2px var(--accent); }
+    .dir-card .about { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dir-card.open .about { white-space: normal; }   /* состав открыт — описание целиком */
+    .dir-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .dir-row .meta { flex: 1; min-width: 0; margin-top: 0; }
+    /* «Состав» — текстовая кнопка фирменного цвета. Высота 44 точки (под палец),
+       отрицательные отступы — чтобы карточка от этого не стала выше */
+    .dir-more {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 4px;
+      min-height: 44px; margin: -6px -10px -10px 0; padding: 0 10px;
+      background: none; border: 0; color: var(--accent);
+      font: inherit; font-size: var(--fs-s); font-weight: var(--fw-medium);
+    }
+    .dir-more .pv-chev { flex-basis: 18px; width: 18px; height: 18px; color: var(--accent); }
+    .dir-card.open .dir-more .pv-chev { transform: rotate(180deg); }
+    /* Раскрытый состав */
+    .dir-comp { margin-top: 10px; animation: dropDown .3s ease-out; }
+    .dir-comp .cap { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--hint);
+                     text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+    .dir-comp ol { margin: 0; padding-left: 22px; font-size: var(--fs-s); line-height: 1.55; }
     /* Пояснение под заголовком экрана (зал: цикл программ) */
     .screen-note { font-size: var(--fs-s); line-height: 1.4; margin: -6px 2px 16px; }
     /* Кнопки видов занятий — все одного размера: одинаковая ширина колонок
@@ -706,6 +733,8 @@
       .home-body .dial-wrap { grid-row: span 7; }
       .dial-disc { width: min(40vw, 400px); }
       .list { grid-template-columns: 1fr 1fr; }
+      /* Раскрытый «Состав» не растягивает соседнюю карточку в ряду */
+      #dir-list { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
       .sport-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
       /* Тренировка: диск — в левой половине, всё остальное — в правой */
       #workout .wo-main { position: static; margin-left: 50%;
@@ -1741,63 +1770,112 @@
     // =====================================================================
     //  8. Экран «Направление»
     // =====================================================================
+    // Какие карточки раскрыты («Состав»). Помним, пока приложение открыто
+    const openDirs = new Set();
+
     function renderDirections() {
       const s = sport();
       $('dir-eyebrow').textContent = s.name;
-      // Зал: программы идут по циклу, упражнения понемногу меняются
+      // Пояснение под заголовком — коротко, в 1–2 строки
       const hint = $('dir-hint');
       const rotates = !s.cycles && s.directions.some(hasRotation);
       hint.classList.toggle('hidden', !s.cycles && !rotates);
-      // Зарядка: упражнения чередуются от раза к разу
-      if (rotates) hint.textContent = 'После каждого занятия 2–3 упражнения меняются на похожие — ' +
-        'в карточке программы показан состав следующего раза. Традиционные комплексы не меняются.';
+      // Зарядка: упражнения чередуются от раза к разу (кроме традиционных комплексов)
+      if (rotates) {
+        const still = s.directions.filter(d => !hasRotation(d)).map(d => d.short);
+        hint.textContent = 'После занятия 2–3 упражнения меняются на похожие.' +
+          (still.length ? ' ' + still.join(' и ') + ' — без замен.' : '');
+      }
+      // Зал: программы идут по циклу, упражнения понемногу меняются
       if (s.cycles) {
         const cy = cycleOf(s, dirId(), state.cycleBySport[s.id] || 0);
-        hint.textContent = 'После тренировки по умолчанию выбирается следующая программа цикла, ' +
-          'а 1–2 упражнения меняются на похожие.' +
-          (cy && cy.length > 1 ? ' Ваш цикл: ' + cy.map(id => getDirection(s.id, id).short).join(' → ') + '.' : '');
+        hint.textContent = cy && cy.length > 1
+          ? 'Цикл: ' + cy.map(id => getDirection(s.id, id).short).join(' → ') + '. 1–2 замены за раз.'
+          : 'Каждый раз 1–2 упражнения меняются на похожие.';
       }
       const box = $('dir-list');
       box.innerHTML = '';
       s.directions.forEach(dir => {
         const selected = dir.id === dirId();
-        const card = document.createElement('button');
-        card.className = 'pick-card glass' + (selected ? ' selected' : '');
+        const key = s.id + ':' + dir.id;
+        // Карточка — не <button>: внутри неё есть своя кнопка «Состав»
+        const card = document.createElement('div');
+        card.className = 'pick-card glass dir-card' + (selected ? ' selected' : '') + (openDirs.has(key) ? ' open' : '');
+        card.setAttribute('role', 'button');
+        card.tabIndex = 0;
 
         const title = document.createElement('div');
         title.className = 'title';
         title.textContent = dir.name;
         if (selected) { const t = document.createElement('span'); t.className = 'tick'; t.textContent = '✓'; title.append(t); }
 
-        // Подходы (отрезки): в зале — сколько обычно, в беге и скакалке — от и до
+        // Описание — одна строка (длинное обрезается многоточием)
         const about = document.createElement('div');
         about.className = 'about';
-        const sets = !dir.sets ? '' : dir.minSets
-          ? dir.minSets + '\u2060–\u2060' + dir.maxSets + '\u00a0' + setWord(s, dir.maxSets)   // «3–12 отрезков» без переноса
-          : dir.sets + ' ' + setWord(s, dir.sets);
-        about.textContent = dir.description + (sets ? ' · ' + sets : '');
+        about.textContent = dir.description;
 
-        // Группы мышц и сколько программа может длиться без повторов
+        // Строка «12 упражнений · 3–30 мин». У бега и скакалки вместо числа упражнений —
+        // сколько отрезков (раундов): «3–12 отрезков · 15–50 мин». В зале у всех программ
+        // по 3 подхода, поэтому подходы не пишем — строка остаётся в одну строку
         const round = roundOf(s.id, dir.id);
-        const main = mainIds(dir, round);   // зал: упражнения следующей тренировки (с заменами)
+        const main = mainIds(dir, round);   // упражнения следующего занятия (с заменами)
         const lim = planLimits(s.id, dir.id, round);
-        const groups = document.createElement('div');
-        groups.className = 'meta';
-        groups.textContent = directionGroups(dir).join(' · ') + ' — ' + main.length + ' ' +
-          plural(main.length, 'упражнение', 'упражнения', 'упражнений') + ', ' + lim.min + '–' + lim.max + ' мин';
-
         const ids = [...dir.warmup, ...main, ...dir.cool];
+        const count = dir.minSets
+          ? dir.minSets + '\u2060–\u2060' + dir.maxSets + '\u00a0' + setWord(s, dir.maxSets)   // «3–12 отрезков» без переноса
+          : ids.length + '\u00a0' + plural(ids.length, 'упражнение', 'упражнения', 'упражнений');
         const meta = document.createElement('div');
         meta.className = 'meta';
-        meta.textContent = ids.map(id => getExercise(id).name).join(' · ');
+        meta.textContent = count + ' · ' + lim.min + '\u2060–\u2060' + lim.max + '\u00a0мин';
 
-        card.append(title, about, groups, meta);
-        card.addEventListener('click', () => {
+        // Кнопка «Состав» со стрелкой
+        const more = document.createElement('button');
+        more.className = 'dir-more';
+        more.type = 'button';
+        more.setAttribute('aria-expanded', openDirs.has(key));
+        more.innerHTML = 'Состав<svg class="pv-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" ' +
+          'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+
+        const row = document.createElement('div');
+        row.className = 'dir-row';
+        row.append(meta, more);
+        card.append(title, about, row);
+
+        // Состав следующего занятия — список, виден только когда карточка раскрыта
+        const comp = document.createElement('div');
+        comp.className = 'dir-comp';
+        if (s.cycles || hasRotation(dir)) {
+          const cap = document.createElement('div');
+          cap.className = 'cap';
+          cap.textContent = 'Следующее занятие';
+          comp.append(cap);
+        }
+        const ol = document.createElement('ol');
+        ids.forEach(id => { const li = document.createElement('li'); li.textContent = getExercise(id).name; ol.append(li); });
+        comp.append(ol);
+        if (openDirs.has(key)) card.append(comp);
+
+        // «Состав» — раскрыть / свернуть (программу не выбирает)
+        more.addEventListener('click', e => {
+          e.stopPropagation();
+          haptic('light');
+          const open = !openDirs.has(key);
+          if (open) { openDirs.add(key); card.append(comp); } else { openDirs.delete(key); comp.remove(); }
+          card.classList.toggle('open', open);
+          more.setAttribute('aria-expanded', open);
+        });
+
+        // Нажатие на саму карточку — выбрать программу
+        const pick = () => {
           state.dirBySport[state.sport] = dir.id;
           haptic('select');
           updatePlan();
           saveSettings();
           show('home');
+        };
+        card.addEventListener('click', pick);
+        card.addEventListener('keydown', e => {
+          if (e.target === card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(); }
         });
         box.append(card);
       });
